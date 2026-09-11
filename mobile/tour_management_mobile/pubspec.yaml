@@ -1,0 +1,21 @@
+﻿name: tour_management_mobile
+description: TourManagement Flutter admin app (scaffold placeholder).
+  Run lutter create . from this folder after installing Flutter to generate the full project.
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

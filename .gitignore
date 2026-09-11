@@ -1,0 +1,47 @@
+# ============================================================
+# TourManagement — root .gitignore
+# Covers: .NET, Node/React, Flutter, Python, secrets
+# ============================================================
+
+# ---------- .NET ----------
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.nupkg
+appsettings.*.Development.json
+
+# ---------- Node / React ----------
+node_modules/
+dist/
+.cache/
+*.local
+
+# ---------- Flutter ----------
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+
+# ---------- Python ----------
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# ---------- Secrets / env ----------
+.env
+.env.*
+!.env.example
+!ai-service/.env.example
+appsettings.Production.json
+secrets.json
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db

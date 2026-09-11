@@ -1,0 +1,12 @@
+# ai-service/requirements.txt
+# Intended packages — install with: pip install -r requirements.txt
+# Do not pin versions yet; they will be locked once the service is implemented.
+
+fastapi
+uvicorn[standard]
+langgraph
+langchain
+langchain-core
+pydantic
+python-dotenv
+httpx
