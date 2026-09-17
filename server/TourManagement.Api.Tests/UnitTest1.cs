@@ -1,10 +1,3 @@
-namespace TourManagement.Api.Tests;
-
-public class UnitTest1
-{
-    [Fact]
-    public void Test1()
-    {
-
-    }
-}
+// This file intentionally left empty.
+// The default placeholder test has been removed.
+// See Services/AuthServiceTests.cs for the actual unit tests.
