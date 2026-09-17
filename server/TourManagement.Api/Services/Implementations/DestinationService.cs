@@ -24,13 +24,13 @@ public class DestinationService : IDestinationService
     {
         var query = _db.Destinations.AsQueryable();
 
-        // Search by name or country.
+        // Search by name or region.
         if (!string.IsNullOrEmpty(search))
-            query = query.Where(d => d.Name.Contains(search) || d.Country.Contains(search));
+            query = query.Where(d => d.Name.Contains(search) || d.Region.Contains(search));
 
         query = sort switch
         {
-            "country" => query.OrderBy(d => d.Country),
+            "region"  => query.OrderBy(d => d.Region),
             "oldest"  => query.OrderBy(d => d.CreatedAt),
             _         => query.OrderBy(d => d.Name)  // default: alphabetical by name
         };

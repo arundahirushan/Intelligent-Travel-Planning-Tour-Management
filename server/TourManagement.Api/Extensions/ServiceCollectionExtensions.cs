@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService,        TourManagement.Api.Services.Implementations.UserService>();
         services.AddScoped<IDestinationService, TourManagement.Api.Services.Implementations.DestinationService>();
         services.AddScoped<ITripService,        TourManagement.Api.Services.Implementations.TripService>();
+        services.AddScoped<IHotelService,       TourManagement.Api.Services.Implementations.HotelService>();
+        services.AddScoped<IBookingService,     TourManagement.Api.Services.Implementations.BookingService>();
 
         return services;
     }

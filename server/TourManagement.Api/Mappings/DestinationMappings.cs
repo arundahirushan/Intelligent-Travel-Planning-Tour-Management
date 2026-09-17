@@ -12,7 +12,7 @@ public static class DestinationMappings
         {
             Id          = dest.Id,
             Name        = dest.Name,
-            Country     = dest.Country,
+            Region      = dest.Region,
             Description = dest.Description,
             ImageUrl    = dest.ImageUrl,
             CreatedAt   = dest.CreatedAt,
@@ -26,7 +26,7 @@ public static class DestinationMappings
         return new Destination
         {
             Name        = dto.Name,
-            Country     = dto.Country,
+            Region      = dto.Region,
             Description = dto.Description,
             ImageUrl    = dto.ImageUrl,
             CreatedAt   = DateTime.UtcNow,
@@ -38,7 +38,7 @@ public static class DestinationMappings
     public static void UpdateFromDto(this Destination dest, UpdateDestinationDto dto)
     {
         dest.Name        = dto.Name;
-        dest.Country     = dto.Country;
+        dest.Region      = dto.Region;
         dest.Description = dto.Description;
         dest.ImageUrl    = dto.ImageUrl;
         dest.UpdatedAt   = DateTime.UtcNow;
