@@ -228,13 +228,32 @@ public class HotelService : IHotelService
         await _db.SaveChangesAsync();
     }
 
-    // Used for both rejection (of pending) and policy suspension (of active).
+    // Reject a pending listing — only valid while the hotel is still PendingApproval.
+    // Use SuspendHotelAsync instead for hotels that are already Active.
+    public async Task RejectHotelAsync(int hotelId)
+    {
+        var hotel = await GetHotelOrThrowAsync(hotelId);
+
+        if (hotel.Status != HotelStatus.PendingApproval)
+            throw new ValidationException(
+                "Only PendingApproval hotels can be rejected. " +
+                "To disable an Active hotel, use the suspend endpoint instead.");
+
+        hotel.Status    = HotelStatus.Rejected;
+        hotel.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    // Suspend an already-Active listing (policy violation, complaints, etc.).
+    // For rejecting a pending listing, use RejectHotelAsync instead.
     public async Task SuspendHotelAsync(int hotelId)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
 
-        if (hotel.Status == HotelStatus.Inactive)
-            throw new ValidationException("Hotel is already inactive and cannot be suspended.");
+        if (hotel.Status != HotelStatus.Active)
+            throw new ValidationException(
+                "Only Active hotels can be suspended. " +
+                "Use the reject endpoint for PendingApproval hotels.");
 
         hotel.Status    = HotelStatus.Suspended;
         hotel.UpdatedAt = DateTime.UtcNow;
