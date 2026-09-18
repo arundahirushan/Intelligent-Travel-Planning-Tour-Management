@@ -1,16 +1,20 @@
 namespace TourManagement.Api.Configurations;
 
-// Placeholder options classes for strongly-typed configuration.
-// Values bound from appsettings.json / environment variables / user-secrets.
-// Never commit real secrets.
+// Strongly-typed settings classes. Values are bound from appsettings.json
+// and overridden by user-secrets / environment variables at runtime.
+// Never commit real secrets — use "dotnet user-secrets set ..." instead.
 
-// JWT configuration (issuer, audience, secret key, expiry).
+// JWT signing / validation settings.
 public class JwtSettings
 {
-    // Properties added later.
+    public string Issuer { get; set; } = string.Empty;
+    public string Audience { get; set; } = string.Empty;
+    public string SecretKey { get; set; } = string.Empty;
+    // How many hours until the token expires (default: 2).
+    public int ExpiresInHours { get; set; } = 2;
 }
 
-// PayHere payment gateway configuration (merchant ID, secret, etc.).
+// PayHere payment gateway configuration (used by a different team member's component).
 public class PayHereSettings
 {
     // Properties added later.
