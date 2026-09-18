@@ -163,7 +163,20 @@ public class HotelsController : ControllerBase
         return Ok(ApiResponse.Ok("Hotel approved."));
     }
 
-    /// <summary>Suspend a hotel (used for rejection or policy violations). Admin / SuperAdmin only.</summary>
+    /// <summary>
+    /// Reject a pending hotel listing (Status → Rejected). Admin / SuperAdmin only.
+    /// Only valid when the hotel is still PendingApproval.
+    /// To disable an already-Active hotel, use the suspend endpoint instead.
+    /// </summary>
+    [HttpPost("{id}/reject")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
+    public async Task<ActionResult<ApiResponse>> Reject(int id)
+    {
+        await _hotelService.RejectHotelAsync(id);
+        return Ok(ApiResponse.Ok("Hotel listing rejected."));
+    }
+
+    /// <summary>Suspend an active hotel (Status → Suspended). Admin / SuperAdmin only. Use reject for pending listings.</summary>
     [HttpPost("{id}/suspend")]
     [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
     public async Task<ActionResult<ApiResponse>> Suspend(int id)
