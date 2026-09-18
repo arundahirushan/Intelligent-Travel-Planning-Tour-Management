@@ -30,4 +30,7 @@ public class Trip
     // Navigation properties — EF Core uses these to join the related tables.
     public User Traveler { get; set; } = null!;
     public List<ItineraryItem> ItineraryItems { get; set; } = new();
+
+    // Hotel bookings linked to this trip.
+    public List<Booking> Bookings { get; set; } = new();
 }

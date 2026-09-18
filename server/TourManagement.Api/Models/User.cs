@@ -21,7 +21,9 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation property — EF Core uses this to know about the one-to-many
-    // relationship between User and Trip.
+    // Navigation properties — EF Core uses these to join related tables.
     public List<Trip> Trips { get; set; } = new();
+
+    // Hotels this user owns (only populated when Role = HotelOwner).
+    public List<Hotel> Hotels { get; set; } = new();
 }

@@ -10,7 +10,7 @@ public class UpdateDestinationDto
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    public string Country { get; set; } = string.Empty;
+    public string Region { get; set; } = string.Empty;
 
     [Required]
     public string Description { get; set; } = string.Empty;

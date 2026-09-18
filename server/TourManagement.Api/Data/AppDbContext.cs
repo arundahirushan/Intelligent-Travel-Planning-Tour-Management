@@ -14,6 +14,9 @@ public class AppDbContext : DbContext
     public DbSet<Destination> Destinations => Set<Destination>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<ItineraryItem> ItineraryItems => Set<ItineraryItem>();
+    public DbSet<Hotel> Hotels => Set<Hotel>();
+    public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,6 +41,14 @@ public class AppDbContext : DbContext
                   .WithOne(t => t.Traveler)
                   .HasForeignKey(t => t.TravelerId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            // A HotelOwner can have many hotels. We RESTRICT deletion here:
+            // deleting an owner account with hotels would silently lose booking
+            // history. The service layer must handle this explicitly.
+            entity.HasMany(u => u.Hotels)
+                  .WithOne(h => h.Owner)
+                  .HasForeignKey(h => h.OwnerId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── Destination ──────────────────────────────────────────────────────
@@ -70,6 +81,14 @@ public class AppDbContext : DbContext
                   .WithOne(i => i.Trip)
                   .HasForeignKey(i => i.TripId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            // RESTRICT trip deletion if it has bookings — deleting a trip that
+            // has bookings would break hotel booking history.
+            // The service layer should handle this with a clear error message.
+            entity.HasMany(t => t.Bookings)
+                  .WithOne(b => b.Trip)
+                  .HasForeignKey(b => b.TripId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── ItineraryItem ────────────────────────────────────────────────────
@@ -83,6 +102,69 @@ public class AppDbContext : DbContext
                   .WithMany(d => d.ItineraryItems)
                   .HasForeignKey(i => i.DestinationId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Hotel ─────────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Hotel>(entity =>
+        {
+            // Store HotelStatus as a string for readability.
+            entity.Property(h => h.Status)
+                  .HasConversion<string>();
+
+            // These are used in WHERE clauses for filtering/search.
+            entity.HasIndex(h => h.DestinationId);
+            entity.HasIndex(h => h.Status);
+
+            // Rooms have no meaning without their hotel — cascade delete them.
+            entity.HasMany(h => h.Rooms)
+                  .WithOne(r => r.Hotel)
+                  .HasForeignKey(r => r.HotelId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // A Hotel belongs to a Destination. RESTRICT deletion of a Destination
+            // that still has hotels pointing to it.
+            entity.HasOne(h => h.Destination)
+                  .WithMany(d => d.Hotels)
+                  .HasForeignKey(h => h.DestinationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Room ──────────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Room>(entity =>
+        {
+            // Store RoomStatus as a string.
+            entity.Property(r => r.Status)
+                  .HasConversion<string>();
+
+            // PricePerNight is money — store with 2 decimal places.
+            entity.Property(r => r.PricePerNight)
+                  .HasColumnType("decimal(18,2)");
+
+            // Indexed because the search query filters by HotelId.
+            entity.HasIndex(r => r.HotelId);
+
+            // RESTRICT: don't allow deleting a room that has existing bookings.
+            // The booking history must be preserved.
+            entity.HasMany(r => r.Bookings)
+                  .WithOne(b => b.Room)
+                  .HasForeignKey(b => b.RoomId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Booking ───────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Booking>(entity =>
+        {
+            // Store BookingStatus as a string.
+            entity.Property(b => b.Status)
+                  .HasConversion<string>();
+
+            // All three columns are frequently used in WHERE clauses.
+            entity.HasIndex(b => b.RoomId);
+            entity.HasIndex(b => b.TripId);
+            entity.HasIndex(b => b.Status);
         });
     }
 }
