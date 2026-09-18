@@ -1,0 +1,155 @@
+Intelligent-Travel-Planning-Tour-Management/
+├── .github
+│   └── workflows
+│       └── backend-ci.yml
+├── .gitignore
+├── PROJECT_STRUCTURE.md
+├── README.md
+├── ai-service
+│   ├── .env.example
+│   ├── agents
+│   │   ├── __init__.py
+│   │   ├── planning_agent.py
+│   │   ├── recommendation_agent.py
+│   │   ├── validation_agent.py
+│   │   └── weather_agent.py
+│   ├── graph
+│   │   └── workflow_graph.py
+│   ├── main.py
+│   ├── requirements.txt
+│   ├── schemas
+│   │   └── .gitkeep
+│   ├── state
+│   │   └── workflow_state.py
+│   ├── tests
+│   │   └── .gitkeep
+│   └── tools
+│       └── .gitkeep
+├── client
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── .oxlintrc.json
+│   ├── README.md
+│   ├── index.html
+│   ├── package.json
+│   ├── public
+│   │   ├── favicon.svg
+│   │   └── icons.svg
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.jsx
+│   │   ├── assets
+│   │   │   ├── .gitkeep
+│   │   │   ├── hero.png
+│   │   │   ├── react.svg
+│   │   │   └── vite.svg
+│   │   ├── components
+│   │   │   └── .gitkeep
+│   │   ├── context
+│   │   │   └── .gitkeep
+│   │   ├── features
+│   │   │   └── .gitkeep
+│   │   ├── hooks
+│   │   │   └── .gitkeep
+│   │   ├── index.css
+│   │   ├── main.jsx
+│   │   ├── pages
+│   │   │   ├── HomePage.jsx
+│   │   │   ├── LoginPage.jsx
+│   │   │   └── RegisterPage.jsx
+│   │   ├── routes
+│   │   │   ├── AppRoutes.jsx
+│   │   │   └── ProtectedRoute.jsx
+│   │   ├── services
+│   │   │   └── api.js
+│   │   ├── styles
+│   │   │   └── global.css
+│   │   └── utils
+│   │       ├── .gitkeep
+│   │       ├── constants.js
+│   │       └── formatters.js
+│   └── vite.config.js
+├── docs
+│   ├── adr
+│   │   └── .gitkeep
+│   └── er-diagram
+│       └── .gitkeep
+├── first prompt.md
+├── mobile
+│   └── tour_management_mobile
+│       ├── lib
+│       │   ├── app.dart
+│       │   ├── core
+│       │   │   ├── constants
+│       │   │   │   └── app_constants.dart
+│       │   │   ├── network
+│       │   │   │   └── api_client.dart
+│       │   │   ├── theme
+│       │   │   │   └── app_theme.dart
+│       │   │   └── utils
+│       │   │       └── .gitkeep
+│       │   ├── main.dart
+│       │   ├── models
+│       │   │   └── .gitkeep
+│       │   ├── routes
+│       │   │   └── app_routes.dart
+│       │   ├── screens
+│       │   │   └── .gitkeep
+│       │   ├── services
+│       │   │   └── auth_service.dart
+│       │   ├── state
+│       │   │   └── .gitkeep
+│       │   └── widgets
+│       │       └── .gitkeep
+│       └── pubspec.yaml
+└── server
+    ├── TourManagement.Api
+    │   ├── AgentIntegration
+    │   │   ├── AgentServiceClient.cs
+    │   │   ├── IAgentServiceClient.cs
+    │   │   └── Models
+    │   │       └── WorkflowDtos.cs
+    │   ├── Common
+    │   │   └── ApiResponse.cs
+    │   ├── Configurations
+    │   │   └── AppSettings.cs
+    │   ├── Controllers
+    │   │   └── WorkflowsController.cs
+    │   ├── Data
+    │   │   ├── AppDbContext.cs
+    │   │   └── SeedData.cs
+    │   ├── Dtos
+    │   │   └── .gitkeep
+    │   ├── Extensions
+    │   │   └── ServiceCollectionExtensions.cs
+    │   ├── Middleware
+    │   │   └── ExceptionHandlingMiddleware.cs
+    │   ├── Models
+    │   │   └── .gitkeep
+    │   ├── Program.cs
+    │   ├── Properties
+    │   │   └── launchSettings.json
+    │   ├── Repositories
+    │   │   ├── Implementations
+    │   │   │   └── .gitkeep
+    │   │   └── Interfaces
+    │   │       └── .gitkeep
+    │   ├── Services
+    │   │   ├── Implementations
+    │   │   │   └── .gitkeep
+    │   │   └── Interfaces
+    │   │       └── .gitkeep
+    │   ├── TourManagement.Api.csproj
+    │   ├── TourManagement.Api.http
+    │   ├── appsettings.Development.json
+    │   └── appsettings.json
+    ├── TourManagement.Api.Tests
+    │   ├── Controllers
+    │   │   └── .gitkeep
+    │   ├── Integration
+    │   │   └── .gitkeep
+    │   ├── Services
+    │   │   └── .gitkeep
+    │   ├── TourManagement.Api.Tests.csproj
+    │   └── UnitTest1.cs
+    └── TourManagement.sln
