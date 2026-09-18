@@ -6,6 +6,7 @@ public enum HotelStatus
 {
     PendingApproval,  // just submitted, waiting for Admin review
     Active,           // approved and visible to travelers
-    Suspended,        // disabled by Admin (policy violation or used as rejection)
+    Rejected,         // Admin reviewed and denied a PendingApproval listing
+    Suspended,        // Admin disabled an already-Active listing (policy violation etc.)
     Inactive          // soft-deleted by the owner; hidden but history is preserved
 }
