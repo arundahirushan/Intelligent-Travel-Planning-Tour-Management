@@ -41,7 +41,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDestinationService, TourManagement.Api.Services.Implementations.DestinationService>();
         services.AddScoped<ITripService,        TourManagement.Api.Services.Implementations.TripService>();
         services.AddScoped<IHotelService,       TourManagement.Api.Services.Implementations.HotelService>();
-        services.AddScoped<IBookingService,     TourManagement.Api.Services.Implementations.BookingService>();
+        services.AddScoped<IHotelBookingService,     TourManagement.Api.Services.Implementations.HotelBookingService>();
+        services.AddScoped<IVehicleService,     TourManagement.Api.Services.Implementations.VehicleService>();
+        services.AddScoped<IVehicleBookingService, TourManagement.Api.Services.Implementations.VehicleBookingService>();
 
         return services;
     }

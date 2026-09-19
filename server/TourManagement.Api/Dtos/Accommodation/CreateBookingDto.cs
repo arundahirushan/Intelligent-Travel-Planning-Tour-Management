@@ -1,23 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace TourManagement.Api.Dtos.Accommodation;
 
-// What the client sends when creating a new hotel booking.
-public class CreateBookingDto
-{
-    [Required]
-    public int TripId { get; set; }
-
-    [Required]
-    public int RoomId { get; set; }
-
-    [Required]
-    public DateTime CheckInDate { get; set; }
-
-    [Required]
-    public DateTime CheckOutDate { get; set; }
-
-    [Required]
-    [Range(1, int.MaxValue, ErrorMessage = "NumberOfRooms must be at least 1.")]
-    public int NumberOfRooms { get; set; }
-}
+// This DTO has been renamed to CreateHotelBookingDto (see CreateHotelBookingDto.cs).
+// This file is kept to avoid git history loss but no longer defines a type.
