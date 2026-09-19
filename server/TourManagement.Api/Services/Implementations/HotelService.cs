@@ -136,13 +136,13 @@ public class HotelService : IHotelService
     }
 
     // HotelOwner sees bookings for their hotel (read-only, for managing availability).
-    public async Task<PagedResult<BookingSummaryDto>> GetHotelBookingsAsync(
+    public async Task<PagedResult<HotelBookingSummaryDto>> GetHotelBookingsAsync(
         int hotelId, int requestingUserId, int page, int pageSize)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
         CheckOwner(hotel, requestingUserId);
 
-        var query = _db.Bookings
+        var query = _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .Where(b => b.Room.HotelId == hotelId)
             .OrderByDescending(b => b.CreatedAt);
@@ -154,7 +154,7 @@ public class HotelService : IHotelService
             .Select(b => b.ToSummaryDto())
             .ToListAsync();
 
-        return new PagedResult<BookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+        return new PagedResult<HotelBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
     // ── Admin / SuperAdmin operations ────────────────────────────────────────
@@ -228,13 +228,32 @@ public class HotelService : IHotelService
         await _db.SaveChangesAsync();
     }
 
-    // Used for both rejection (of pending) and policy suspension (of active).
+    // Reject a pending listing — only valid while the hotel is still PendingApproval.
+    // Use SuspendHotelAsync instead for hotels that are already Active.
+    public async Task RejectHotelAsync(int hotelId)
+    {
+        var hotel = await GetHotelOrThrowAsync(hotelId);
+
+        if (hotel.Status != HotelStatus.PendingApproval)
+            throw new ValidationException(
+                "Only PendingApproval hotels can be rejected. " +
+                "To disable an Active hotel, use the suspend endpoint instead.");
+
+        hotel.Status    = HotelStatus.Rejected;
+        hotel.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    // Suspend an already-Active listing (policy violation, complaints, etc.).
+    // For rejecting a pending listing, use RejectHotelAsync instead.
     public async Task SuspendHotelAsync(int hotelId)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
 
-        if (hotel.Status == HotelStatus.Inactive)
-            throw new ValidationException("Hotel is already inactive and cannot be suspended.");
+        if (hotel.Status != HotelStatus.Active)
+            throw new ValidationException(
+                "Only Active hotels can be suspended. " +
+                "Use the reject endpoint for PendingApproval hotels.");
 
         hotel.Status    = HotelStatus.Suspended;
         hotel.UpdatedAt = DateTime.UtcNow;
@@ -242,10 +261,10 @@ public class HotelService : IHotelService
     }
 
     // Admin oversight view of all bookings across all hotels.
-    public async Task<PagedResult<BookingSummaryDto>> GetAllBookingsAsync(
+    public async Task<PagedResult<HotelBookingSummaryDto>> GetAllBookingsAsync(
         string? status, int page, int pageSize)
     {
-        var query = _db.Bookings
+        var query = _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .AsQueryable();
 
@@ -261,7 +280,7 @@ public class HotelService : IHotelService
             .Select(b => b.ToSummaryDto())
             .ToListAsync();
 
-        return new PagedResult<BookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+        return new PagedResult<HotelBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
     // ── Public / Traveler: search and view ───────────────────────────────────
@@ -344,13 +363,16 @@ public class HotelService : IHotelService
     // Counts how many rooms of a given type are already booked (Held or Confirmed)
     // for any date range that overlaps with [checkIn, checkOut).
     //
-    // This same logic is reused by SearchAsync (above) and BookingService.CreateAsync
-    // (to validate that a new booking won't exceed TotalRooms).
+    // This same logic is reused by SearchAsync (above) and HotelBookingService.CreateAsync
+    // (to validate that a new booking won't exceed TotalRooms capacity).
     //
-    // Two date ranges overlap if: startA < endB AND startB < endA.
+    // The overlap formula is: startA < endB AND startB < endA.
+    // See Common/DateRangeHelper.cs for the canonical definition used in non-EF code.
+    // EF Core LINQ cannot call DateRangeHelper.HasOverlap directly, so the two
+    // conditions are kept inline below so EF can translate them to SQL.
     public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut)
     {
-        var booked = await _db.Bookings
+        var booked = await _db.HotelBookings
             .Where(b => b.RoomId == roomId
                      && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
                      && b.CheckInDate  < checkOut   // overlap condition part 1

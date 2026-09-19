@@ -17,12 +17,12 @@ public interface IHotelService
     Task<HotelDetailDto> UpdateRoomAsync(int hotelId, int roomId, UpdateRoomDto dto, int requestingUserId);
     Task<HotelDetailDto> DeactivateRoomAsync(int hotelId, int roomId, int requestingUserId);
 
-    Task<PagedResult<BookingSummaryDto>> GetHotelBookingsAsync(int hotelId, int requestingUserId, int page, int pageSize);
+    Task<PagedResult<HotelBookingSummaryDto>> GetHotelBookingsAsync(int hotelId, int requestingUserId, int page, int pageSize);
 
-    // ── Shared helper ─────────────────────────────────────────────────────────
+    // ── Shared helper ──────────────────────────────────────────────────
 
     // Counts rooms already booked (Held or Confirmed) for a room type in a date range.
-    // Used by both SearchAsync and BookingService to avoid duplicating the overlap logic.
+    // Used by both SearchAsync and HotelBookingService to avoid duplicating the overlap logic.
     Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut);
 
     // ── Admin / SuperAdmin operations ────────────────────────────────────────
@@ -30,9 +30,10 @@ public interface IHotelService
     Task<PagedResult<HotelSummaryDto>> GetAllHotelsAsync(string? status, int? destinationId, int? ownerId, string? search, string? sort, int page, int pageSize);
     Task<PagedResult<HotelSummaryDto>> GetPendingHotelsAsync(int page, int pageSize);
     Task ApproveHotelAsync(int hotelId);
-    Task SuspendHotelAsync(int hotelId);  // used for both reject and policy suspension
+    Task RejectHotelAsync(int hotelId);   // only valid from PendingApproval → Rejected
+    Task SuspendHotelAsync(int hotelId);  // only valid from Active → Suspended
 
-    Task<PagedResult<BookingSummaryDto>> GetAllBookingsAsync(string? status, int page, int pageSize);
+    Task<PagedResult<HotelBookingSummaryDto>> GetAllBookingsAsync(string? status, int page, int pageSize);
 
     // ── Public / Traveler operations ─────────────────────────────────────────
 

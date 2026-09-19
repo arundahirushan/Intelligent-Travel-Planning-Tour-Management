@@ -26,4 +26,7 @@ public class User
 
     // Hotels this user owns (only populated when Role = HotelOwner).
     public List<Hotel> Hotels { get; set; } = new();
+
+    // Vehicles this user owns (only populated when Role = TransportProvider).
+    public List<Vehicle> Vehicles { get; set; } = new();
 }
