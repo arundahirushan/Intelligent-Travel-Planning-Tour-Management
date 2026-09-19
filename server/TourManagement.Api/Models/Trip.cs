@@ -33,4 +33,7 @@ public class Trip
 
     // Hotel bookings linked to this trip.
     public List<Booking> Bookings { get; set; } = new();
+
+    // Vehicle bookings linked to this trip.
+    public List<VehicleBooking> VehicleBookings { get; set; } = new();
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TourManagement.Api.Data;
@@ -11,9 +12,11 @@ using TourManagement.Api.Data;
 namespace TourManagement.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260918111928_AddRejectedStatus")]
+    partial class AddRejectedStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -332,107 +335,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("TourManagement.Api.Models.Vehicle", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Capacity")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Model")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("PricePerDay")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ProviderId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("RegistrationNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("VehicleType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProviderId");
-
-                    b.HasIndex("RegistrationNumber")
-                        .IsUnique();
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("Vehicles");
-                });
-
-            modelBuilder.Entity("TourManagement.Api.Models.VehicleBooking", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("PickupLatitude")
-                        .HasColumnType("decimal(10,7)");
-
-                    b.Property<decimal>("PickupLongitude")
-                        .HasColumnType("decimal(11,7)");
-
-                    b.Property<string>("PickupNote")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TripId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("VehicleId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("TripId");
-
-                    b.HasIndex("VehicleId");
-
-                    b.ToTable("VehicleBookings");
-                });
-
             modelBuilder.Entity("TourManagement.Api.Models.Booking", b =>
                 {
                     b.HasOne("TourManagement.Api.Models.Room", "Room")
@@ -512,36 +414,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("Traveler");
                 });
 
-            modelBuilder.Entity("TourManagement.Api.Models.Vehicle", b =>
-                {
-                    b.HasOne("TourManagement.Api.Models.User", "Provider")
-                        .WithMany("Vehicles")
-                        .HasForeignKey("ProviderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Provider");
-                });
-
-            modelBuilder.Entity("TourManagement.Api.Models.VehicleBooking", b =>
-                {
-                    b.HasOne("TourManagement.Api.Models.Trip", "Trip")
-                        .WithMany("VehicleBookings")
-                        .HasForeignKey("TripId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("TourManagement.Api.Models.Vehicle", "Vehicle")
-                        .WithMany("VehicleBookings")
-                        .HasForeignKey("VehicleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Trip");
-
-                    b.Navigation("Vehicle");
-                });
-
             modelBuilder.Entity("TourManagement.Api.Models.Destination", b =>
                 {
                     b.Navigation("Hotels");
@@ -564,8 +436,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("Bookings");
 
                     b.Navigation("ItineraryItems");
-
-                    b.Navigation("VehicleBookings");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.User", b =>
@@ -573,13 +443,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("Hotels");
 
                     b.Navigation("Trips");
-
-                    b.Navigation("Vehicles");
-                });
-
-            modelBuilder.Entity("TourManagement.Api.Models.Vehicle", b =>
-                {
-                    b.Navigation("VehicleBookings");
                 });
 #pragma warning restore 612, 618
         }
