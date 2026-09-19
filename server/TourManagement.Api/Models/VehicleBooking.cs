@@ -25,8 +25,8 @@ public class VehicleBooking
     public string? PickupNote { get; set; }
 
     // Held = tentative (blocks availability), Confirmed = finalized, Cancelled = no-op.
-    // Stored as a string in the DB (see AppDbContext).
-    public VehicleBookingStatus Status { get; set; } = VehicleBookingStatus.Held;
+    // Stored as a string in the DB (see AppDbContext). Uses the shared BookingStatus enum.
+    public BookingStatus Status { get; set; } = BookingStatus.Held;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

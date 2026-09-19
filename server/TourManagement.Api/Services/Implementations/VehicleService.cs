@@ -295,12 +295,15 @@ public class VehicleService : IVehicleService
     // This same logic is reused by SearchAsync (above) and VehicleBookingService.CreateAsync
     // (to validate that a new booking won't double-book the vehicle).
     //
-    // Two date ranges overlap if: startA < endB AND startB < endA.
+    // The overlap formula is: startA < endB AND startB < endA.
+    // See Common/DateRangeHelper.cs for the canonical definition used in non-EF code.
+    // EF Core LINQ cannot call DateRangeHelper.HasOverlap directly, so the two
+    // conditions are kept inline below so EF can translate them to SQL.
     public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate)
     {
         bool hasOverlap = await _db.VehicleBookings.AnyAsync(b =>
             b.VehicleId == vehicleId
-            && (b.Status == VehicleBookingStatus.Held || b.Status == VehicleBookingStatus.Confirmed)
+            && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
             && b.StartDate < endDate    // overlap condition part 1
             && b.EndDate   > startDate  // overlap condition part 2
         );

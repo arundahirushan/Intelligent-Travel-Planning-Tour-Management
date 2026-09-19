@@ -39,6 +39,11 @@ public class VehicleBookingService : IVehicleBookingService
         if (trip.TravelerId != travelerId)
             throw new ForbiddenException("You can only create bookings for your own trips.");
 
+        // Booking dates must fall within the trip's date range.
+        if (dto.StartDate < trip.StartDate || dto.EndDate > trip.EndDate)
+            throw new ValidationException(
+                $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
+
         // Make sure the vehicle exists and is Active.
         var vehicle = await _db.Vehicles.FindAsync(dto.VehicleId);
         if (vehicle == null)
@@ -62,7 +67,7 @@ public class VehicleBookingService : IVehicleBookingService
             PickupLatitude  = dto.PickupLatitude,
             PickupLongitude = dto.PickupLongitude,
             PickupNote      = dto.PickupNote,
-            Status          = VehicleBookingStatus.Held,
+            Status          = BookingStatus.Held,
             CreatedAt       = DateTime.UtcNow,
             UpdatedAt       = DateTime.UtcNow
         };
@@ -115,10 +120,10 @@ public class VehicleBookingService : IVehicleBookingService
         if (!isOwner && !isAdmin)
             throw new ForbiddenException("You do not have permission to cancel this booking.");
 
-        if (booking.Status == VehicleBookingStatus.Cancelled)
+        if (booking.Status == BookingStatus.Cancelled)
             throw new ValidationException("This booking is already cancelled.");
 
-        booking.Status    = VehicleBookingStatus.Cancelled;
+        booking.Status    = BookingStatus.Cancelled;
         booking.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
@@ -131,7 +136,7 @@ public class VehicleBookingService : IVehicleBookingService
             .Include(b => b.Vehicle)
             .AsQueryable();
 
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<VehicleBookingStatus>(status, out var statusEnum))
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
             query = query.Where(b => b.Status == statusEnum);
 
         query = query.OrderByDescending(b => b.CreatedAt);

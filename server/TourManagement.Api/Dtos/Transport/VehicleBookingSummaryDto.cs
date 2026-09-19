@@ -20,7 +20,7 @@ public class VehicleBookingSummaryDto
     public decimal PickupLongitude { get; set; }
     public string? PickupNote { get; set; }
 
-    public VehicleBookingStatus Status { get; set; }
+    public BookingStatus Status { get; set; }
 
     // PricePerDay × number of days. Calculated in mapping, not stored in the DB.
     public decimal TotalPrice { get; set; }

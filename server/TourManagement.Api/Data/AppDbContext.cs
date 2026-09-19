@@ -16,7 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<ItineraryItem> ItineraryItems => Set<ItineraryItem>();
     public DbSet<Hotel> Hotels => Set<Hotel>();
     public DbSet<Room> Rooms => Set<Room>();
-    public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<HotelBooking> HotelBookings => Set<HotelBooking>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<VehicleBooking> VehicleBookings => Set<VehicleBooking>();
 
@@ -94,7 +94,7 @@ public class AppDbContext : DbContext
             // RESTRICT trip deletion if it has hotel bookings — deleting a trip that
             // has bookings would break hotel booking history.
             // The service layer should handle this with a clear error message.
-            entity.HasMany(t => t.Bookings)
+            entity.HasMany(t => t.HotelBookings)
                   .WithOne(b => b.Trip)
                   .HasForeignKey(b => b.TripId)
                   .OnDelete(DeleteBehavior.Restrict);
@@ -169,10 +169,13 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── Booking ───────────────────────────────────────────────────────────
+        // ── HotelBooking ──────────────────────────────────────────────────────
 
-        modelBuilder.Entity<Booking>(entity =>
+        modelBuilder.Entity<HotelBooking>(entity =>
         {
+            // Map to the HotelBookings table (renamed from Bookings).
+            entity.ToTable("HotelBookings");
+
             // Store BookingStatus as a string.
             entity.Property(b => b.Status)
                   .HasConversion<string>();
@@ -213,7 +216,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<VehicleBooking>(entity =>
         {
-            // Store VehicleBookingStatus as a string for readability.
+            // Store BookingStatus as a string (uses the shared enum now).
             entity.Property(b => b.Status)
                   .HasConversion<string>();
 
