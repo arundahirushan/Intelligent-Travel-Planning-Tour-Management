@@ -35,5 +35,5 @@ public class Room
 
     // Navigation properties.
     public Hotel Hotel { get; set; } = null!;
-    public List<Booking> Bookings { get; set; } = new();
+    public List<HotelBooking> Bookings { get; set; } = new();
 }

@@ -4,11 +4,15 @@ using TourManagement.Api.Dtos.Accommodation;
 using TourManagement.Api.Models;
 using TourManagement.Api.Services.Implementations;
 
+using ValidationException = TourManagement.Api.Common.Exceptions.ValidationException;
+
 namespace TourManagement.Api.Tests.Services;
 
-// Tests for the two key business rules in the accommodation component:
+// Tests for the key business rules in the accommodation component:
 //  1. Search correctly excludes a fully-booked room.
 //  2. Creating a booking that would exceed TotalRooms capacity is rejected.
+//  3. Partial availability — overlapping booking leaves 1 room free.
+//  4. Booking dates outside the trip's date range are rejected.
 public class HotelServiceTests
 {
     // Creates an in-memory database seeded with a destination, hotel, and one room type.
@@ -71,12 +75,13 @@ public class HotelServiceTests
         var db = CreateDb(nameof(Search_ExcludesFullyBookedRoom));
 
         // Seed a traveler and a trip to attach bookings to.
+        // Trip spans Sep 30 – Oct 10 so it encompasses the Oct 1–5 booking dates.
         db.Users.Add(new User { Id = 20, FullName = "Traveler", Email = "t@t.com", PasswordHash = "h", Role = "Traveler" });
-        db.Trips.Add(new Trip { Id = 1, TravelerId = 20, Title = "Trip", StartDate = DateTime.Today, EndDate = DateTime.Today.AddDays(5), Budget = 10000, GroupSize = 2 });
+        db.Trips.Add(new Trip { Id = 1, TravelerId = 20, Title = "Trip", StartDate = new DateTime(2026, 9, 30), EndDate = new DateTime(2026, 10, 10), Budget = 10000, GroupSize = 2 });
         db.SaveChanges();
 
         // Book all 2 rooms for 01 Oct – 05 Oct.
-        db.Bookings.Add(new Booking
+        db.HotelBookings.Add(new HotelBooking
         {
             TripId        = 1,
             RoomId        = 1,
@@ -112,12 +117,13 @@ public class HotelServiceTests
         // Arrange: 1 of the 2 rooms is already booked for the target dates.
         var db = CreateDb(nameof(CreateBooking_RejectsWhenExceedsCapacity));
 
+        // Trip spans Sep 30 – Oct 10 so it encompasses the Oct 1–5 booking dates.
         db.Users.Add(new User { Id = 20, FullName = "Traveler", Email = "t@t.com", PasswordHash = "h", Role = "Traveler" });
-        db.Trips.Add(new Trip { Id = 1, TravelerId = 20, Title = "Trip", StartDate = DateTime.Today, EndDate = DateTime.Today.AddDays(5), Budget = 10000, GroupSize = 2 });
+        db.Trips.Add(new Trip { Id = 1, TravelerId = 20, Title = "Trip", StartDate = new DateTime(2026, 9, 30), EndDate = new DateTime(2026, 10, 10), Budget = 10000, GroupSize = 2 });
         db.SaveChanges();
 
         // 1 room already booked → only 1 left.
-        db.Bookings.Add(new Booking
+        db.HotelBookings.Add(new HotelBooking
         {
             TripId        = 1,
             RoomId        = 1,
@@ -129,10 +135,10 @@ public class HotelServiceTests
         db.SaveChanges();
 
         var hotelService   = new HotelService(db);
-        var bookingService = new BookingService(db, hotelService);
+        var bookingService = new HotelBookingService(db, hotelService);
 
         // Act: traveler tries to book 2 rooms — but only 1 is available.
-        var dto = new CreateBookingDto
+        var dto = new CreateHotelBookingDto
         {
             TripId        = 1,
             RoomId        = 1,
@@ -142,7 +148,7 @@ public class HotelServiceTests
         };
 
         // Assert: ValidationException is thrown with a clear message.
-        var ex = await Assert.ThrowsAsync<TourManagement.Api.Common.Exceptions.ValidationException>(
+        var ex = await Assert.ThrowsAsync<ValidationException>(
             () => bookingService.CreateAsync(dto, travelerId: 20));
 
         Assert.Contains("Not enough rooms available", ex.Message);
@@ -158,11 +164,12 @@ public class HotelServiceTests
         // Arrange: 1 of 2 rooms already booked → search should show AvailableRoomCount = 1.
         var db = CreateDb(nameof(Search_ShowsPartiallyAvailableRoom));
 
+        // Trip spans Sep 30 – Oct 10 so it encompasses the Oct 1–5 booking dates.
         db.Users.Add(new User { Id = 20, FullName = "Traveler", Email = "t@t.com", PasswordHash = "h", Role = "Traveler" });
-        db.Trips.Add(new Trip { Id = 1, TravelerId = 20, Title = "Trip", StartDate = DateTime.Today, EndDate = DateTime.Today.AddDays(5), Budget = 10000, GroupSize = 2 });
+        db.Trips.Add(new Trip { Id = 1, TravelerId = 20, Title = "Trip", StartDate = new DateTime(2026, 9, 30), EndDate = new DateTime(2026, 10, 10), Budget = 10000, GroupSize = 2 });
         db.SaveChanges();
 
-        db.Bookings.Add(new Booking
+        db.HotelBookings.Add(new HotelBooking
         {
             TripId        = 1,
             RoomId        = 1,
@@ -187,5 +194,40 @@ public class HotelServiceTests
         // Assert: room is still listed but with AvailableRoomCount = 1.
         Assert.Single(results);
         Assert.Equal(1, results[0].AvailableRoomCount);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 4: Booking dates outside the trip's date range are rejected
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateHotelBooking_RejectsDatesOutsideTrip()
+    {
+        // Arrange: trip runs Oct 1 – Oct 5; booking attempts to check out on Oct 7 (outside trip).
+        var db = CreateDb(nameof(CreateHotelBooking_RejectsDatesOutsideTrip));
+
+        db.Users.Add(new User { Id = 20, FullName = "Traveler", Email = "t@t.com", PasswordHash = "h", Role = "Traveler" });
+        db.Trips.Add(new Trip { Id = 1, TravelerId = 20, Title = "Trip",
+            StartDate = new DateTime(2026, 10, 1), EndDate = new DateTime(2026, 10, 5),
+            Budget = 10000, GroupSize = 2 });
+        db.SaveChanges();
+
+        var hotelService   = new HotelService(db);
+        var bookingService = new HotelBookingService(db, hotelService);
+
+        // CheckOutDate (Oct 7) is after Trip.EndDate (Oct 5) — must be rejected.
+        var dto = new CreateHotelBookingDto
+        {
+            TripId        = 1,
+            RoomId        = 1,
+            CheckInDate   = new DateTime(2026, 10, 2),
+            CheckOutDate  = new DateTime(2026, 10, 7),   // outside trip range
+            NumberOfRooms = 1
+        };
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(
+            () => bookingService.CreateAsync(dto, travelerId: 20));
+
+        Assert.Contains("trip's date range", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }

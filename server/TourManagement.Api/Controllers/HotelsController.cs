@@ -115,13 +115,13 @@ public class HotelsController : ControllerBase
     /// <summary>Get bookings for this hotel. HotelOwner only (ownership checked in service).</summary>
     [HttpGet("{hotelId}/bookings")]
     [Authorize(Roles = Roles.HotelOwner)]
-    public async Task<ActionResult<ApiResponse<PagedResult<BookingSummaryDto>>>> GetHotelBookings(
+    public async Task<ActionResult<ApiResponse<PagedResult<HotelBookingSummaryDto>>>> GetHotelBookings(
         int hotelId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         var result = await _hotelService.GetHotelBookingsAsync(hotelId, GetCurrentUserId(), page, pageSize);
-        return Ok(ApiResponse<PagedResult<BookingSummaryDto>>.Ok(result));
+        return Ok(ApiResponse<PagedResult<HotelBookingSummaryDto>>.Ok(result));
     }
 
     // ── Admin / SuperAdmin endpoints ─────────────────────────────────────────
@@ -188,13 +188,13 @@ public class HotelsController : ControllerBase
     /// <summary>All bookings across all hotels. Admin / SuperAdmin only.</summary>
     [HttpGet("bookings-all")]
     [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
-    public async Task<ActionResult<ApiResponse<PagedResult<BookingSummaryDto>>>> GetAllBookings(
+    public async Task<ActionResult<ApiResponse<PagedResult<HotelBookingSummaryDto>>>> GetAllBookings(
         [FromQuery] string? status,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         var result = await _hotelService.GetAllBookingsAsync(status, page, pageSize);
-        return Ok(ApiResponse<PagedResult<BookingSummaryDto>>.Ok(result));
+        return Ok(ApiResponse<PagedResult<HotelBookingSummaryDto>>.Ok(result));
     }
 
     // ── Public / Traveler endpoints ──────────────────────────────────────────

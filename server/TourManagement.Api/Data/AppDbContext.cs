@@ -16,7 +16,9 @@ public class AppDbContext : DbContext
     public DbSet<ItineraryItem> ItineraryItems => Set<ItineraryItem>();
     public DbSet<Hotel> Hotels => Set<Hotel>();
     public DbSet<Room> Rooms => Set<Room>();
-    public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<HotelBooking> HotelBookings => Set<HotelBooking>();
+    public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+    public DbSet<VehicleBooking> VehicleBookings => Set<VehicleBooking>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +50,13 @@ public class AppDbContext : DbContext
             entity.HasMany(u => u.Hotels)
                   .WithOne(h => h.Owner)
                   .HasForeignKey(h => h.OwnerId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // A TransportProvider can have many vehicles. Same reasoning as above:
+            // deleting a provider with vehicles would silently lose booking history.
+            entity.HasMany(u => u.Vehicles)
+                  .WithOne(v => v.Provider)
+                  .HasForeignKey(v => v.ProviderId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -82,10 +91,17 @@ public class AppDbContext : DbContext
                   .HasForeignKey(i => i.TripId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            // RESTRICT trip deletion if it has bookings — deleting a trip that
+            // RESTRICT trip deletion if it has hotel bookings — deleting a trip that
             // has bookings would break hotel booking history.
             // The service layer should handle this with a clear error message.
-            entity.HasMany(t => t.Bookings)
+            entity.HasMany(t => t.HotelBookings)
+                  .WithOne(b => b.Trip)
+                  .HasForeignKey(b => b.TripId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // RESTRICT trip deletion if it has vehicle bookings — same reasoning as above.
+            // Consistent with the Trip → Bookings relationship for hotels.
+            entity.HasMany(t => t.VehicleBookings)
                   .WithOne(b => b.Trip)
                   .HasForeignKey(b => b.TripId)
                   .OnDelete(DeleteBehavior.Restrict);
@@ -153,16 +169,67 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── Booking ───────────────────────────────────────────────────────────
+        // ── HotelBooking ──────────────────────────────────────────────────────
 
-        modelBuilder.Entity<Booking>(entity =>
+        modelBuilder.Entity<HotelBooking>(entity =>
         {
+            // Map to the HotelBookings table (renamed from Bookings).
+            entity.ToTable("HotelBookings");
+
             // Store BookingStatus as a string.
             entity.Property(b => b.Status)
                   .HasConversion<string>();
 
             // All three columns are frequently used in WHERE clauses.
             entity.HasIndex(b => b.RoomId);
+            entity.HasIndex(b => b.TripId);
+            entity.HasIndex(b => b.Status);
+        });
+
+        // ── Vehicle ───────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Vehicle>(entity =>
+        {
+            // Store VehicleStatus as a string for readability.
+            entity.Property(v => v.Status)
+                  .HasConversion<string>();
+
+            // PricePerDay is money — store with 2 decimal places.
+            entity.Property(v => v.PricePerDay)
+                  .HasColumnType("decimal(18,2)");
+
+            // Registration numbers must be globally unique.
+            entity.HasIndex(v => v.RegistrationNumber).IsUnique();
+
+            // Status is used in WHERE clauses for search and admin filtering.
+            entity.HasIndex(v => v.Status);
+
+            // RESTRICT: don't allow deleting a vehicle that has existing bookings.
+            // The booking history must be preserved.
+            entity.HasMany(v => v.VehicleBookings)
+                  .WithOne(b => b.Vehicle)
+                  .HasForeignKey(b => b.VehicleId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── VehicleBooking ────────────────────────────────────────────────────
+
+        modelBuilder.Entity<VehicleBooking>(entity =>
+        {
+            // Store BookingStatus as a string (uses the shared enum now).
+            entity.Property(b => b.Status)
+                  .HasConversion<string>();
+
+            // Coordinates: 18 total digits, 7 decimal places gives ~1cm precision.
+            // Using the same decimal column type for consistency with other money columns,
+            // but with enough decimal places for GPS-accurate coordinates.
+            entity.Property(b => b.PickupLatitude)
+                  .HasColumnType("decimal(10,7)");
+            entity.Property(b => b.PickupLongitude)
+                  .HasColumnType("decimal(11,7)");
+
+            // All three columns are frequently used in WHERE clauses.
+            entity.HasIndex(b => b.VehicleId);
             entity.HasIndex(b => b.TripId);
             entity.HasIndex(b => b.Status);
         });
