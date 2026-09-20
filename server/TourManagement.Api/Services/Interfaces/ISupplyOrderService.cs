@@ -6,6 +6,8 @@ namespace TourManagement.Api.Services.Interfaces;
 public interface ISupplyOrderService
 {
     Task<SupplyOrderSummaryDto> CreateAsync(CreateSupplyOrderDto dto, int travelerId);
+    Task<SupplyOrderSummaryDto> UpdateAsync(int id, UpdateSupplyOrderDto dto, int travelerId);
+    Task DeleteAsync(int id, int requestingUserId, string requestingUserRole);
     
     Task<PagedResult<SupplyOrderSummaryDto>> GetMyOrdersAsync(
         int travelerId, string? status, string? sort, int page, int pageSize);

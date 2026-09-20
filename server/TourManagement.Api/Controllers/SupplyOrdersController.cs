@@ -26,6 +26,12 @@ public class SupplyOrdersController : ControllerBase
         return int.Parse(claim);
     }
 
+    private string GetCurrentUserRole()
+    {
+        return User.FindFirstValue(ClaimTypes.Role)
+            ?? throw new InvalidOperationException("Role claim not found in token.");
+    }
+
     // ── Traveler endpoints ───────────────────────────────────────────────────
 
     /// <summary>Create a new supply order for a trip. Traveler only.</summary>
@@ -57,17 +63,24 @@ public class SupplyOrdersController : ControllerBase
     [Authorize(Roles = $"{Roles.Traveler},{Roles.Admin},{Roles.SuperAdmin}")]
     public async Task<ActionResult<ApiResponse<SupplyOrderSummaryDto>>> Cancel(int id)
     {
-        // For Admin overriding, we'd theoretically pass a different ID or bypass the check, 
-        // but for simplicity the service expects the travelerId. 
-        // If the user is Admin, they might not own the trip, so the service might forbid them 
-        // unless we pass a special flag or check their role inside the service.
-        // Wait, the prompt says "only the trip's owner or Admin".
-        // Let's pass the UserId and if it fails, maybe we need to adjust the service.
-        // But the prompt in Part 4 says: "Only the Traveler who owns the referenced Trip can place this order"
-        // And "For POST /api/supply-orders/{id}/cancel... restores stock".
-        // We will pass the current user's ID.
         var result = await _supplyOrderService.CancelAsync(id, GetCurrentUserId());
         return Ok(ApiResponse<SupplyOrderSummaryDto>.Ok(result, "Supply order cancelled."));
+    }
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = Roles.Traveler)]
+    public async Task<ActionResult<ApiResponse<SupplyOrderSummaryDto>>> Update(int id, [FromBody] UpdateSupplyOrderDto dto)
+    {
+        var result = await _supplyOrderService.UpdateAsync(id, dto, GetCurrentUserId());
+        return Ok(ApiResponse<SupplyOrderSummaryDto>.Ok(result, "Supply order updated."));
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = $"{Roles.Traveler},{Roles.Admin},{Roles.SuperAdmin}")]
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
+    {
+        await _supplyOrderService.DeleteAsync(id, GetCurrentUserId(), GetCurrentUserRole());
+        return Ok(ApiResponse.Ok("Supply order deleted."));
     }
 
     // ── Supplier endpoints ───────────────────────────────────────────────────

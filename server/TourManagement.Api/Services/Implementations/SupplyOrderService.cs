@@ -69,6 +69,76 @@ public class SupplyOrderService : ISupplyOrderService
         return order.ToSummaryDto();
     }
 
+    public async Task<SupplyOrderSummaryDto> UpdateAsync(int id, UpdateSupplyOrderDto dto, int travelerId)
+    {
+        var order = await _db.SupplyOrders
+            .Include(o => o.Trip)
+            .Include(o => o.Supply)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+            throw new NotFoundException($"SupplyOrder with ID {id} not found.");
+
+        if (order.Trip.TravelerId != travelerId)
+            throw new ForbiddenException("You do not have permission to modify this order.");
+
+        if (order.Status != BookingStatus.Held)
+            throw new ValidationException($"Cannot modify a booking that is already {order.Status}.");
+
+        // Restore old quantity
+        order.Supply.StockQuantity += order.Quantity;
+
+        var newSupply = await _db.Supplies.FirstOrDefaultAsync(s => s.Id == dto.SupplyId);
+        if (newSupply == null || newSupply.Status != SupplyStatus.Active)
+            throw new ValidationException("Supply is not available or does not exist.");
+
+        bool hasValidContract = await _contractService.IsContractCurrentlyValidAsync(newSupply.SupplierId);
+        if (!hasValidContract)
+            throw new ValidationException("This supplier does not currently have a valid contract.");
+
+        if (newSupply.StockQuantity < dto.Quantity)
+            throw new ValidationException("Insufficient stock available.");
+
+        newSupply.StockQuantity -= dto.Quantity;
+        newSupply.UpdatedAt = DateTime.UtcNow;
+
+        order.SupplyId = dto.SupplyId;
+        order.Quantity = dto.Quantity;
+        order.PriceAtOrderTime = newSupply.PricePerUnit;
+        order.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        order.Supply = newSupply;
+        return order.ToSummaryDto();
+    }
+
+    public async Task DeleteAsync(int id, int requestingUserId, string requestingUserRole)
+    {
+        var order = await _db.SupplyOrders
+            .Include(o => o.Trip)
+            .Include(o => o.Supply)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+            throw new NotFoundException($"SupplyOrder with ID {id} not found.");
+
+        bool isOwner = order.Trip.TravelerId == requestingUserId;
+        bool isAdmin = requestingUserRole == Roles.Admin || requestingUserRole == Roles.SuperAdmin;
+
+        if (!isOwner && !isAdmin)
+            throw new ForbiddenException("You do not have permission to delete this order.");
+
+        if (order.Status != BookingStatus.Held)
+            throw new ValidationException($"Cannot modify a booking that is already {order.Status}.");
+
+        order.Supply.StockQuantity += order.Quantity;
+        order.Supply.UpdatedAt = DateTime.UtcNow;
+
+        _db.SupplyOrders.Remove(order);
+        await _db.SaveChangesAsync();
+    }
+
     public async Task<PagedResult<SupplyOrderSummaryDto>> GetMyOrdersAsync(
         int travelerId, string? status, string? sort, int page, int pageSize)
     {

@@ -370,16 +370,20 @@ public class HotelService : IHotelService
     // See Common/DateRangeHelper.cs for the canonical definition used in non-EF code.
     // EF Core LINQ cannot call DateRangeHelper.HasOverlap directly, so the two
     // conditions are kept inline below so EF can translate them to SQL.
-    public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut)
+    public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludeBookingId = null)
     {
-        var booked = await _db.HotelBookings
+        var query = _db.HotelBookings
             .Where(b => b.RoomId == roomId
                      && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
                      && b.CheckInDate  < checkOut   // overlap condition part 1
-                     && b.CheckOutDate > checkIn)   // overlap condition part 2
-            .SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
+                     && b.CheckOutDate > checkIn);  // overlap condition part 2
 
-        return booked;
+        if (excludeBookingId.HasValue)
+        {
+            query = query.Where(b => b.Id != excludeBookingId.Value);
+        }
+
+        return await query.SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

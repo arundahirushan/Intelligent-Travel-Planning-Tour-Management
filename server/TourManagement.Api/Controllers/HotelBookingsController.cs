@@ -64,4 +64,20 @@ public class HotelBookingsController : ControllerBase
         await _bookingService.CancelAsync(id, GetCurrentUserId(), GetCurrentUserRole());
         return Ok(ApiResponse.Ok("Hotel booking cancelled."));
     }
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = Roles.Traveler)]
+    public async Task<ActionResult<ApiResponse<HotelBookingSummaryDto>>> Update(int id, [FromBody] UpdateHotelBookingDto dto)
+    {
+        var result = await _bookingService.UpdateAsync(id, dto, GetCurrentUserId());
+        return Ok(ApiResponse<HotelBookingSummaryDto>.Ok(result, "Hotel booking updated."));
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
+    {
+        await _bookingService.DeleteAsync(id, GetCurrentUserId(), GetCurrentUserRole());
+        return Ok(ApiResponse.Ok("Hotel booking deleted."));
+    }
 }
