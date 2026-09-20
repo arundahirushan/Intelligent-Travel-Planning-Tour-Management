@@ -35,4 +35,7 @@ public class Supply
 
     // Navigation property
     public User Supplier { get; set; } = null!;
+    
+    // Supply orders referencing this supply
+    public List<SupplyOrder> SupplyOrders { get; set; } = new();
 }
