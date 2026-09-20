@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html lang="en" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "charcoal": "#0F172A",
+            "canvas": "#F8FAFC",
+            "robin": "#0284C7",
+            "robin-dark": "#0369A1",
+            "primary": "#0284C7",
+            "accent-blue": "#0284C7",
+            "sapphire": "#1A56DB",
+            "sapphire-dark": "#1746B3"
+          },
+          fontFamily: {
+            headline: ["Manrope", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    @layer base {
+      html { scroll-behavior: smooth; }
+      body { background-color: #F8FAFC; color: #0F172A; }
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+<body class="font-body text-[#0F172A] bg-[#F8FAFC] antialiased selection:bg-[#0284C7] selection:text-white">
+<!-- 1. CLEAN NAVIGATION BAR -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-[#F8FAFC]/90 backdrop-blur-md border-b border-[#BAE6FD]/70 transition-all">
+<div class="max-w-7xl mx-auto h-20 px-6 lg:px-12 flex items-center justify-between">
+<!-- Logo -->
+<a class="flex items-center gap-3 group" href="#">
+<div class="h-10 w-auto flex items-center">
+<img alt="Ceylon Dispatch Logo" class="h-9 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Ucrl340Gs4ZqRBHHSCgK8XwQYBpuY0dL1xyap1V_AZbQaa8pF2rykwWsqvs6BfinljpxoMBMoolxmNDL7YAgJlH_7P0IaPsIQpF11sWfoKbN2H3c0VJ35bcLsx9G7ix3cWhExL_zzCofgQS1ck_dct-JptSVipnLl7B7T3IbAgvBIfkM-8mOErRBu2uZBHwg3V1oZGIktmEPT4pZ-EHYF6LveN2-nwl5r0N_wtZ16kUwlbi5_fbgZ0sY8"/>
+</div>
+</a>
+<!-- Clean Nav Links -->
+<nav class="hidden md:flex items-center gap-9">
+<a class="font-headline text-sm font-semibold tracking-wide text-[#0F172A]/80 hover:text-[#0284C7] transition-colors" href="#destinations">Destinations</a>
+<a class="font-headline text-sm font-semibold tracking-wide text-[#0F172A]/80 hover:text-[#0284C7] transition-colors" href="#experiences">Experiences</a>
+<a class="font-headline text-sm font-semibold tracking-wide text-[#0F172A]/80 hover:text-[#0284C7] transition-colors" href="#stories">About Us</a>
+<a class="font-headline text-sm font-semibold tracking-wide text-[#0F172A]/80 hover:text-[#0284C7] transition-colors" href="#plan">Plan Your Trip</a>
+</nav>
+<!-- Crisp CTA Button -->
+<div class="flex flex-col items-center justify-center"><a class="inline-flex items-center justify-center px-6 py-2 bg-[#0284C7] text-white font-headline text-xs font-bold uppercase tracking-widest rounded-full hover:bg-[#0369A1] transition-all shadow-sm" href="#plan">Log in</a><a class="text-xs text-slate-600 hover:text-slate-900 underline mt-1 tracking-wide" href="#register">Register</a></div>
+</div>
+</header>
+<main class="w-full">
+<!-- 2. SIMPLIFIED HERO SECTION -->
+<section class="relative w-full min-h-[92vh] flex items-center justify-center overflow-hidden bg-[#0A1120] text-white pt-20">
+<!-- Cinematic Backdrop Image -->
+<div class="absolute inset-0 z-0">
+<img alt="Sigiriya Citadel rising in morning mist" class="w-full h-full object-cover object-center transform scale-100" src="https://lh3.googleusercontent.com/aida/AEtjO1ULtv5QazTvhv1D91njb8U3_kwPXG6Ar-OQzMSzZXlngUkG9HGDEFeT-blNAjqvgH6ZjGuFhHkHO5Svv8-EATrKeJCPCG21HfNruNc5PhWqZVvwNTcEitiXtHK6ka_lAYFWvIXwxNWIQt7lBGUiuEfMUymIhrREsfAF08d2PgSgHs9PP0l512Vsb2p15XlE4-qjsNmjbUswYHouRltiSFji_fF6nwhvOmDFRwQQnv22qUkZGfROJPmEqE4"/>
+<!-- Gentle dark gradient for effortless readability -->
+<div class="absolute inset-0 bg-gradient-to-t from-[#0A1120] via-[#0A1120]/50 to-[#0A1120]/30"></div>
+<div class="absolute inset-0 bg-black/25"></div>
+</div>
+<!-- Hero Content -->
+<div class="relative z-10 max-w-4xl mx-auto px-6 py-20 text-center flex flex-col items-center">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[#38BDF8] font-headline text-xs font-bold uppercase tracking-widest mb-6">
+<span class="w-2 h-2 rounded-full bg-[#0284C7]"></span>
+          Ceylon Dispatch
+        </div>
+<h1 class="font-headline text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight uppercase leading-[1.1] mb-6 text-white">
+          One Island.<br/>Endless Stories.
+        </h1>
+<p class="font-body text-base sm:text-xl text-white/85 max-w-2xl font-light leading-relaxed mb-10">
+          Curated journeys through ancient kingdoms, misty highland peaks, and wild Indian Ocean shores.
+        </p>
+<!-- CTAs -->
+<div class="flex flex-col sm:flex-row items-center gap-5">
+<a class="inline-flex items-center justify-center px-8 py-3.5 bg-[#0284C7] text-white font-headline text-xs font-bold uppercase tracking-widest rounded-full hover:bg-[#0369A1] transition-all duration-200 shadow-lg group" href="#destinations">
+<span class="">Explore Sri Lanka</span>
+<span class="material-symbols-outlined text-[18px] ml-2 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+<!-- 3. POPULAR DESTINATIONS SECTION -->
+<section class="w-full py-24 px-6 lg:px-12 max-w-7xl mx-auto" id="destinations">
+<!-- Clean Editorial Header -->
+<div class="mb-14 text-center max-w-2xl mx-auto">
+<span class="font-headline text-xs font-bold uppercase tracking-widest text-[#0284C7] block mb-2">Curated Highlights</span>
+<h2 class="font-headline text-3xl sm:text-4xl font-bold tracking-tight text-[#0F172A] uppercase">Popular Destinations</h2>
+<p class="font-body text-base text-[#475569] mt-3">Essential places to begin your journey across the island.</p>
+</div>
+<!-- 5 Large Visually Striking Destination Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Sigiriya -->
+<div class="group relative bg-slate-900 rounded-2xl overflow-hidden shadow-sm aspect-[4/5] flex flex-col justify-end p-8 cursor-pointer">
+<img alt="Sigiriya Rock Fortress" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AEtjO1ULtv5QazTvhv1D91njb8U3_kwPXG6Ar-OQzMSzZXlngUkG9HGDEFeT-blNAjqvgH6ZjGuFhHkHO5Svv8-EATrKeJCPCG21HfNruNc5PhWqZVvwNTcEitiXtHK6ka_lAYFWvIXwxNWIQt7lBGUiuEfMUymIhrREsfAF08d2PgSgHs9PP0l512Vsb2p15XlE4-qjsNmjbUswYHouRltiSFji_fF6nwhvOmDFRwQQnv22qUkZGfROJPmEqE4"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity"></div>
+<div class="relative z-10 text-white">
+<h3 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2 group-hover:text-[#38BDF8] transition-colors">Sigiriya</h3>
+<p class="font-body text-sm text-white/85 line-clamp-1 mb-4">5th-century ancient rock citadel &amp; water gardens.</p>
+<div class="inline-flex items-center gap-1 font-headline text-xs font-bold uppercase tracking-wider text-[#38BDF8]">
+<span class="">Explore</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Weligama & Mirissa -->
+<div class="group relative bg-slate-900 rounded-2xl overflow-hidden shadow-sm aspect-[4/5] flex flex-col justify-end p-8 cursor-pointer">
+<img alt="Weligama Stilt Fishermen" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AEtjO1UBRpSYh4IYhL_51BxbiXmh5Eaoc_o1De0bTeZl1KRAt4BZm59RFJDB7NczHqnUJ02qr1KyVUVEkRyyWlW8dPg5RdL_Iz8SFgJUWCTDrWW77NDqLLIXrsb0Z-WexUa3SzTvnT961LVuUyOMazu_hMn7a6syRwRwW1tLrPzplUoeCqC2F9KYZchIRI12gIID2rumCoDkVLoRfu9hLBGYowNa_UdWjqoJEQrZUDo2cOfXoOhdOu3bb5QfPzY"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity"></div>
+<div class="relative z-10 text-white">
+<h3 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2 group-hover:text-[#38BDF8] transition-colors">Weligama &amp; Mirissa</h3>
+<p class="font-body text-sm text-white/85 line-clamp-1 mb-4">Sun-drenched southern surf breaks and stilt fishermen.</p>
+<div class="inline-flex items-center gap-1 font-headline text-xs font-bold uppercase tracking-wider text-[#38BDF8]">
+<span class="">Explore</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Ella & Demodara -->
+<div class="group relative bg-slate-900 rounded-2xl overflow-hidden shadow-sm aspect-[4/5] flex flex-col justify-end p-8 cursor-pointer">
+<img alt="Nine Arch Bridge Ella" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AEtjO1WR43JxqGdxkONNDBSOlXQjmgUifQWbRvFMDIDuXMIg_aRqsM-v5OQ_S8C08_9nOG4u_t_w-AdYZTHRROG338ECXvCpBwkqWKNOaZPpeRqrBHWsYjbqZP9VO1rPC6gbHDwr0LkIMVt6DoXApQCR_Hg3arC7ptHVBMUM1I3ei5mDMV_3o_pF711Bu2d5rCByuG2MzSWl2Fa25YbQgdM7Por4IKiPMuzuOR91Oqcn3d82uURwalDvF6I9t5c"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity"></div>
+<div class="relative z-10 text-white">
+<h3 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2 group-hover:text-[#38BDF8] transition-colors">Ella &amp; Demodara</h3>
+<p class="font-body text-sm text-white/85 line-clamp-1 mb-4">Misty emerald tea highlands and colonial viaducts.</p>
+<div class="inline-flex items-center gap-1 font-headline text-xs font-bold uppercase tracking-wider text-[#38BDF8]">
+<span class="">Explore</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Yala National Park -->
+<div class="group relative bg-slate-900 rounded-2xl overflow-hidden shadow-sm aspect-[4/5] lg:col-span-1.5 flex flex-col justify-end p-8 cursor-pointer">
+<img alt="Yala wild elephant in forest" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AEtjO1Wi9JT0r724kPXK4vr8ywZ4UkwU3G80owi5KCD49OyYMZGzBpsz6QRxU5t7JUogc36l2Xh16H_K5o372Wx9ee3NHFRLK-YHDCRvxhxOek44EtxWY21_brY3YLp6qyq4SR-hay87n9S4HZ8TfTXlgGhT0j0SY2dXWJvpp6tUFv070TLGhiAUhW8AyG9o1KH1m8SXdtXsqdtb7yo9VAcaPdRorg4Jjqlchg35QzHL6hWVoPTQq26CgyNkFdo"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity"></div>
+<div class="relative z-10 text-white">
+<h3 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2 group-hover:text-[#38BDF8] transition-colors">Yala National Park</h3>
+<p class="font-body text-sm text-white/85 line-clamp-1 mb-4">Wild leopard sanctuary and primeval roaming tuskers.</p>
+<div class="inline-flex items-center gap-1 font-headline text-xs font-bold uppercase tracking-wider text-[#38BDF8]">
+<span class="">Explore</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Galle Fort -->
+<div class="group relative bg-slate-900 rounded-2xl overflow-hidden shadow-sm aspect-[4/5] lg:col-span-2 flex flex-col justify-end p-8 cursor-pointer">
+<img alt="Galle Fort sunset ramparts and lighthouse" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AEtjO1WenJ7D5_p0eFtb9sEHsvgaQ_lu7T_7fNyelwX72i3Q_Y1N30kFQEC9fRWhj-lzV_jBLTnC6KXpDvhxlIHOYGtUUw3eQm4T_FJncRwAAkVTkcN8mGKzsvsycicz0pNfOAQc1x5RoRCM3Msr2ZTz2f7BksKTOZWsvQitJvZOxyr4Dwr9goHgITFa4soV5n_Vja9GIinVhmVw3V9k2ZpSLfhZQUa1Q_2G2-M2tOk67eKX1T7dPYr9dLBMxw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity"></div>
+<div class="relative z-10 text-white">
+<h3 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2 group-hover:text-[#38BDF8] transition-colors">Galle Fort</h3>
+<p class="font-body text-sm text-white/85 line-clamp-1 mb-4">16th-century stone ramparts over turquoise ocean swells.</p>
+<div class="inline-flex items-center gap-1 font-headline text-xs font-bold uppercase tracking-wider text-[#38BDF8]">
+<span class="">Explore</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. STREAMLINED EXPERIENCES SECTION -->
+<section class="w-full py-24 bg-white border-y border-[#BAE6FD]/60" id="experiences">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="mb-14 text-center max-w-2xl mx-auto">
+<span class="font-headline text-xs font-bold uppercase tracking-widest text-[#0284C7] block mb-2">Experiences</span>
+<h2 class="font-headline text-3xl sm:text-4xl font-bold tracking-tight text-[#0F172A] uppercase">Ways to Experience Sri Lanka</h2>
+<p class="font-body text-base text-[#475569] mt-3">Six refined ways to connect with the island's raw essence.</p>
+</div>
+<!-- 6 Simple, Clean Category Cards -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
+<!-- Beaches -->
+<a class="group flex flex-col items-center text-center p-6 rounded-xl bg-[#E0F2FE]/70 hover:bg-[#BAE6FD]/60 border border-[#BAE6FD]/40 hover:shadow-md transition-all" href="#destinations">
+<div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#0284C7] group-hover:scale-110 transition-transform mb-4 shadow-sm border border-[#BAE6FD]/50">
+<span class="material-symbols-outlined text-[28px]">beach_access</span>
+</div>
+<h4 class="font-headline text-base font-bold text-[#0F172A] uppercase mb-1">Beaches</h4>
+<p class="font-body text-xs text-[#475569]">Coast &amp; Surf</p>
+</a>
+<!-- Wildlife -->
+<a class="group flex flex-col items-center text-center p-6 rounded-xl bg-[#E0F2FE]/70 hover:bg-[#BAE6FD]/60 border border-[#BAE6FD]/40 hover:shadow-md transition-all" href="#destinations">
+<div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#0284C7] group-hover:scale-110 transition-transform mb-4 shadow-sm border border-[#BAE6FD]/50">
+<span class="material-symbols-outlined text-[28px]">pets</span>
+</div>
+<h4 class="font-headline text-base font-bold text-[#0F172A] uppercase mb-1">Wildlife</h4>
+<p class="font-body text-xs text-[#475569]">Leopards &amp; Safaris</p>
+</a>
+<!-- Heritage -->
+<a class="group flex flex-col items-center text-center p-6 rounded-xl bg-[#E0F2FE]/70 hover:bg-[#BAE6FD]/60 border border-[#BAE6FD]/40 hover:shadow-md transition-all" href="#destinations">
+<div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#0284C7] group-hover:scale-110 transition-transform mb-4 shadow-sm border border-[#BAE6FD]/50">
+<span class="material-symbols-outlined text-[28px]">account_balance</span>
+</div>
+<h4 class="font-headline text-base font-bold text-[#0F172A] uppercase mb-1">Heritage</h4>
+<p class="font-body text-xs text-[#475569]">Ancient Citadels</p>
+</a>
+<!-- Nature -->
+<a class="group flex flex-col items-center text-center p-6 rounded-xl bg-[#E0F2FE]/70 hover:bg-[#BAE6FD]/60 border border-[#BAE6FD]/40 hover:shadow-md transition-all" href="#destinations">
+<div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#0284C7] group-hover:scale-110 transition-transform mb-4 shadow-sm border border-[#BAE6FD]/50">
+<span class="material-symbols-outlined text-[28px]">forest</span>
+</div>
+<h4 class="font-headline text-base font-bold text-[#0F172A] uppercase mb-1">Nature</h4>
+<p class="font-body text-xs text-[#475569]">Tea &amp; Rainforests</p>
+</a>
+<!-- Adventure -->
+<a class="group flex flex-col items-center text-center p-6 rounded-xl bg-[#E0F2FE]/70 hover:bg-[#BAE6FD]/60 border border-[#BAE6FD]/40 hover:shadow-md transition-all" href="#destinations">
+<div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#0284C7] group-hover:scale-110 transition-transform mb-4 shadow-sm border border-[#BAE6FD]/50">
+<span class="material-symbols-outlined text-[28px]">hiking</span>
+</div>
+<h4 class="font-headline text-base font-bold text-[#0F172A] uppercase mb-1">Adventure</h4>
+<p class="font-body text-xs text-[#475569]">Hikes &amp; Oceans</p>
+</a>
+<!-- Cuisine -->
+<a class="group flex flex-col items-center text-center p-6 rounded-xl bg-[#E0F2FE]/70 hover:bg-[#BAE6FD]/60 border border-[#BAE6FD]/40 hover:shadow-md transition-all" href="#destinations">
+<div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#0284C7] group-hover:scale-110 transition-transform mb-4 shadow-sm border border-[#BAE6FD]/50">
+<span class="material-symbols-outlined text-[28px]">restaurant</span>
+</div>
+<h4 class="font-headline text-base font-bold text-[#0F172A] uppercase mb-1">Cuisine</h4>
+<p class="font-body text-xs text-[#475569]">Spices &amp; Seafood</p>
+</a>
+</div>
+</div>
+</section>
+<!-- 5. FEATURED DESTINATION / STORY SPOTLIGHT -->
+<section class="w-full py-24 px-6 lg:px-12 max-w-7xl mx-auto" id="featured">
+<div class="bg-[#F0F9FF] text-[#0F172A] border border-[#BAE6FD] rounded-3xl overflow-hidden shadow-lg grid grid-cols-1 lg:grid-cols-12 items-center">
+<!-- Visual Column -->
+<div class="lg:col-span-7 h-72 sm:h-96 lg:h-[500px] relative overflow-hidden">
+<img alt="Sigiriya Rock at dawn" class="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida/AEtjO1ULtv5QazTvhv1D91njb8U3_kwPXG6Ar-OQzMSzZXlngUkG9HGDEFeT-blNAjqvgH6ZjGuFhHkHO5Svv8-EATrKeJCPCG21HfNruNc5PhWqZVvwNTcEitiXtHK6ka_lAYFWvIXwxNWIQt7lBGUiuEfMUymIhrREsfAF08d2PgSgHs9PP0l512Vsb2p15XlE4-qjsNmjbUswYHouRltiSFji_fF6nwhvOmDFRwQQnv22qUkZGfROJPmEqE4"/>
+<div class="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#F0F9FF]/80 via-transparent to-transparent"></div>
+</div>
+<!-- Editorial Spotlight Info -->
+<div class="lg:col-span-5 p-8 sm:p-12 lg:p-14 flex flex-col items-start">
+<div class="inline-flex items-center gap-2 text-[#0284C7] font-headline text-xs font-bold uppercase tracking-widest mb-4">
+<span class="w-2 h-2 rounded-full bg-[#0284C7]"></span>
+            Featured Spotlight
+          </div>
+<h3 class="font-headline text-3xl sm:text-4xl font-bold uppercase tracking-tight mb-4 text-[#0F172A] leading-tight">
+            The Sky Citadel of Sigiriya
+          </h3>
+<p class="font-body text-base text-[#475569] leading-relaxed mb-8">
+            Rising two hundred meters above the northern jungle canopy, an ancient 5th-century palace carved into sheer granite.
+          </p>
+<a class="inline-flex items-center gap-2 px-7 py-3 bg-[#0284C7] text-white font-headline text-xs font-bold uppercase tracking-widest rounded-full hover:bg-[#0369A1] transition-all shadow-sm" href="#plan">
+<span class="">Discover More</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+<!-- 6. SIMPLE PLAN YOUR TRIP CTA SECTION -->
+<section class="w-full py-20 px-6 lg:px-12" id="plan">
+<div class="max-w-5xl mx-auto bg-[#E0F2FE] text-[#0F172A] border border-[#BAE6FD] rounded-3xl p-10 sm:p-16 text-center shadow-lg relative overflow-hidden">
+<div class="max-w-2xl mx-auto relative z-10">
+<h2 class="font-headline text-3xl sm:text-4xl font-bold uppercase tracking-tight mb-4 text-[#0F172A]">
+            Ready to Begin Your Journey?
+          </h2>
+<p class="font-body text-base sm:text-lg text-[#475569] leading-relaxed mb-8">
+            Craft your custom Sri Lankan itinerary with curated routes, private transfers, and local insight.
+          </p>
+<a class="inline-flex items-center justify-center px-8 py-3.5 bg-[#0284C7] text-white font-headline text-xs font-bold uppercase tracking-widest rounded-full hover:bg-[#0369A1] transition-all shadow-md" href="#">
+            Plan Your Trip
+          </a>
+</div>
+</div>
+</section>
+</main>
+<!-- 7. CLEAN, MINIMAL FOOTER -->
+<footer class="w-full bg-[#F1F5F9] text-[#0F172A] pt-16 pb-12 border-t border-[#BAE6FD]/70">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-[#CBD5E1] items-start">
+<!-- Logo & Brief Note -->
+<div class="md:col-span-4 flex flex-col">
+<a class="mb-4 inline-block" href="#">
+<img alt="Ceylon Dispatch Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Ucrl340Gs4ZqRBHHSCgK8XwQYBpuY0dL1xyap1V_AZbQaa8pF2rykwWsqvs6BfinljpxoMBMoolxmNDL7YAgJlH_7P0IaPsIQpF11sWfoKbN2H3c0VJ35bcLsx9G7ix3cWhExL_zzCofgQS1ck_dct-JptSVipnLl7B7T3IbAgvBIfkM-8mOErRBu2uZBHwg3V1oZGIktmEPT4pZ-EHYF6LveN2-nwl5r0N_wtZ16kUwlbi5_fbgZ0sY8"/>
+</a>
+<p class="font-body text-sm text-[#475569] leading-relaxed max-w-sm">
+            An editorial travel archive documenting the living heritage, landscapes, and horizons of Sri Lanka.
+          </p>
+</div>
+<!-- Concise Links -->
+<div class="md:col-span-4 flex flex-wrap gap-x-8 gap-y-3 font-headline text-xs font-semibold uppercase tracking-wider text-[#0F172A]">
+<a class="hover:text-[#0284C7] transition-colors" href="#destinations">Destinations</a>
+<a class="hover:text-[#0284C7] transition-colors" href="#experiences">Experiences</a>
+<a class="hover:text-[#0284C7] transition-colors" href="#stories">Stories</a>
+<a class="hover:text-[#0284C7] transition-colors" href="#">Journal</a>
+<a class="hover:text-[#0284C7] transition-colors" href="#">Contact</a>
+</div>
+<!-- Newsletter Subscription -->
+<div class="md:col-span-4 flex flex-col">
+<span class="font-headline text-xs font-bold uppercase tracking-widest text-[#0F172A] mb-2">The Field Journal</span>
+<p class="font-body text-xs text-[#475569] mb-3">Bi-weekly curated stories and seasonal expedition dispatches.</p>
+<form class="flex w-full" onsubmit="event.preventDefault(); alert('Thank you for subscribing to Ceylon Dispatch.');">
+<input class="w-full px-4 py-2 bg-white text-[#0F172A] placeholder:text-[#475569]/60 text-sm border border-[#BAE6FD] border-r-0 rounded-l-lg focus:ring-1 focus:ring-[#0284C7] focus:border-[#0284C7] outline-none font-body" placeholder="Your email address" required="" type="email"/>
+<button class="px-5 py-2 bg-[#0284C7] text-white font-headline text-xs font-bold uppercase tracking-widest rounded-r-lg hover:bg-[#0369A1] border border-[#0284C7] border-l-0 transition-colors" type="submit">
+              Subscribe
+            </button>
+</form>
+</div>
+</div>
+<!-- Bottom Bar -->
+<div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 font-body text-xs text-[#475569]">
+<p class="">© 2024 Ceylon Dispatch. All rights reserved.</p>
+<div class="flex items-center gap-6">
+<a class="hover:text-[#0284C7] transition-colors" href="#">Privacy</a>
+<a class="hover:text-[#0284C7] transition-colors" href="#">Terms</a>
+<a class="hover:text-[#0284C7] transition-colors" href="#">Instagram</a>
+<a class="hover:text-[#0284C7] transition-colors" href="#">Twitter</a>
+</div>
+</div>
+</div>
+</footer>
+</body></html>
