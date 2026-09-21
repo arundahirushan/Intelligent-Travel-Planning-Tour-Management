@@ -23,7 +23,7 @@ public interface IHotelService
 
     // Counts rooms already booked (Held or Confirmed) for a room type in a date range.
     // Used by both SearchAsync and HotelBookingService to avoid duplicating the overlap logic.
-    Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut);
+    Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludeBookingId = null);
 
     // ── Admin / SuperAdmin operations ────────────────────────────────────────
 

@@ -13,4 +13,7 @@ public interface IHotelBookingService
 
     // Traveler or Admin cancels a booking.
     Task CancelAsync(int bookingId, int requestingUserId, string requestingUserRole);
+
+    Task<HotelBookingSummaryDto> UpdateAsync(int id, UpdateHotelBookingDto dto, int travelerId);
+    Task DeleteAsync(int id, int requestingUserId, string requestingUserRole);
 }

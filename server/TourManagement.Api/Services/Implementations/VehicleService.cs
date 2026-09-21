@@ -299,14 +299,21 @@ public class VehicleService : IVehicleService
     // See Common/DateRangeHelper.cs for the canonical definition used in non-EF code.
     // EF Core LINQ cannot call DateRangeHelper.HasOverlap directly, so the two
     // conditions are kept inline below so EF can translate them to SQL.
-    public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate)
+    public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate, int? excludeBookingId = null)
     {
-        bool hasOverlap = await _db.VehicleBookings.AnyAsync(b =>
+        var query = _db.VehicleBookings.Where(b =>
             b.VehicleId == vehicleId
             && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
             && b.StartDate < endDate    // overlap condition part 1
             && b.EndDate   > startDate  // overlap condition part 2
         );
+
+        if (excludeBookingId.HasValue)
+        {
+            query = query.Where(b => b.Id != excludeBookingId.Value);
+        }
+
+        bool hasOverlap = await query.AnyAsync();
 
         return !hasOverlap;
     }

@@ -36,4 +36,7 @@ public class Trip
 
     // Vehicle bookings linked to this trip.
     public List<VehicleBooking> VehicleBookings { get; set; } = new();
+
+    // Supply orders linked to this trip.
+    public List<SupplyOrder> SupplyOrders { get; set; } = new();
 }
