@@ -19,6 +19,10 @@ public class AppDbContext : DbContext
     public DbSet<HotelBooking> HotelBookings => Set<HotelBooking>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<VehicleBooking> VehicleBookings => Set<VehicleBooking>();
+    public DbSet<Supply> Supplies => Set<Supply>();
+    public DbSet<Contract> Contracts => Set<Contract>();
+    public DbSet<ContractRequest> ContractRequests => Set<ContractRequest>();
+    public DbSet<SupplyOrder> SupplyOrders => Set<SupplyOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,6 +61,25 @@ public class AppDbContext : DbContext
             entity.HasMany(u => u.Vehicles)
                   .WithOne(v => v.Provider)
                   .HasForeignKey(v => v.ProviderId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // A Supplier can have many supplies. RESTRICT deletion:
+            // deleting a supplier with supplies would break inventory records.
+            entity.HasMany(u => u.Supplies)
+                  .WithOne(s => s.Supplier)
+                  .HasForeignKey(s => s.SupplierId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // A Supplier can have many contracts. RESTRICT deletion to preserve legal/audit history.
+            entity.HasMany(u => u.Contracts)
+                  .WithOne(c => c.Supplier)
+                  .HasForeignKey(c => c.SupplierId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // A Supplier can have many contract requests. RESTRICT deletion to preserve audit history.
+            entity.HasMany(u => u.ContractRequests)
+                  .WithOne(cr => cr.Supplier)
+                  .HasForeignKey(cr => cr.SupplierId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -232,6 +255,91 @@ public class AppDbContext : DbContext
             entity.HasIndex(b => b.VehicleId);
             entity.HasIndex(b => b.TripId);
             entity.HasIndex(b => b.Status);
+        });
+
+        // ── Supply ────────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Supply>(entity =>
+        {
+            // Store enums as strings for readability.
+            entity.Property(s => s.Status)
+                  .HasConversion<string>();
+
+            entity.Property(s => s.RemovalReason)
+                  .HasConversion<string>();
+
+            // PricePerUnit is money in LKR — store with 2 decimal places.
+            entity.Property(s => s.PricePerUnit)
+                  .HasColumnType("decimal(18,2)");
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(s => s.SupplierId);
+            entity.HasIndex(s => s.Status);
+        });
+
+        // ── Contract ──────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Contract>(entity =>
+        {
+            // Store ContractStatus as string (Active, Terminated).
+            entity.Property(c => c.Status)
+                  .HasConversion<string>();
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(c => c.SupplierId);
+            entity.HasIndex(c => c.Status);
+
+            // Renewal requests referencing this contract.
+            entity.HasMany(c => c.ContractRequests)
+                  .WithOne(cr => cr.ExistingContract)
+                  .HasForeignKey(cr => cr.ExistingContractId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── ContractRequest ───────────────────────────────────────────────────
+
+        modelBuilder.Entity<ContractRequest>(entity =>
+        {
+            // Store enums as string.
+            entity.Property(cr => cr.RequestType)
+                  .HasConversion<string>();
+
+            entity.Property(cr => cr.Status)
+                  .HasConversion<string>();
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(cr => cr.SupplierId);
+            entity.HasIndex(cr => cr.Status);
+        });
+
+        // ── SupplyOrder ───────────────────────────────────────────────────────
+
+        modelBuilder.Entity<SupplyOrder>(entity =>
+        {
+            // Store BookingStatus as a string.
+            entity.Property(so => so.Status)
+                  .HasConversion<string>();
+
+            // PriceAtOrderTime is money — store with 2 decimal places.
+            entity.Property(so => so.PriceAtOrderTime)
+                  .HasColumnType("decimal(18,2)");
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(so => so.TripId);
+            entity.HasIndex(so => so.SupplyId);
+            entity.HasIndex(so => so.Status);
+
+            // RESTRICT trip deletion if it has supply orders.
+            entity.HasOne(so => so.Trip)
+                  .WithMany(t => t.SupplyOrders)
+                  .HasForeignKey(so => so.TripId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // RESTRICT supply deletion if it has supply orders.
+            entity.HasOne(so => so.Supply)
+                  .WithMany(s => s.SupplyOrders)
+                  .HasForeignKey(so => so.SupplyId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
