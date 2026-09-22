@@ -186,6 +186,38 @@ public class VehicleBookingService : IVehicleBookingService
         return new PagedResult<VehicleBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
+    public async Task<PagedResult<VehicleBookingSummaryDto>> GetMyVehiclesBookingsAsync(
+        int providerId, string? search, string? status, int page, int pageSize)
+    {
+        var query = _db.VehicleBookings
+            .Include(b => b.Vehicle)
+            .Include(b => b.Trip)
+            .Where(b => b.Vehicle.ProviderId == providerId)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
+            query = query.Where(b => b.Status == statusEnum);
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(b => 
+                b.Vehicle.VehicleType.Contains(search) || 
+                b.Vehicle.Model.Contains(search) || 
+                b.Vehicle.RegistrationNumber.Contains(search));
+        }
+
+        query = query.OrderByDescending(b => b.CreatedAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(b => b.ToSummaryDto())
+            .ToListAsync();
+
+        return new PagedResult<VehicleBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
+
     private async Task ValidateAndCheckAvailabilityAsync(
         int vehicleId, DateTime startDate, DateTime endDate, Trip trip, int? excludeBookingId)
     {

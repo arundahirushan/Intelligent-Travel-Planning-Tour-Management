@@ -66,6 +66,12 @@ public class VehicleService : IVehicleService
             .Select(v => v.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.IsBookedToday = await IsVehicleBookedOnDateAsync(item.Id, today);
+        }
+
         return new PagedResult<VehicleSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -161,6 +167,12 @@ public class VehicleService : IVehicleService
             .Select(v => v.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.IsBookedToday = await IsVehicleBookedOnDateAsync(item.Id, today);
+        }
+
         return new PagedResult<VehicleSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -177,6 +189,12 @@ public class VehicleService : IVehicleService
             .Take(pageSize)
             .Select(v => v.ToSummaryDto())
             .ToListAsync();
+
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.IsBookedToday = await IsVehicleBookedOnDateAsync(item.Id, today);
+        }
 
         return new PagedResult<VehicleSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
@@ -316,6 +334,16 @@ public class VehicleService : IVehicleService
         bool hasOverlap = await query.AnyAsync();
 
         return !hasOverlap;
+    }
+
+    public async Task<bool> IsVehicleBookedOnDateAsync(int vehicleId, DateTime date)
+    {
+        return await _db.VehicleBookings.AnyAsync(b =>
+            b.VehicleId == vehicleId
+            && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+            && b.StartDate.Date <= date.Date
+            && b.EndDate.Date >= date.Date
+        );
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
