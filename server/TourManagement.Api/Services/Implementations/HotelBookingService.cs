@@ -140,6 +140,31 @@ public class HotelBookingService : IHotelBookingService
         return new PagedResult<HotelBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
+    public async Task<PagedResult<HotelBookingSummaryDto>> GetMyHotelsBookingsAsync(
+        int ownerId, string? search, string? status, int page, int pageSize)
+    {
+        var query = _db.HotelBookings
+            .Include(b => b.Room).ThenInclude(r => r.Hotel)
+            .Where(b => b.Room.Hotel.OwnerId == ownerId);
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
+            query = query.Where(b => b.Status == statusEnum);
+
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(b => b.Room.Hotel.Name.Contains(search) || b.Room.RoomType.Contains(search));
+
+        query = query.OrderByDescending(b => b.CreatedAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(b => b.ToSummaryDto())
+            .ToListAsync();
+
+        return new PagedResult<HotelBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
+
     // Cancel a booking. Only the trip owner or an Admin/SuperAdmin can do this.
     // Cancellation is allowed while the booking is Held or Confirmed.
     public async Task CancelAsync(int bookingId, int requestingUserId, string requestingUserRole)

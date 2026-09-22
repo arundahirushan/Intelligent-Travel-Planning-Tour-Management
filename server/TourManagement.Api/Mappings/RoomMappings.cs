@@ -20,6 +20,22 @@ public static class RoomMappings
         };
     }
 
+    public static RoomWithHotelDto ToRoomWithHotelDto(this Room room)
+    {
+        return new RoomWithHotelDto
+        {
+            Id           = room.Id,
+            HotelId      = room.HotelId,
+            HotelName    = room.Hotel?.Name ?? string.Empty,
+            RoomType     = room.RoomType,
+            PricePerNight = room.PricePerNight,
+            Capacity     = room.Capacity,
+            TotalRooms   = room.TotalRooms,
+            Amenities    = room.Amenities,
+            Status       = room.Status
+        };
+    }
+
     public static Room ToEntity(this CreateRoomDto dto, int hotelId)
     {
         return new Room

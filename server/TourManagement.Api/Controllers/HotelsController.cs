@@ -66,6 +66,19 @@ public class HotelsController : ControllerBase
         return Ok(ApiResponse<HotelDetailDto>.Ok(result));
     }
 
+    /// <summary>Get all rooms across all hotels owned by the owner. HotelOwner only.</summary>
+    [HttpGet("my/rooms")]
+    [Authorize(Roles = Roles.HotelOwner)]
+    public async Task<ActionResult<ApiResponse<PagedResult<RoomWithHotelDto>>>> GetMyRooms(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await _hotelService.GetMyRoomsAsync(GetCurrentUserId(), search, status, page, pageSize);
+        return Ok(ApiResponse<PagedResult<RoomWithHotelDto>>.Ok(result));
+    }
+
     /// <summary>Update hotel details. HotelOwner only (ownership checked in service).</summary>
     [HttpPut("{id}")]
     [Authorize(Roles = Roles.HotelOwner)]
