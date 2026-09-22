@@ -2,8 +2,23 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import ImageCard from '../components/ImageCard';
 import FeatureCard from '../components/FeatureCard';
+import { useAuth } from '../context/AuthContext';
 
 export default function HomePage() {
+  const { isAuthenticated, user } = useAuth();
+
+  const getDashboardPath = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'HotelOwner': return '/hotel-owner';
+      case 'Traveler': return '/traveler';
+      case 'TransportProvider': return '/transport-provider';
+      case 'Supplier': return '/supplier';
+      case 'SuperAdmin': return '/admin';
+      case 'Admin': return '/admin';
+      default: return '/';
+    }
+  };
   return (
     <div className="min-h-screen bg-canvas">
       {/* Navbar */}
@@ -19,13 +34,32 @@ export default function HomePage() {
             <a href="#how-it-works" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">How It Works</a>
           </nav>
 
-          <div className="flex flex-col items-center justify-center">
-            <Link to="/login" className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
-              Log in
-            </Link>
-            <Link to="/register" className="text-[11px] text-text-secondary hover:text-text underline mt-1 tracking-wide uppercase font-bold">
-              Register
-            </Link>
+          <div className="flex items-center gap-4">
+            {isAuthenticated ? (
+              <>
+                <Link to={getDashboardPath()} className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
+                  Dashboard
+                </Link>
+                <div className="hidden md:flex items-center gap-3 text-right ml-2">
+                  <div className="flex flex-col justify-center">
+                    <span className="font-heading font-bold text-sm text-text leading-tight">{user?.fullName || 'User'}</span>
+                    <span className="font-body text-xs text-text-secondary">{user?.role || ''}</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg">
+                    {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U'}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center">
+                <Link to="/login" className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
+                  Log in
+                </Link>
+                <Link to="/register" className="text-[11px] text-text-secondary hover:text-text underline mt-1 tracking-wide uppercase font-bold">
+                  Register
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -54,8 +88,8 @@ export default function HomePage() {
             <p className="font-body text-base sm:text-xl text-white/85 max-w-2xl font-light leading-relaxed mb-10">
               Build your custom itinerary with curated routes, trusted local partners, and intelligent recommendations for the perfect island journey.
             </p>
-            <Link to="/register" className="inline-flex items-center justify-center px-8 py-3.5 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all duration-200 shadow-lg group">
-              <span>Start Planning</span>
+            <Link to={isAuthenticated ? getDashboardPath() : "/register"} className="inline-flex items-center justify-center px-8 py-3.5 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all duration-200 shadow-lg group">
+              <span>{isAuthenticated ? 'Go to Dashboard' : 'Start Planning'}</span>
               <span className="material-symbols-outlined text-[18px] ml-2 group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </Link>
           </div>
@@ -159,8 +193,8 @@ export default function HomePage() {
               <p className="font-body text-base text-text-secondary leading-relaxed mb-8">
                 Tell us what you love—beaches, heritage, nature, or adventure—and let our intelligent engine craft a personalized route across the island just for you.
               </p>
-              <Link to="/register" className="inline-flex items-center gap-2 px-7 py-3 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
-                <span>Start Planning</span>
+              <Link to={isAuthenticated ? getDashboardPath() : "/register"} className="inline-flex items-center gap-2 px-7 py-3 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
+                <span>{isAuthenticated ? 'Go to Dashboard' : 'Start Planning'}</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </Link>
             </div>
@@ -177,8 +211,8 @@ export default function HomePage() {
               <p className="font-body text-base sm:text-lg text-text-secondary leading-relaxed mb-8">
                 Craft your custom Sri Lankan itinerary with curated routes, private transfers, and local insight.
               </p>
-              <Link to="/register" className="inline-flex items-center justify-center px-8 py-3.5 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-md">
-                Start Planning
+              <Link to={isAuthenticated ? getDashboardPath() : "/register"} className="inline-flex items-center justify-center px-8 py-3.5 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-md">
+                {isAuthenticated ? 'Go to Dashboard' : 'Start Planning'}
               </Link>
             </div>
           </div>
@@ -203,8 +237,14 @@ export default function HomePage() {
             <div className="md:col-span-6 flex flex-wrap gap-x-8 gap-y-3 font-heading text-xs font-semibold uppercase tracking-wider text-text md:justify-end">
               <a href="#destinations" className="hover:text-primary transition-colors">Destinations</a>
               <a href="#how-it-works" className="hover:text-primary transition-colors">How It Works</a>
-              <Link to="/login" className="hover:text-primary transition-colors">Log In</Link>
-              <Link to="/register" className="hover:text-primary transition-colors">Register</Link>
+              {isAuthenticated ? (
+                <Link to={getDashboardPath()} className="hover:text-primary transition-colors">Dashboard</Link>
+              ) : (
+                <>
+                  <Link to="/login" className="hover:text-primary transition-colors">Log In</Link>
+                  <Link to="/register" className="hover:text-primary transition-colors">Register</Link>
+                </>
+              )}
             </div>
 
           </div>

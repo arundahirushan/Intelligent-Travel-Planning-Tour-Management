@@ -62,6 +62,12 @@ public class HotelService : IHotelService
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
+
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -99,6 +105,31 @@ public class HotelService : IHotelService
     }
 
     // ── HotelOwner: manage rooms ─────────────────────────────────────────────
+
+    public async Task<PagedResult<RoomWithHotelDto>> GetMyRoomsAsync(
+        int ownerId, string? search, string? status, int page, int pageSize)
+    {
+        var query = _db.Rooms
+            .Include(r => r.Hotel)
+            .Where(r => r.Hotel.OwnerId == ownerId);
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<RoomStatus>(status, out var statusEnum))
+            query = query.Where(r => r.Status == statusEnum);
+
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(r => r.RoomType.Contains(search) || r.Hotel.Name.Contains(search));
+
+        query = query.OrderByDescending(r => r.CreatedAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => r.ToRoomWithHotelDto())
+            .ToListAsync();
+
+        return new PagedResult<RoomWithHotelDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
 
     public async Task<HotelDetailDto> AddRoomAsync(int hotelId, CreateRoomDto dto, int requestingUserId)
     {
@@ -195,6 +226,12 @@ public class HotelService : IHotelService
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
+
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -212,6 +249,12 @@ public class HotelService : IHotelService
             .Take(pageSize)
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
+
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
 
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
@@ -386,6 +429,23 @@ public class HotelService : IHotelService
         return await query.SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
     }
 
+    public async Task<int> ComputeOccupancyAsync(int hotelId, DateTime today)
+    {
+        var hotelRooms = await _db.Rooms.Where(r => r.HotelId == hotelId).ToListAsync();
+        int totalRooms = hotelRooms.Sum(r => r.TotalRooms);
+        
+        if (totalRooms == 0) return 0;
+
+        var bookedCount = await _db.HotelBookings
+            .Where(b => b.Room.HotelId == hotelId
+                     && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+                     && b.CheckInDate <= today 
+                     && b.CheckOutDate >= today)
+            .SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
+
+        return (int)Math.Round((double)bookedCount * 100 / totalRooms);
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     // Loads a hotel with Owner, Destination, and Rooms fully populated.
@@ -400,7 +460,9 @@ public class HotelService : IHotelService
         if (hotel == null)
             throw new NotFoundException($"Hotel with ID {hotelId} was not found.");
 
-        return hotel.ToDetailDto();
+        var dto = hotel.ToDetailDto();
+        dto.OccupancyPercentage = await ComputeOccupancyAsync(hotelId, DateTime.UtcNow.Date);
+        return dto;
     }
 
     // Fetches a Hotel by ID or throws NotFoundException.
