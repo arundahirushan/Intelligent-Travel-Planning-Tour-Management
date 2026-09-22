@@ -92,7 +92,7 @@ export default function HotelDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner">
+      <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner" profileRoute="/hotel-owner/profile">
         <div className="flex justify-center items-center h-64">
           <LoadingSpinner size="lg" />
         </div>
@@ -102,7 +102,7 @@ export default function HotelDetailPage() {
 
   if (error || !hotel) {
     return (
-      <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner">
+      <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner" profileRoute="/hotel-owner/profile">
         <div className="mb-6">
           <Link to="/hotel-owner/hotels" className="text-primary hover:underline flex items-center gap-2 font-heading text-sm font-bold">
             <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -159,7 +159,7 @@ export default function HotelDetailPage() {
   ];
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner">
+    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner" profileRoute="/hotel-owner/profile">
       {/* Back Link */}
       <div className="mb-6">
         <Link to="/hotel-owner/hotels" className="text-primary hover:underline flex items-center gap-2 font-heading text-sm font-bold">

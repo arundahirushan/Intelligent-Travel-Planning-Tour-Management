@@ -88,7 +88,7 @@ export default function MyHotelsPage() {
   };
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner">
+    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner" profileRoute="/hotel-owner/profile">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>

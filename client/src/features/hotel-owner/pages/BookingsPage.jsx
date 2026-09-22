@@ -54,7 +54,7 @@ export default function BookingsPage() {
   ];
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner">
+    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner" profileRoute="/hotel-owner/profile">
       <div className="mb-6">
         <div className="text-label-uppercase text-primary flex items-center gap-2 mb-1">
           <span className="w-2 h-2 rounded-full bg-primary"></span>

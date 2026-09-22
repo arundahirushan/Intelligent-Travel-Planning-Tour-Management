@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function DashboardLayout({ navItems, roleBadge, children }) {
+export default function DashboardLayout({ navItems, roleBadge, profileRoute = '/profile', children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,11 +39,7 @@ export default function DashboardLayout({ navItems, roleBadge, children }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Determine the default profile route based on role
-  let profileRoute = '/hotel-owner/profile';
-  if (user?.role === 'Traveler') profileRoute = '/traveler/profile';
-  if (user?.role === 'TransportProvider') profileRoute = '/transport/profile';
-  if (user?.role === 'Supplier') profileRoute = '/supplier/profile';
+  // profileRoute is passed as a prop by each dashboard — no role-switching here.
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col relative">
