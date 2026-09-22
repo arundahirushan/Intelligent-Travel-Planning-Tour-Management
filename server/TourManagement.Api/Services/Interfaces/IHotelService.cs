@@ -13,17 +13,22 @@ public interface IHotelService
     Task<HotelDetailDto> UpdateHotelAsync(int hotelId, UpdateHotelDto dto, int requestingUserId);
     Task DeactivateHotelAsync(int hotelId, int requestingUserId);  // sets Status = Inactive
 
+    Task<PagedResult<RoomWithHotelDto>> GetMyRoomsAsync(int ownerId, string? search, string? status, int page, int pageSize);
+
     Task<HotelDetailDto> AddRoomAsync(int hotelId, CreateRoomDto dto, int requestingUserId);
     Task<HotelDetailDto> UpdateRoomAsync(int hotelId, int roomId, UpdateRoomDto dto, int requestingUserId);
     Task<HotelDetailDto> DeactivateRoomAsync(int hotelId, int roomId, int requestingUserId);
 
-    Task<PagedResult<BookingSummaryDto>> GetHotelBookingsAsync(int hotelId, int requestingUserId, int page, int pageSize);
+    Task<PagedResult<HotelBookingSummaryDto>> GetHotelBookingsAsync(int hotelId, int requestingUserId, int page, int pageSize);
 
-    // ── Shared helper ─────────────────────────────────────────────────────────
+    // ── Shared helper ──────────────────────────────────────────────────
 
     // Counts rooms already booked (Held or Confirmed) for a room type in a date range.
-    // Used by both SearchAsync and BookingService to avoid duplicating the overlap logic.
-    Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut);
+    // Used by both SearchAsync and HotelBookingService to avoid duplicating the overlap logic.
+    Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludeBookingId = null);
+
+    // Computes the occupancy percentage (0-100) for a given hotel on a specific date.
+    Task<int> ComputeOccupancyAsync(int hotelId, DateTime today);
 
     // ── Admin / SuperAdmin operations ────────────────────────────────────────
 
@@ -33,7 +38,7 @@ public interface IHotelService
     Task RejectHotelAsync(int hotelId);   // only valid from PendingApproval → Rejected
     Task SuspendHotelAsync(int hotelId);  // only valid from Active → Suspended
 
-    Task<PagedResult<BookingSummaryDto>> GetAllBookingsAsync(string? status, int page, int pageSize);
+    Task<PagedResult<HotelBookingSummaryDto>> GetAllBookingsAsync(string? status, int page, int pageSize);
 
     // ── Public / Traveler operations ─────────────────────────────────────────
 

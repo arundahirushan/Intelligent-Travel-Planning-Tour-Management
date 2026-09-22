@@ -61,8 +61,9 @@ public class VehicleServiceTests
             Id         = 1,
             TravelerId = 2,
             Title      = "Test Trip",
-            StartDate  = DateTime.Today,
-            EndDate    = DateTime.Today.AddDays(10),
+            // Fixed date range covering all test booking windows (Sep 25 – Oct 10).
+            StartDate  = new DateTime(2026, 9, 24),
+            EndDate    = new DateTime(2026, 10, 10),
             Budget     = 50000,
             GroupSize  = 4
         });
@@ -89,7 +90,7 @@ public class VehicleServiceTests
             EndDate         = new DateTime(2026, 10, 5),
             PickupLatitude  = 6.9m,
             PickupLongitude = 79.8m,
-            Status          = VehicleBookingStatus.Confirmed
+            Status          = BookingStatus.Confirmed
         });
         db.SaveChanges();
 
@@ -124,7 +125,7 @@ public class VehicleServiceTests
             EndDate         = new DateTime(2026, 9, 30),
             PickupLatitude  = 6.9m,
             PickupLongitude = 79.8m,
-            Status          = VehicleBookingStatus.Confirmed
+            Status          = BookingStatus.Confirmed
         });
         db.SaveChanges();
 
@@ -160,7 +161,7 @@ public class VehicleServiceTests
             EndDate         = new DateTime(2026, 10, 5),
             PickupLatitude  = 6.9m,
             PickupLongitude = 79.8m,
-            Status          = VehicleBookingStatus.Held
+            Status          = BookingStatus.Held
         });
         db.SaveChanges();
 
@@ -210,6 +211,42 @@ public class VehicleServiceTests
 
         Assert.False(isValid);
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(dto.PickupLatitude)));
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 5: Booking dates outside the trip's date range are rejected
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateVehicleBooking_RejectsDatesOutsideTrip()
+    {
+        // Arrange: trip runs Oct 1–5; booking attempts to end on Oct 8 (outside trip).
+        var db = CreateDb(nameof(CreateVehicleBooking_RejectsDatesOutsideTrip));
+
+        // Override the trip's EndDate so it's narrower than the booking window.
+        var trip = await db.Trips.FindAsync(1);
+        trip!.StartDate = new DateTime(2026, 10, 1);
+        trip!.EndDate   = new DateTime(2026, 10, 5);
+        await db.SaveChangesAsync();
+
+        var vehicleService = new VehicleService(db);
+        var bookingService = new VehicleBookingService(db, vehicleService);
+
+        // EndDate (Oct 8) is after Trip.EndDate (Oct 5) — must be rejected.
+        var dto = new CreateVehicleBookingDto
+        {
+            TripId          = 1,
+            VehicleId       = 1,
+            StartDate       = new DateTime(2026, 10, 2),
+            EndDate         = new DateTime(2026, 10, 8),   // outside trip range
+            PickupLatitude  = 6.9m,
+            PickupLongitude = 79.8m
+        };
+
+        var ex = await Assert.ThrowsAsync<TourManagement.Api.Common.Exceptions.ValidationException>(
+            () => bookingService.CreateAsync(dto, travelerId: 2));
+
+        Assert.Contains("trip's date range", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }
 

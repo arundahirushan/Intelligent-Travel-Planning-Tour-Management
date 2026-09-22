@@ -63,6 +63,22 @@ public class VehicleBookingsController : ControllerBase
         return Ok(ApiResponse.Ok("Vehicle booking cancelled."));
     }
 
+    [HttpPut("{id}")]
+    [Authorize(Roles = Roles.Traveler)]
+    public async Task<ActionResult<ApiResponse<VehicleBookingSummaryDto>>> Update(int id, [FromBody] UpdateVehicleBookingDto dto)
+    {
+        var result = await _bookingService.UpdateAsync(id, dto, GetCurrentUserId());
+        return Ok(ApiResponse<VehicleBookingSummaryDto>.Ok(result, "Vehicle booking updated."));
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
+    {
+        await _bookingService.DeleteAsync(id, GetCurrentUserId(), GetCurrentUserRole());
+        return Ok(ApiResponse.Ok("Vehicle booking deleted."));
+    }
+
     // ── Admin / SuperAdmin endpoints ─────────────────────────────────────────
 
     /// <summary>All vehicle bookings, oversight view. Admin / SuperAdmin only.</summary>

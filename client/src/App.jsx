@@ -1,12 +1,16 @@
-// App.jsx — cleaned up from Vite default demo
-// Real layout (Navbar, router outlet, etc.) will be added in a later prompt.
+import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import AppRoutes from './routes/AppRoutes';
+import './index.css';
 
 function App() {
   return (
-    <div>
-      <h1>TourManagement</h1>
-      <p>App shell — real layout coming in a later prompt.</p>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

@@ -28,30 +28,14 @@ public class VehicleBookingService : IVehicleBookingService
     // ensures the vehicle is available for the requested dates.
     public async Task<VehicleBookingSummaryDto> CreateAsync(CreateVehicleBookingDto dto, int travelerId)
     {
-        // Basic date validation.
-        if (dto.EndDate <= dto.StartDate)
-            throw new ValidationException("EndDate must be after StartDate.");
-
-        // Make sure the trip exists and belongs to this traveler.
         var trip = await _db.Trips.FindAsync(dto.TripId);
         if (trip == null)
             throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
         if (trip.TravelerId != travelerId)
             throw new ForbiddenException("You can only create bookings for your own trips.");
 
-        // Make sure the vehicle exists and is Active.
-        var vehicle = await _db.Vehicles.FindAsync(dto.VehicleId);
-        if (vehicle == null)
-            throw new NotFoundException($"Vehicle with ID {dto.VehicleId} was not found.");
-        if (vehicle.Status != VehicleStatus.Active)
-            throw new ValidationException("This vehicle is not currently available for booking.");
-
-        // Check availability using the same shared method as the search endpoint.
-        // This prevents double-booking the same physical vehicle.
-        bool available = await _vehicleService.IsVehicleAvailableAsync(dto.VehicleId, dto.StartDate, dto.EndDate);
-        if (!available)
-            throw new ValidationException(
-                "This vehicle is already booked for an overlapping date range. Please choose different dates.");
+        await ValidateAndCheckAvailabilityAsync(
+            dto.VehicleId, dto.StartDate, dto.EndDate, trip, null);
 
         var booking = new VehicleBooking
         {
@@ -62,7 +46,7 @@ public class VehicleBookingService : IVehicleBookingService
             PickupLatitude  = dto.PickupLatitude,
             PickupLongitude = dto.PickupLongitude,
             PickupNote      = dto.PickupNote,
-            Status          = VehicleBookingStatus.Held,
+            Status          = BookingStatus.Held,
             CreatedAt       = DateTime.UtcNow,
             UpdatedAt       = DateTime.UtcNow
         };
@@ -70,12 +54,68 @@ public class VehicleBookingService : IVehicleBookingService
         _db.VehicleBookings.Add(booking);
         await _db.SaveChangesAsync();
 
-        // Reload with Vehicle so ToSummaryDto can compute TotalPrice.
         var saved = await _db.VehicleBookings
             .Include(b => b.Vehicle)
             .FirstAsync(b => b.Id == booking.Id);
 
         return saved.ToSummaryDto();
+    }
+
+    public async Task<VehicleBookingSummaryDto> UpdateAsync(int id, UpdateVehicleBookingDto dto, int travelerId)
+    {
+        var booking = await _db.VehicleBookings
+            .Include(b => b.Trip)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking == null)
+            throw new NotFoundException($"Vehicle booking with ID {id} was not found.");
+
+        if (booking.Trip.TravelerId != travelerId)
+            throw new ForbiddenException("You do not have permission to modify this booking.");
+
+        if (booking.Status != BookingStatus.Held)
+            throw new ValidationException($"Cannot modify a booking that is already {booking.Status}.");
+
+        await ValidateAndCheckAvailabilityAsync(
+            dto.VehicleId, dto.StartDate, dto.EndDate, booking.Trip, booking.Id);
+
+        booking.VehicleId = dto.VehicleId;
+        booking.StartDate = dto.StartDate;
+        booking.EndDate = dto.EndDate;
+        booking.PickupLatitude = dto.PickupLatitude;
+        booking.PickupLongitude = dto.PickupLongitude;
+        booking.PickupNote = dto.PickupNote;
+        booking.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        var saved = await _db.VehicleBookings
+            .Include(b => b.Vehicle)
+            .FirstAsync(b => b.Id == booking.Id);
+
+        return saved.ToSummaryDto();
+    }
+
+    public async Task DeleteAsync(int id, int requestingUserId, string requestingUserRole)
+    {
+        var booking = await _db.VehicleBookings
+            .Include(b => b.Trip)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking == null)
+            throw new NotFoundException($"Vehicle booking with ID {id} was not found.");
+
+        bool isOwner = booking.Trip.TravelerId == requestingUserId;
+        bool isAdmin = requestingUserRole == Roles.Admin || requestingUserRole == Roles.SuperAdmin;
+
+        if (!isOwner && !isAdmin)
+            throw new ForbiddenException("You do not have permission to delete this booking.");
+
+        if (booking.Status != BookingStatus.Held)
+            throw new ValidationException($"Cannot modify a booking that is already {booking.Status}.");
+
+        _db.VehicleBookings.Remove(booking);
+        await _db.SaveChangesAsync();
     }
 
     // Returns all vehicle bookings that belong to the requesting traveler
@@ -115,10 +155,10 @@ public class VehicleBookingService : IVehicleBookingService
         if (!isOwner && !isAdmin)
             throw new ForbiddenException("You do not have permission to cancel this booking.");
 
-        if (booking.Status == VehicleBookingStatus.Cancelled)
+        if (booking.Status == BookingStatus.Cancelled)
             throw new ValidationException("This booking is already cancelled.");
 
-        booking.Status    = VehicleBookingStatus.Cancelled;
+        booking.Status    = BookingStatus.Cancelled;
         booking.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
@@ -131,7 +171,7 @@ public class VehicleBookingService : IVehicleBookingService
             .Include(b => b.Vehicle)
             .AsQueryable();
 
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<VehicleBookingStatus>(status, out var statusEnum))
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
             query = query.Where(b => b.Status == statusEnum);
 
         query = query.OrderByDescending(b => b.CreatedAt);
@@ -144,6 +184,28 @@ public class VehicleBookingService : IVehicleBookingService
             .ToListAsync();
 
         return new PagedResult<VehicleBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
+
+    private async Task ValidateAndCheckAvailabilityAsync(
+        int vehicleId, DateTime startDate, DateTime endDate, Trip trip, int? excludeBookingId)
+    {
+        if (endDate <= startDate)
+            throw new ValidationException("EndDate must be after StartDate.");
+
+        if (startDate < trip.StartDate || endDate > trip.EndDate)
+            throw new ValidationException(
+                $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
+
+        var vehicle = await _db.Vehicles.FindAsync(vehicleId);
+        if (vehicle == null)
+            throw new NotFoundException($"Vehicle with ID {vehicleId} was not found.");
+        if (vehicle.Status != VehicleStatus.Active)
+            throw new ValidationException("This vehicle is not currently available for booking.");
+
+        bool available = await _vehicleService.IsVehicleAvailableAsync(vehicleId, startDate, endDate, excludeBookingId);
+        if (!available)
+            throw new ValidationException(
+                "This vehicle is already booked for an overlapping date range. Please choose different dates.");
     }
 }
 

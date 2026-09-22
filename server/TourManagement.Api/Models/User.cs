@@ -29,4 +29,13 @@ public class User
 
     // Vehicles this user owns (only populated when Role = TransportProvider).
     public List<Vehicle> Vehicles { get; set; } = new();
+
+    // Supplies this user owns (only populated when Role = Supplier).
+    public List<Supply> Supplies { get; set; } = new();
+
+    // Contracts associated with this supplier (only populated when Role = Supplier).
+    public List<Contract> Contracts { get; set; } = new();
+
+    // Contract requests submitted by this supplier (only populated when Role = Supplier).
+    public List<ContractRequest> ContractRequests { get; set; } = new();
 }

@@ -62,6 +62,12 @@ public class HotelService : IHotelService
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
+
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -100,6 +106,31 @@ public class HotelService : IHotelService
 
     // ── HotelOwner: manage rooms ─────────────────────────────────────────────
 
+    public async Task<PagedResult<RoomWithHotelDto>> GetMyRoomsAsync(
+        int ownerId, string? search, string? status, int page, int pageSize)
+    {
+        var query = _db.Rooms
+            .Include(r => r.Hotel)
+            .Where(r => r.Hotel.OwnerId == ownerId);
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<RoomStatus>(status, out var statusEnum))
+            query = query.Where(r => r.Status == statusEnum);
+
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(r => r.RoomType.Contains(search) || r.Hotel.Name.Contains(search));
+
+        query = query.OrderByDescending(r => r.CreatedAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => r.ToRoomWithHotelDto())
+            .ToListAsync();
+
+        return new PagedResult<RoomWithHotelDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
+
     public async Task<HotelDetailDto> AddRoomAsync(int hotelId, CreateRoomDto dto, int requestingUserId)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
@@ -136,13 +167,13 @@ public class HotelService : IHotelService
     }
 
     // HotelOwner sees bookings for their hotel (read-only, for managing availability).
-    public async Task<PagedResult<BookingSummaryDto>> GetHotelBookingsAsync(
+    public async Task<PagedResult<HotelBookingSummaryDto>> GetHotelBookingsAsync(
         int hotelId, int requestingUserId, int page, int pageSize)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
         CheckOwner(hotel, requestingUserId);
 
-        var query = _db.Bookings
+        var query = _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .Where(b => b.Room.HotelId == hotelId)
             .OrderByDescending(b => b.CreatedAt);
@@ -154,7 +185,7 @@ public class HotelService : IHotelService
             .Select(b => b.ToSummaryDto())
             .ToListAsync();
 
-        return new PagedResult<BookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+        return new PagedResult<HotelBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
     // ── Admin / SuperAdmin operations ────────────────────────────────────────
@@ -195,6 +226,12 @@ public class HotelService : IHotelService
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
+
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -212,6 +249,12 @@ public class HotelService : IHotelService
             .Take(pageSize)
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
+
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
 
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
@@ -261,10 +304,10 @@ public class HotelService : IHotelService
     }
 
     // Admin oversight view of all bookings across all hotels.
-    public async Task<PagedResult<BookingSummaryDto>> GetAllBookingsAsync(
+    public async Task<PagedResult<HotelBookingSummaryDto>> GetAllBookingsAsync(
         string? status, int page, int pageSize)
     {
-        var query = _db.Bookings
+        var query = _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .AsQueryable();
 
@@ -280,7 +323,7 @@ public class HotelService : IHotelService
             .Select(b => b.ToSummaryDto())
             .ToListAsync();
 
-        return new PagedResult<BookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+        return new PagedResult<HotelBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
     // ── Public / Traveler: search and view ───────────────────────────────────
@@ -363,20 +406,44 @@ public class HotelService : IHotelService
     // Counts how many rooms of a given type are already booked (Held or Confirmed)
     // for any date range that overlaps with [checkIn, checkOut).
     //
-    // This same logic is reused by SearchAsync (above) and BookingService.CreateAsync
-    // (to validate that a new booking won't exceed TotalRooms).
+    // This same logic is reused by SearchAsync (above) and HotelBookingService.CreateAsync
+    // (to validate that a new booking won't exceed TotalRooms capacity).
     //
-    // Two date ranges overlap if: startA < endB AND startB < endA.
-    public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut)
+    // The overlap formula is: startA < endB AND startB < endA.
+    // See Common/DateRangeHelper.cs for the canonical definition used in non-EF code.
+    // EF Core LINQ cannot call DateRangeHelper.HasOverlap directly, so the two
+    // conditions are kept inline below so EF can translate them to SQL.
+    public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludeBookingId = null)
     {
-        var booked = await _db.Bookings
+        var query = _db.HotelBookings
             .Where(b => b.RoomId == roomId
                      && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
                      && b.CheckInDate  < checkOut   // overlap condition part 1
-                     && b.CheckOutDate > checkIn)   // overlap condition part 2
+                     && b.CheckOutDate > checkIn);  // overlap condition part 2
+
+        if (excludeBookingId.HasValue)
+        {
+            query = query.Where(b => b.Id != excludeBookingId.Value);
+        }
+
+        return await query.SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
+    }
+
+    public async Task<int> ComputeOccupancyAsync(int hotelId, DateTime today)
+    {
+        var hotelRooms = await _db.Rooms.Where(r => r.HotelId == hotelId).ToListAsync();
+        int totalRooms = hotelRooms.Sum(r => r.TotalRooms);
+        
+        if (totalRooms == 0) return 0;
+
+        var bookedCount = await _db.HotelBookings
+            .Where(b => b.Room.HotelId == hotelId
+                     && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+                     && b.CheckInDate <= today 
+                     && b.CheckOutDate >= today)
             .SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
 
-        return booked;
+        return (int)Math.Round((double)bookedCount * 100 / totalRooms);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -393,7 +460,9 @@ public class HotelService : IHotelService
         if (hotel == null)
             throw new NotFoundException($"Hotel with ID {hotelId} was not found.");
 
-        return hotel.ToDetailDto();
+        var dto = hotel.ToDetailDto();
+        dto.OccupancyPercentage = await ComputeOccupancyAsync(hotelId, DateTime.UtcNow.Date);
+        return dto;
     }
 
     // Fetches a Hotel by ID or throws NotFoundException.

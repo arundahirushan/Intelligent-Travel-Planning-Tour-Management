@@ -32,8 +32,11 @@ public class Trip
     public List<ItineraryItem> ItineraryItems { get; set; } = new();
 
     // Hotel bookings linked to this trip.
-    public List<Booking> Bookings { get; set; } = new();
+    public List<HotelBooking> HotelBookings { get; set; } = new();
 
     // Vehicle bookings linked to this trip.
     public List<VehicleBooking> VehicleBookings { get; set; } = new();
+
+    // Supply orders linked to this trip.
+    public List<SupplyOrder> SupplyOrders { get; set; } = new();
 }
