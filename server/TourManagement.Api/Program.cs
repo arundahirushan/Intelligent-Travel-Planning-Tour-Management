@@ -58,10 +58,17 @@ builder.Services.AddSwaggerGen(options =>
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // Allow the React dev server to call our API. The policy name is referenced below.
+// Read allowed origins: always allow the local dev server, plus an optional
+// production frontend URL supplied via the FRONTEND_URL environment variable.
+var allowedOrigins = new List<string> { "http://localhost:5173" };
+var prodFrontend = builder.Configuration["FRONTEND_URL"];
+if (!string.IsNullOrWhiteSpace(prodFrontend))
+    allowedOrigins.Add(prodFrontend);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontends", policy =>
-        policy.WithOrigins("http://localhost:5173")  // React (Vite) dev server
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
