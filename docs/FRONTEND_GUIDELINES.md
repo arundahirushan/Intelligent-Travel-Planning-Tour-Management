@@ -68,14 +68,26 @@ paragraphs and general body text). Don't introduce a third font family.
 These already exist — **use them, don't rebuild your own versions**:
 
 - **`Button.jsx`** — supports `primary` and `secondary` variants.
-- **`Input.jsx`** — text/password input with label, validation error
-  message support, and focus styling.
+- **`Input.jsx`** — text/password input with label, validation error message support, and focus styling.
 - **`ErrorBanner.jsx`** — inline error alert (icon + message).
 - **`LoadingSpinner.jsx`** — supports `sm`/`md`/`lg` sizes.
-- **`FeatureCard.jsx`** — icon + uppercase title + description, used on
-  the landing page.
-- **`ImageCard.jsx`** — image background with gradient overlay and hover
-  action indicator, used for destination cards.
+- **`FeatureCard.jsx`** — icon + uppercase title + description, used on the landing page.
+- **`ImageCard.jsx`** — image background with gradient overlay and hover action indicator, used for destination cards.
+- **`DashboardLayout.jsx`** — one-column responsive layout with a top navbar (including profile dropdown and mobile hamburger menu), main content area, and a floating help widget. Accepts `navItems`, `roleBadge`, and **`profileRoute`** (required — pass the correct profile path explicitly, e.g. `"/hotel-owner/profile"` or `"/transport-provider/profile"`). Do NOT rely on a default; always pass profileRoute so the "Profile" dropdown link goes to the right place.
+- **`StatusBadge.jsx`** — maps a string status to a semantic color pill badge.
+- **`ProgressBar.jsx`** — simple rounded-pill horizontal progress bar with optional label.
+- **`SummaryMetricCard.jsx`** — dashboard summary block with icon, label, large value, optional badge, and progress bar.
+- **`SearchFilterBar.jsx`** — responsive bar above lists with a search input, custom filters (passed as children), and result counts.
+- **`DataTable.jsx`** — standard list view table with pagination, empty states, and loading states.
+- **`Modal.jsx`** — base modal with backdrop, accessible close button, and sizes.
+- **`RoomModal.jsx`** — shared room form modal supporting single-hotel or multi-hotel context.
+- **`ConfirmDialog.jsx`** — small modal for confirming destructive or critical actions.
+- **`EmptyState.jsx`** — centered icon + title + description for empty lists or zero search results.
+- **`PickupLocationModal.jsx`** — shared map modal (Leaflet + OpenStreetMap) for displaying a lat/lng pickup point with an optional note and a "Open in Google Maps" link. Used by Transport Provider bookings; reuse for M1 traveler booking views too.
+
+### Shared Pages (`client/src/features/shared/pages/`)
+
+- **`ProfilePage.jsx`** — generic profile page (fetch/update profile, deletion eligibility check, danger zone). Props: `navItems`, `roleBadge`, `profileRoute`, `dashboardHomePath` (path for the danger-zone "View My X" link), `dashboardHomeLabel` (label for that link). Every role dashboard uses this — hotel-owner wraps it in a thin file, transport-provider uses it inline in the route. No role-specific logic inside.
 
 If a dashboard needs a data table, modal, confirm dialog, status badge,
 or search/filter bar, **check first whether one has already been built**
@@ -140,26 +152,12 @@ Each of the 4 core components has its own dashboard owner. This is
 deliberately **not** a 1-to-1 split with the backend components — read
 carefully:
 
-- **M1 (Trip)** — owns the entire Traveler-facing experience: trip
-  creation/list/detail, AND all three traveler-facing booking flows
-  (browse/book hotels, browse/book vehicles, order supplies), since a
-  traveler manages all of this from inside one trip. **Built last.**
-- **M2 (Accommodation)** — owns ONLY the Hotel Owner's own management
-  dashboard (manage their hotels/rooms, view their bookings). **Built
-  first.**
-- **M3 (Transport)** — owns ONLY the Transport Provider's own management
-  dashboard. Built after M2.
-- **M4 (Supplier)** — owns ONLY the Supplier's own management dashboard
-  (including contract/contract-request views). Built after M2.
+- **M1 (Trip)** — owns the entire Traveler-facing experience: trip creation/list/detail, AND all three traveler-facing booking flows (browse/book hotels, browse/book vehicles, order supplies), since a traveler manages all of this from inside one trip. **Built last.**
+- **M2 (Accommodation)** — **[COMPLETED]** owns ONLY the Hotel Owner's own management dashboard (manage their hotels/rooms, view their bookings). Built first to establish the shared UI component kit.
+- **M3 (Transport)** — owns ONLY the Transport Provider's own management dashboard. Built after M2. Reuses M2's UI components.
+- **M4 (Supplier)** — owns ONLY the Supplier's own management dashboard (including contract/contract-request views). Built after M2. Reuses M2's UI components.
 
-**Why M2 goes first:** rather than guessing upfront what "shared UI"
-every dashboard will need, M2 is being built as the pilot. Whatever
-generic, reusable pieces come out of building it for real (a data table
-with sort/filter/pagination, a modal, a confirm dialog, a status badge
-component, a search/filter bar, a dashboard layout with sidebar
-navigation) become the shared kit. **If you are building M3, M4, or M1:
-check `client/src/components/` for what M2 already produced before
-building your own version of a table, modal, badge, etc.**
+**Why M2 goes first:** rather than guessing upfront what "shared UI" every dashboard will need, M2 was built as the pilot. The generic, reusable pieces that came out of building it for real (data table with pagination, modal, confirm dialog, status badge component, search/filter bar, dashboard layout with sidebar navigation, summary metric cards) are now the shared kit. **If you are building M3, M4, or M1: check `client/src/components/` for what M2 already produced before building your own version of a table, modal, badge, etc.**
 
 Each dashboard lives in its own feature folder
 (`client/src/features/<name>/`) with its own `components/`, `pages/`,

@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IContractService,    TourManagement.Api.Services.Implementations.ContractService>();
         services.AddScoped<IContractRequestService, TourManagement.Api.Services.Implementations.ContractRequestService>();
         services.AddScoped<ISupplyOrderService,     TourManagement.Api.Services.Implementations.SupplyOrderService>();
+        services.AddScoped<IProfileService,         TourManagement.Api.Services.Implementations.ProfileService>();
 
         return services;
     }

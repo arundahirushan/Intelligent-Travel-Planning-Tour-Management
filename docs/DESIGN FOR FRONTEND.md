@@ -67,19 +67,11 @@ radius scale and the single `shadow-soft` token from
 ## Layout Patterns
 
 ### Dashboard Shell (use for every role's dashboard)
-- Fixed left sidebar, ~18rem wide: logo + app name at top, a role badge
-  pill beneath it (e.g. "Hotel Partner"), a nav section label
-  ("Operations") followed by nav links with icon + label (active item
-  gets `bg-primary text-white`, inactive items are neutral with a hover
-  state), and pinned to the bottom: a small support/help info box and a
-  "Sign Out" link in the danger color.
-- Fixed top header, offset to start after the sidebar: a breadcrumb-style
-  location indicator on the left, and on the right — a small account/
-  organization switcher button, a notification bell with an unread-count
-  badge, and the current user's name + role + avatar circle (initials on
-  a `bg-primary` circle if no photo).
-- Main content area below the header, with generous padding, using the
-  spacing scale above.
+- Top Navbar: Logo + app name ("EasyPlanner") on the left (links to `/`). A horizontal list of nav links with icon + label (active item gets `bg-primary text-white`, inactive items are neutral with a hover state).
+- Top-Right: A small account/organization switcher button, a notification bell with an unread-count badge, and a clickable area showing the current user's name + role + avatar circle which opens a small dropdown menu on click with "Profile" and "Sign Out" (in danger color).
+- Mobile: The horizontal nav items collapse into a simple hamburger menu toggle.
+- Pinned to the bottom-right corner of the viewport: a small floating support/help widget that expands to show generic contact info.
+- Main content area below the header, with generous padding, using the spacing scale above.
 
 ### Page Header Pattern (top of most dashboard pages)
 - A small uppercase "eyebrow" label with a colored dot, using
