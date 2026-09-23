@@ -6,6 +6,12 @@ import RegisterPage from '../pages/RegisterPage';
 import DashboardPlaceholder from '../pages/DashboardPlaceholder';
 import ProtectedRoute from './ProtectedRoute';
 
+// Traveler Dashboard Pages
+import MyTripsPage from '../features/traveler/pages/MyTripsPage';
+import TripDetailsPage from '../features/traveler/pages/TripDetailsPage';
+import MyBookingsPage from '../features/traveler/pages/MyBookingsPage';
+import TravelerProfilePage from '../features/traveler/pages/TravelerProfilePage';
+
 // Hotel Owner Dashboard Pages
 import MyHotelsPage from '../features/hotel-owner/pages/MyHotelsPage';
 import HotelDetailPage from '../features/hotel-owner/pages/HotelDetailPage';
@@ -32,9 +38,13 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Protected Placeholder Routes */}
+      {/* Traveler Dashboard */}
       <Route element={<ProtectedRoute allowedRoles={['Traveler']} />}>
-        <Route path="/traveler" element={<DashboardPlaceholder role="Traveler" />} />
+        <Route path="/traveler" element={<Navigate to="/traveler/trips" replace />} />
+        <Route path="/traveler/trips" element={<MyTripsPage />} />
+        <Route path="/traveler/trips/:tripId" element={<TripDetailsPage />} />
+        <Route path="/traveler/bookings" element={<MyBookingsPage />} />
+        <Route path="/traveler/profile" element={<TravelerProfilePage />} />
       </Route>
 
       {/* Hotel Owner Dashboard */}

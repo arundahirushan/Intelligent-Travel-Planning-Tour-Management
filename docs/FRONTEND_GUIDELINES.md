@@ -152,7 +152,7 @@ Each of the 4 core components has its own dashboard owner. This is
 deliberately **not** a 1-to-1 split with the backend components — read
 carefully:
 
-- **M1 (Trip)** — owns the entire Traveler-facing experience: trip creation/list/detail, AND all three traveler-facing booking flows (browse/book hotels, browse/book vehicles, order supplies), since a traveler manages all of this from inside one trip. **Built last.**
+- **M1 (Trip)** — **[COMPLETED]** owns the entire Traveler-facing experience: trip creation/list/detail, AND all three traveler-facing booking flows (browse/book hotels, browse/book vehicles, order supplies), since a traveler manages all of this from inside one trip. Built last, heavily reusing M2's shared UI components.
 - **M2 (Accommodation)** — **[COMPLETED]** owns ONLY the Hotel Owner's own management dashboard (manage their hotels/rooms, view their bookings). Built first to establish the shared UI component kit.
 - **M3 (Transport)** — owns ONLY the Transport Provider's own management dashboard. Built after M2. Reuses M2's UI components.
 - **M4 (Supplier)** — owns ONLY the Supplier's own management dashboard (including contract/contract-request views). Built after M2. Reuses M2's UI components.
