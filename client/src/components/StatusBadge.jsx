@@ -3,9 +3,9 @@ import React from 'react';
 export default function StatusBadge({ status }) {
   let colorClass = 'bg-status-neutral/15 text-status-neutral';
   
-  if (['Active', 'Confirmed'].includes(status)) {
+  if (['Active', 'Confirmed', 'Available Today'].includes(status)) {
     colorClass = 'bg-status-success/15 text-status-success';
-  } else if (['PendingApproval', 'Held'].includes(status)) {
+  } else if (['PendingApproval', 'Held', 'Booked Today'].includes(status)) {
     colorClass = 'bg-status-warning/15 text-status-warning';
   } else if (['Rejected'].includes(status)) {
     colorClass = 'bg-status-danger/15 text-status-danger';

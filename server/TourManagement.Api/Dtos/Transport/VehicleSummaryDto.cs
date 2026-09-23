@@ -14,5 +14,8 @@ public class VehicleSummaryDto
 
     // ProviderName is mainly useful in the Admin's view.
     public string ProviderName { get; set; } = string.Empty;
+
+    // True if there is a Held or Confirmed booking for today.
+    public bool IsBookedToday { get; set; }
 }
 
