@@ -17,7 +17,7 @@ import { useAuth } from '../../../context/AuthContext';
 //   profileRoute       — passed through to DashboardLayout
 //   dashboardHomePath  — path for the "View My [X]" link in the danger zone (e.g. "/hotel-owner/hotels")
 //   dashboardHomeLabel — label for that link (e.g. "My Hotels", "My Vehicles")
-export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboardHomePath, dashboardHomeLabel }) {
+export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboardHomePath, dashboardHomeLabel, showDangerZone = true }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -186,7 +186,8 @@ export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboa
             </form>
           </div>
 
-          {/* Danger Zone Card */}
+          {/* Danger Zone Card — hidden for roles where deletion is unreliable */}
+          {showDangerZone && (
           <div className="border border-status-danger/30 bg-status-danger/5 rounded-xl p-[var(--space-lg)]">
             <div className="text-status-danger text-label-uppercase tracking-widest mb-2 font-bold font-heading">
               DANGER ZONE
@@ -228,6 +229,7 @@ export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboa
               </button>
             )}
           </div>
+          )}
         </div>
       </div>
 

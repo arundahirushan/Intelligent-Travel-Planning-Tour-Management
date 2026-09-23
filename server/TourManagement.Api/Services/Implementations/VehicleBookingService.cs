@@ -28,6 +28,10 @@ public class VehicleBookingService : IVehicleBookingService
     // ensures the vehicle is available for the requested dates.
     public async Task<VehicleBookingSummaryDto> CreateAsync(CreateVehicleBookingDto dto, int travelerId)
     {
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
         var trip = await _db.Trips.FindAsync(dto.TripId);
         if (trip == null)
             throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
@@ -63,6 +67,10 @@ public class VehicleBookingService : IVehicleBookingService
 
     public async Task<VehicleBookingSummaryDto> UpdateAsync(int id, UpdateVehicleBookingDto dto, int travelerId)
     {
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
         var booking = await _db.VehicleBookings
             .Include(b => b.Trip)
             .FirstOrDefaultAsync(b => b.Id == id);
@@ -224,7 +232,7 @@ public class VehicleBookingService : IVehicleBookingService
         if (endDate <= startDate)
             throw new ValidationException("EndDate must be after StartDate.");
 
-        if (startDate < trip.StartDate || endDate > trip.EndDate)
+        if (startDate.Date < trip.StartDate.Date || endDate.Date > trip.EndDate.Date)
             throw new ValidationException(
                 $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
 
