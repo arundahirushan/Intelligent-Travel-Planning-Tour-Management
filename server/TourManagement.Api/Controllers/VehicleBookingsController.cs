@@ -54,6 +54,19 @@ public class VehicleBookingsController : ControllerBase
         return Ok(ApiResponse<PagedResult<VehicleBookingSummaryDto>>.Ok(result));
     }
 
+    /// <summary>Get all bookings across all vehicles owned by the TransportProvider.</summary>
+    [HttpGet("my-vehicles")]
+    [Authorize(Roles = Roles.TransportProvider)]
+    public async Task<ActionResult<ApiResponse<PagedResult<VehicleBookingSummaryDto>>>> GetMyVehiclesBookings(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await _bookingService.GetMyVehiclesBookingsAsync(GetCurrentUserId(), search, status, page, pageSize);
+        return Ok(ApiResponse<PagedResult<VehicleBookingSummaryDto>>.Ok(result));
+    }
+
     /// <summary>Cancel a vehicle booking. Trip owner or Admin/SuperAdmin only.</summary>
     [HttpPost("{id}/cancel")]
     [Authorize]

@@ -107,7 +107,7 @@ export default function RoomsPage() {
   ];
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner">
+    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Hotel Partner" profileRoute="/hotel-owner/profile">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <div className="text-label-uppercase text-primary flex items-center gap-2 mb-1">

@@ -334,6 +334,11 @@ public class HotelService : IHotelService
         if (request.CheckOutDate <= request.CheckInDate)
             throw new ValidationException("CheckOutDate must be after CheckInDate.");
 
+        // PostgreSQL (Npgsql) requires DateTime to be UTC when querying timestamp with time zone columns.
+        // Query string dates bind as Unspecified, so we force them to UTC here.
+        request.CheckInDate = DateTime.SpecifyKind(request.CheckInDate, DateTimeKind.Utc);
+        request.CheckOutDate = DateTime.SpecifyKind(request.CheckOutDate, DateTimeKind.Utc);
+
         // Step 1: Get all active hotels at the requested destination.
         var hotels = await _db.Hotels
             .Include(h => h.Rooms)

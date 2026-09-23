@@ -28,6 +28,10 @@ public class VehicleBookingService : IVehicleBookingService
     // ensures the vehicle is available for the requested dates.
     public async Task<VehicleBookingSummaryDto> CreateAsync(CreateVehicleBookingDto dto, int travelerId)
     {
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
         var trip = await _db.Trips.FindAsync(dto.TripId);
         if (trip == null)
             throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
@@ -63,6 +67,10 @@ public class VehicleBookingService : IVehicleBookingService
 
     public async Task<VehicleBookingSummaryDto> UpdateAsync(int id, UpdateVehicleBookingDto dto, int travelerId)
     {
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
         var booking = await _db.VehicleBookings
             .Include(b => b.Trip)
             .FirstOrDefaultAsync(b => b.Id == id);
@@ -186,13 +194,45 @@ public class VehicleBookingService : IVehicleBookingService
         return new PagedResult<VehicleBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
+    public async Task<PagedResult<VehicleBookingSummaryDto>> GetMyVehiclesBookingsAsync(
+        int providerId, string? search, string? status, int page, int pageSize)
+    {
+        var query = _db.VehicleBookings
+            .Include(b => b.Vehicle)
+            .Include(b => b.Trip)
+            .Where(b => b.Vehicle.ProviderId == providerId)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
+            query = query.Where(b => b.Status == statusEnum);
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(b => 
+                b.Vehicle.VehicleType.Contains(search) || 
+                b.Vehicle.Model.Contains(search) || 
+                b.Vehicle.RegistrationNumber.Contains(search));
+        }
+
+        query = query.OrderByDescending(b => b.CreatedAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(b => b.ToSummaryDto())
+            .ToListAsync();
+
+        return new PagedResult<VehicleBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
+
     private async Task ValidateAndCheckAvailabilityAsync(
         int vehicleId, DateTime startDate, DateTime endDate, Trip trip, int? excludeBookingId)
     {
         if (endDate <= startDate)
             throw new ValidationException("EndDate must be after StartDate.");
 
-        if (startDate < trip.StartDate || endDate > trip.EndDate)
+        if (startDate.Date < trip.StartDate.Date || endDate.Date > trip.EndDate.Date)
             throw new ValidationException(
                 $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
 

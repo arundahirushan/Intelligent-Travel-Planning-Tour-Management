@@ -73,7 +73,7 @@ These already exist — **use them, don't rebuild your own versions**:
 - **`LoadingSpinner.jsx`** — supports `sm`/`md`/`lg` sizes.
 - **`FeatureCard.jsx`** — icon + uppercase title + description, used on the landing page.
 - **`ImageCard.jsx`** — image background with gradient overlay and hover action indicator, used for destination cards.
-- **`DashboardLayout.jsx`** — one-column responsive layout with a top navbar (including profile dropdown and mobile hamburger menu), main content area, and a floating help widget. Accepts navItems.
+- **`DashboardLayout.jsx`** — one-column responsive layout with a top navbar (including profile dropdown and mobile hamburger menu), main content area, and a floating help widget. Accepts `navItems`, `roleBadge`, and **`profileRoute`** (required — pass the correct profile path explicitly, e.g. `"/hotel-owner/profile"` or `"/transport-provider/profile"`). Do NOT rely on a default; always pass profileRoute so the "Profile" dropdown link goes to the right place.
 - **`StatusBadge.jsx`** — maps a string status to a semantic color pill badge.
 - **`ProgressBar.jsx`** — simple rounded-pill horizontal progress bar with optional label.
 - **`SummaryMetricCard.jsx`** — dashboard summary block with icon, label, large value, optional badge, and progress bar.
@@ -83,6 +83,11 @@ These already exist — **use them, don't rebuild your own versions**:
 - **`RoomModal.jsx`** — shared room form modal supporting single-hotel or multi-hotel context.
 - **`ConfirmDialog.jsx`** — small modal for confirming destructive or critical actions.
 - **`EmptyState.jsx`** — centered icon + title + description for empty lists or zero search results.
+- **`PickupLocationModal.jsx`** — shared map modal (Leaflet + OpenStreetMap) for displaying a lat/lng pickup point with an optional note and a "Open in Google Maps" link. Used by Transport Provider bookings; reuse for M1 traveler booking views too.
+
+### Shared Pages (`client/src/features/shared/pages/`)
+
+- **`ProfilePage.jsx`** — generic profile page (fetch/update profile, deletion eligibility check, danger zone). Props: `navItems`, `roleBadge`, `profileRoute`, `dashboardHomePath` (path for the danger-zone "View My X" link), `dashboardHomeLabel` (label for that link). Every role dashboard uses this — hotel-owner wraps it in a thin file, transport-provider uses it inline in the route. No role-specific logic inside.
 
 If a dashboard needs a data table, modal, confirm dialog, status badge,
 or search/filter bar, **check first whether one has already been built**
@@ -147,7 +152,7 @@ Each of the 4 core components has its own dashboard owner. This is
 deliberately **not** a 1-to-1 split with the backend components — read
 carefully:
 
-- **M1 (Trip)** — owns the entire Traveler-facing experience: trip creation/list/detail, AND all three traveler-facing booking flows (browse/book hotels, browse/book vehicles, order supplies), since a traveler manages all of this from inside one trip. **Built last.**
+- **M1 (Trip)** — **[COMPLETED]** owns the entire Traveler-facing experience: trip creation/list/detail, AND all three traveler-facing booking flows (browse/book hotels, browse/book vehicles, order supplies), since a traveler manages all of this from inside one trip. Built last, heavily reusing M2's shared UI components.
 - **M2 (Accommodation)** — **[COMPLETED]** owns ONLY the Hotel Owner's own management dashboard (manage their hotels/rooms, view their bookings). Built first to establish the shared UI component kit.
 - **M3 (Transport)** — owns ONLY the Transport Provider's own management dashboard. Built after M2. Reuses M2's UI components.
 - **M4 (Supplier)** — owns ONLY the Supplier's own management dashboard (including contract/contract-request views). Built after M2. Reuses M2's UI components.
