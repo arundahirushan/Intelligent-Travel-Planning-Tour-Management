@@ -66,6 +66,12 @@ public class VehicleService : IVehicleService
             .Select(v => v.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.IsBookedToday = await IsVehicleBookedOnDateAsync(item.Id, today);
+        }
+
         return new PagedResult<VehicleSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -161,6 +167,12 @@ public class VehicleService : IVehicleService
             .Select(v => v.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.IsBookedToday = await IsVehicleBookedOnDateAsync(item.Id, today);
+        }
+
         return new PagedResult<VehicleSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -177,6 +189,12 @@ public class VehicleService : IVehicleService
             .Take(pageSize)
             .Select(v => v.ToSummaryDto())
             .ToListAsync();
+
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.IsBookedToday = await IsVehicleBookedOnDateAsync(item.Id, today);
+        }
 
         return new PagedResult<VehicleSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
@@ -233,6 +251,11 @@ public class VehicleService : IVehicleService
     {
         if (request.EndDate <= request.StartDate)
             throw new ValidationException("EndDate must be after StartDate.");
+
+        // PostgreSQL (Npgsql) requires DateTime to be UTC when querying timestamp with time zone columns.
+        // Query string dates bind as Unspecified, so we force them to UTC here.
+        request.StartDate = DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
+        request.EndDate = DateTime.SpecifyKind(request.EndDate, DateTimeKind.Utc);
 
         // Step 1: Get all active vehicles.
         var vehicles = await _db.Vehicles
@@ -299,16 +322,33 @@ public class VehicleService : IVehicleService
     // See Common/DateRangeHelper.cs for the canonical definition used in non-EF code.
     // EF Core LINQ cannot call DateRangeHelper.HasOverlap directly, so the two
     // conditions are kept inline below so EF can translate them to SQL.
-    public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate)
+    public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate, int? excludeBookingId = null)
     {
-        bool hasOverlap = await _db.VehicleBookings.AnyAsync(b =>
+        var query = _db.VehicleBookings.Where(b =>
             b.VehicleId == vehicleId
             && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
             && b.StartDate < endDate    // overlap condition part 1
             && b.EndDate   > startDate  // overlap condition part 2
         );
 
+        if (excludeBookingId.HasValue)
+        {
+            query = query.Where(b => b.Id != excludeBookingId.Value);
+        }
+
+        bool hasOverlap = await query.AnyAsync();
+
         return !hasOverlap;
+    }
+
+    public async Task<bool> IsVehicleBookedOnDateAsync(int vehicleId, DateTime date)
+    {
+        return await _db.VehicleBookings.AnyAsync(b =>
+            b.VehicleId == vehicleId
+            && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+            && b.StartDate.Date <= date.Date
+            && b.EndDate.Date >= date.Date
+        );
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

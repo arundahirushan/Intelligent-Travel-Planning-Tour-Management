@@ -28,27 +28,47 @@ Intelligent-Travel-Planning-Tour-Management/
 │   └── tools
 │       └── .gitkeep
 ├── client
+│   ├── CLIENT_STRUCTURE.md
 │   ├── .env.example
+│   ├── .env.local
 │   ├── .gitignore
 │   ├── .oxlintrc.json
 │   ├── README.md
 │   ├── index.html
+│   ├── package-lock.json
 │   ├── package.json
 │   ├── public
+│   │   ├── 1.jpg
+│   │   ├── 2.jpg
+│   │   ├── 3.jpg
+│   │   ├── 4.jpg
+│   │   ├── 5.jpg
+│   │   ├── 6.jpg
+│   │   ├── Hero.jpg
+│   │   ├── Nine arch Bridge.jpg
 │   │   ├── favicon.svg
-│   │   └── icons.svg
+│   │   ├── icons.svg
+│   │   └── logo.png
 │   ├── src
 │   │   ├── App.css
 │   │   ├── App.jsx
 │   │   ├── assets
 │   │   │   ├── .gitkeep
 │   │   │   ├── hero.png
+│   │   │   ├── logo.png
 │   │   │   ├── react.svg
 │   │   │   └── vite.svg
 │   │   ├── components
-│   │   │   └── .gitkeep
+│   │   │   ├── .gitkeep
+│   │   │   ├── Button.jsx
+│   │   │   ├── ErrorBanner.jsx
+│   │   │   ├── FeatureCard.jsx
+│   │   │   ├── ImageCard.jsx
+│   │   │   ├── Input.jsx
+│   │   │   └── LoadingSpinner.jsx
 │   │   ├── context
-│   │   │   └── .gitkeep
+│   │   │   ├── .gitkeep
+│   │   │   └── AuthContext.jsx
 │   │   ├── features
 │   │   │   └── .gitkeep
 │   │   ├── hooks
@@ -56,6 +76,7 @@ Intelligent-Travel-Planning-Tour-Management/
 │   │   ├── index.css
 │   │   ├── main.jsx
 │   │   ├── pages
+│   │   │   ├── DashboardPlaceholder.jsx
 │   │   │   ├── HomePage.jsx
 │   │   │   ├── LoginPage.jsx
 │   │   │   └── RegisterPage.jsx

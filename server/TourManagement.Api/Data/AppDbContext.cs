@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<Supply> Supplies => Set<Supply>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractRequest> ContractRequests => Set<ContractRequest>();
+    public DbSet<SupplyOrder> SupplyOrders => Set<SupplyOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -309,6 +310,36 @@ public class AppDbContext : DbContext
             // Frequent lookup and filtering columns.
             entity.HasIndex(cr => cr.SupplierId);
             entity.HasIndex(cr => cr.Status);
+        });
+
+        // ── SupplyOrder ───────────────────────────────────────────────────────
+
+        modelBuilder.Entity<SupplyOrder>(entity =>
+        {
+            // Store BookingStatus as a string.
+            entity.Property(so => so.Status)
+                  .HasConversion<string>();
+
+            // PriceAtOrderTime is money — store with 2 decimal places.
+            entity.Property(so => so.PriceAtOrderTime)
+                  .HasColumnType("decimal(18,2)");
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(so => so.TripId);
+            entity.HasIndex(so => so.SupplyId);
+            entity.HasIndex(so => so.Status);
+
+            // RESTRICT trip deletion if it has supply orders.
+            entity.HasOne(so => so.Trip)
+                  .WithMany(t => t.SupplyOrders)
+                  .HasForeignKey(so => so.TripId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // RESTRICT supply deletion if it has supply orders.
+            entity.HasOne(so => so.Supply)
+                  .WithMany(s => s.SupplyOrders)
+                  .HasForeignKey(so => so.SupplyId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

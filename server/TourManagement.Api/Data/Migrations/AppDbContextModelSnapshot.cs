@@ -386,6 +386,47 @@ namespace TourManagement.Api.Data.Migrations
                     b.ToTable("Supplies");
                 });
 
+            modelBuilder.Entity("TourManagement.Api.Models.SupplyOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("PriceAtOrderTime")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SupplyId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TripId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SupplyId");
+
+                    b.HasIndex("TripId");
+
+                    b.ToTable("SupplyOrders");
+                });
+
             modelBuilder.Entity("TourManagement.Api.Models.Trip", b =>
                 {
                     b.Property<int>("Id")
@@ -686,6 +727,25 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("TourManagement.Api.Models.SupplyOrder", b =>
+                {
+                    b.HasOne("TourManagement.Api.Models.Supply", "Supply")
+                        .WithMany("SupplyOrders")
+                        .HasForeignKey("SupplyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TourManagement.Api.Models.Trip", "Trip")
+                        .WithMany("SupplyOrders")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Supply");
+
+                    b.Navigation("Trip");
+                });
+
             modelBuilder.Entity("TourManagement.Api.Models.Trip", b =>
                 {
                     b.HasOne("TourManagement.Api.Models.User", "Traveler")
@@ -749,11 +809,18 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("Bookings");
                 });
 
+            modelBuilder.Entity("TourManagement.Api.Models.Supply", b =>
+                {
+                    b.Navigation("SupplyOrders");
+                });
+
             modelBuilder.Entity("TourManagement.Api.Models.Trip", b =>
                 {
                     b.Navigation("HotelBookings");
 
                     b.Navigation("ItineraryItems");
+
+                    b.Navigation("SupplyOrders");
 
                     b.Navigation("VehicleBookings");
                 });

@@ -19,6 +19,7 @@ public class HotelDetailDto
     public HotelStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public int OccupancyPercentage { get; set; }
 
     // All room types belonging to this hotel.
     public List<RoomDto> Rooms { get; set; } = new();
