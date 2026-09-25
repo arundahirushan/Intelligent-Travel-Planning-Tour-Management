@@ -106,31 +106,37 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <ImageCard
               title="Sigiriya"
+              category="CULTURAL TRIANGLE"
               description="5th-century ancient rock citadel & water gardens."
-              imageUrl="/1.jpg"
+              imageUrl="/sigiriya.png"
             />
             <ImageCard
               title="Ella"
+              category="CENTRAL HIGHLANDS"
               description="Misty emerald tea highlands and colonial viaducts."
-              imageUrl="/2.jpg"
+              imageUrl="/ella.png"
             />
             <ImageCard
               title="Galle Fort"
+              category="SOUTHERN COAST"
               description="16th-century stone ramparts over turquoise ocean swells."
-              imageUrl="/3.jpg"
+              imageUrl="/galle_fort.png"
             />
             <ImageCard
               title="Kandy"
+              category="SACRED CITY"
               description="Sacred temple of the tooth relic and misty mountain lakes."
               imageUrl="/4.jpg"
             />
             <ImageCard
               title="Yala National Park"
+              category="WILDLIFE SANCTUARY"
               description="Wild leopard sanctuary and primeval roaming tuskers."
               imageUrl="/5.jpg"
             />
             <ImageCard
               title="Mirissa"
+              category="SOUTHERN COAST"
               description="Sun-drenched southern surf breaks and whale watching."
               imageUrl="/6.jpg"
             />

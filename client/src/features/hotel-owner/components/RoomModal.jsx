@@ -143,14 +143,28 @@ export default function RoomModal({ isOpen, onClose, onSuccess, hotelId, room })
           </div>
         )}
         
-        <Input 
-          label="Room Type Name" 
-          name="RoomType" 
-          value={formData.RoomType} 
-          onChange={handleChange} 
-          error={fieldErrors.RoomType}
-          placeholder="e.g. Deluxe Double Ocean View"
-        />
+        <div className="flex flex-col">
+          <label className="mb-1.5 font-heading text-sm font-semibold text-text-secondary">
+            Room Type
+          </label>
+          <select
+            name="RoomType"
+            value={formData.RoomType}
+            onChange={handleChange}
+            className={`bg-white border ${fieldErrors.RoomType ? 'border-status-danger' : 'border-border-neutral'} rounded-md px-4 py-2.5 font-body text-text outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all`}
+          >
+            <option value="">-- Select a Room Type --</option>
+            <option value="Single Room">Single Room</option>
+            <option value="Standard Double">Standard Double</option>
+            <option value="Deluxe Double">Deluxe Double</option>
+            <option value="Twin Room">Twin Room</option>
+            <option value="Suite">Suite</option>
+            <option value="Family Room">Family Room</option>
+            <option value="Presidential Suite">Presidential Suite</option>
+            <option value="Villa">Villa</option>
+          </select>
+          {fieldErrors.RoomType && <span className="text-status-danger text-xs mt-1">{fieldErrors.RoomType}</span>}
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input 
