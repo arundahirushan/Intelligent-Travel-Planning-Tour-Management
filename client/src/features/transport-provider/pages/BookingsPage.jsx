@@ -98,7 +98,7 @@ export default function BookingsPage() {
   ];
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Transport Partner" profileRoute="/transport-provider/profile">
+    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Transport Provider" profileRoute="/transport-provider/profile">
       {/* Page Header */}
       <div className="mb-6">
         <div className="text-label-uppercase text-primary flex items-center gap-2 mb-1">

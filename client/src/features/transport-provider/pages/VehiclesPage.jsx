@@ -105,7 +105,7 @@ export default function VehiclesPage() {
   };
 
   return (
-    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Transport Partner" profileRoute="/transport-provider/profile">
+    <DashboardLayout navItems={NAV_ITEMS} roleBadge="Transport Provider" profileRoute="/transport-provider/profile">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
@@ -113,7 +113,7 @@ export default function VehiclesPage() {
             ● TRANSPORT
           </span>
           <h1 className="text-headline-lg font-heading font-bold text-text mb-1">
-            My Vehicles &amp; Fleet
+            My Vehicles
           </h1>
           <p className="text-body-md text-text-secondary">
             Manage your vehicle listings and track availability.
