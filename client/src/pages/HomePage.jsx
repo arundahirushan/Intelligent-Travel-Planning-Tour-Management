@@ -111,33 +111,33 @@ export default function HomePage() {
               imageUrl="/sigiriya.png"
             />
             <ImageCard
-              title="Ella"
+              title="Ella - Nine Arches Bridge"
               category="CENTRAL HIGHLANDS"
-              description="Misty emerald tea highlands and colonial viaducts."
+              description="Discover the iconic Nine Arches Bridge hidden in the misty emerald highlands of Ella."
               imageUrl="/ella.png"
             />
             <ImageCard
               title="Galle Fort"
               category="SOUTHERN COAST"
-              description="16th-century stone ramparts over turquoise ocean swells."
+              description="Wander through the historic Galle Fort and its iconic lighthouse by the southern coastal swells."
               imageUrl="/galle_fort.png"
-            />
-            <ImageCard
-              title="Kandy"
-              category="SACRED CITY"
-              description="Sacred temple of the tooth relic and misty mountain lakes."
-              imageUrl="/4.jpg"
-            />
-            <ImageCard
-              title="Yala National Park"
-              category="WILDLIFE SANCTUARY"
-              description="Wild leopard sanctuary and primeval roaming tuskers."
-              imageUrl="/5.jpg"
             />
             <ImageCard
               title="Mirissa"
               category="SOUTHERN COAST"
-              description="Sun-drenched southern surf breaks and whale watching."
+              description="Relax on sun-drenched tropical beaches and enjoy vibrant southern coast sunsets."
+              imageUrl="/4.jpg"
+            />
+            <ImageCard
+              title="Nuwara Eliya"
+              category="CENTRAL HIGHLANDS"
+              description="Experience the cool green highlands and sprawling tea plantations of Little England."
+              imageUrl="/5.jpg"
+            />
+            <ImageCard
+              title="Matara - Paravi Duwa Temple"
+              category="SOUTHERN COAST"
+              description="Visit the serene island temple accessed by a beautiful pedestrian bridge over the ocean."
               imageUrl="/6.jpg"
             />
           </div>
