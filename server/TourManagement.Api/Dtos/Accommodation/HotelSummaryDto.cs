@@ -10,6 +10,7 @@ public class HotelSummaryDto
     public string DestinationName { get; set; } = string.Empty;
     public int? StarRating { get; set; }
     public HotelStatus Status { get; set; }
+    public string? ImageUrl { get; set; }
 
     // OwnerName is mainly useful in the Admin's view.
     public string OwnerName { get; set; } = string.Empty;
