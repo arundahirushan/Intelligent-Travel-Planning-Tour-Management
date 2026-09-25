@@ -69,6 +69,7 @@ export default function DashboardLayout({ navItems, roleBadge, profileRoute = '/
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  end
                   className={({ isActive }) => `
                     flex items-center gap-2 px-4 py-2 rounded-md font-heading text-label-button transition-colors
                     ${isActive 
@@ -150,6 +151,7 @@ export default function DashboardLayout({ navItems, roleBadge, profileRoute = '/
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  end
                   className={({ isActive }) => `
                     flex items-center gap-3 px-4 py-3 rounded-md font-heading text-label-button transition-colors
                     ${isActive 
