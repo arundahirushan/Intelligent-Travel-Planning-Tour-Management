@@ -8,6 +8,7 @@ public class VehicleSummaryDto
     public int Id { get; set; }
     public string VehicleType { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
+    public string RegistrationNumber { get; set; } = string.Empty;
     public int Capacity { get; set; }
     public decimal PricePerDay { get; set; }
     public VehicleStatus Status { get; set; }
