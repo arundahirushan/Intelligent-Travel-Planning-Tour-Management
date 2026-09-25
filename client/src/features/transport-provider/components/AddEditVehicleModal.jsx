@@ -43,7 +43,13 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
   }, [isOpen, isEdit, vehicle]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+
+    if (name === 'RegistrationNumber') {
+      // Auto-capitalize and strip out any characters that aren't letters, numbers, spaces, or hyphens
+      value = value.toUpperCase().replace(/[^A-Z0-9 -]/g, '');
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: null }));
@@ -55,7 +61,13 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
     const errors = {};
     if (!formData.VehicleType.trim()) errors.VehicleType = 'Vehicle type is required.';
     if (!formData.Model.trim()) errors.Model = 'Model is required.';
-    if (!formData.RegistrationNumber.trim()) errors.RegistrationNumber = 'Registration number is required.';
+    
+    const regNum = formData.RegistrationNumber.trim();
+    if (!regNum) {
+      errors.RegistrationNumber = 'Registration number is required.';
+    } else if (!/[- ]/.test(regNum)) {
+      errors.RegistrationNumber = 'Must include a hyphen (-) or space.';
+    }
 
     const capacity = parseInt(formData.Capacity, 10);
     if (!formData.Capacity || isNaN(capacity) || capacity < 1) {
@@ -164,6 +176,7 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
               name="Capacity"
               type="number"
               min="1"
+              max="30"
               value={formData.Capacity}
               onChange={handleChange}
               required
