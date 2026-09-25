@@ -13,4 +13,5 @@ public class HotelSummaryDto
 
     // OwnerName is mainly useful in the Admin's view.
     public string OwnerName { get; set; } = string.Empty;
+    public int OccupancyPercentage { get; set; }
 }

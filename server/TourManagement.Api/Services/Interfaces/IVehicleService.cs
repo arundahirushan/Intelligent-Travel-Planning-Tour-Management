@@ -19,7 +19,10 @@ public interface IVehicleService
 
     // Returns true if the vehicle is available (no Held or Confirmed booking overlaps the given dates).
     // Used by both SearchAsync and VehicleBookingService to avoid duplicating the overlap logic.
-    Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate);
+    Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate, int? excludeBookingId = null);
+
+    // Returns true if the vehicle has a Held or Confirmed booking covering the given date.
+    Task<bool> IsVehicleBookedOnDateAsync(int vehicleId, DateTime date);
 
     // ── Admin / SuperAdmin operations ────────────────────────────────────────
 

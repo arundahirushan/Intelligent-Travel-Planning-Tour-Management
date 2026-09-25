@@ -28,42 +28,18 @@ public class HotelBookingService : IHotelBookingService
     // ensures the room has enough availability for the requested dates.
     public async Task<HotelBookingSummaryDto> CreateAsync(CreateHotelBookingDto dto, int travelerId)
     {
-        // Basic date validation.
-        if (dto.CheckOutDate <= dto.CheckInDate)
-            throw new ValidationException("CheckOutDate must be after CheckInDate.");
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.CheckInDate = DateTime.SpecifyKind(dto.CheckInDate, DateTimeKind.Utc);
+        dto.CheckOutDate = DateTime.SpecifyKind(dto.CheckOutDate, DateTimeKind.Utc);
 
-        // Make sure the trip exists and belongs to this traveler.
         var trip = await _db.Trips.FindAsync(dto.TripId);
         if (trip == null)
             throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
         if (trip.TravelerId != travelerId)
             throw new ForbiddenException("You can only create bookings for your own trips.");
 
-        // Booking dates must fall within the trip's date range.
-        if (dto.CheckInDate < trip.StartDate || dto.CheckOutDate > trip.EndDate)
-            throw new ValidationException(
-                $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
-
-        // Make sure the room exists and is Active.
-        var room = await _db.Rooms
-            .Include(r => r.Hotel)
-            .FirstOrDefaultAsync(r => r.Id == dto.RoomId);
-        if (room == null)
-            throw new NotFoundException($"Room with ID {dto.RoomId} was not found.");
-        if (room.Status != RoomStatus.Active)
-            throw new ValidationException("This room type is not currently available for booking.");
-        if (room.Hotel.Status != HotelStatus.Active)
-            throw new ValidationException("This hotel is not currently accepting bookings.");
-
-        // Check availability using the same shared method as the search endpoint.
-        // This prevents double-booking beyond TotalRooms capacity.
-        int alreadyBooked = await _hotelService.CountBookedRoomsAsync(
-            dto.RoomId, dto.CheckInDate, dto.CheckOutDate);
-        int available = room.TotalRooms - alreadyBooked;
-
-        if (dto.NumberOfRooms > available)
-            throw new ValidationException(
-                $"Not enough rooms available. Requested: {dto.NumberOfRooms}, available: {available}.");
+        await ValidateAndCheckAvailabilityAsync(
+            dto.RoomId, dto.CheckInDate, dto.CheckOutDate, dto.NumberOfRooms, trip, null);
 
         var booking = new HotelBooking
         {
@@ -88,6 +64,65 @@ public class HotelBookingService : IHotelBookingService
         return saved.ToSummaryDto();
     }
 
+    public async Task<HotelBookingSummaryDto> UpdateAsync(int id, UpdateHotelBookingDto dto, int travelerId)
+    {
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.CheckInDate = DateTime.SpecifyKind(dto.CheckInDate, DateTimeKind.Utc);
+        dto.CheckOutDate = DateTime.SpecifyKind(dto.CheckOutDate, DateTimeKind.Utc);
+
+        var booking = await _db.HotelBookings
+            .Include(b => b.Trip)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking == null)
+            throw new NotFoundException($"Hotel booking with ID {id} was not found.");
+
+        if (booking.Trip.TravelerId != travelerId)
+            throw new ForbiddenException("You do not have permission to modify this booking.");
+
+        if (booking.Status != BookingStatus.Held)
+            throw new ValidationException($"Cannot modify a booking that is already {booking.Status}.");
+
+        await ValidateAndCheckAvailabilityAsync(
+            dto.RoomId, dto.CheckInDate, dto.CheckOutDate, dto.NumberOfRooms, booking.Trip, booking.Id);
+
+        booking.RoomId = dto.RoomId;
+        booking.CheckInDate = dto.CheckInDate;
+        booking.CheckOutDate = dto.CheckOutDate;
+        booking.NumberOfRooms = dto.NumberOfRooms;
+        booking.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        var saved = await _db.HotelBookings
+            .Include(b => b.Room).ThenInclude(r => r.Hotel)
+            .FirstAsync(b => b.Id == booking.Id);
+
+        return saved.ToSummaryDto();
+    }
+
+    public async Task DeleteAsync(int id, int requestingUserId, string requestingUserRole)
+    {
+        var booking = await _db.HotelBookings
+            .Include(b => b.Trip)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking == null)
+            throw new NotFoundException($"Hotel booking with ID {id} was not found.");
+
+        bool isOwner = booking.Trip.TravelerId == requestingUserId;
+        bool isAdmin = requestingUserRole == Roles.Admin || requestingUserRole == Roles.SuperAdmin;
+
+        if (!isOwner && !isAdmin)
+            throw new ForbiddenException("You do not have permission to delete this booking.");
+
+        if (booking.Status != BookingStatus.Held)
+            throw new ValidationException($"Cannot modify a booking that is already {booking.Status}.");
+
+        _db.HotelBookings.Remove(booking);
+        await _db.SaveChangesAsync();
+    }
+
     // Returns all hotel bookings that belong to the requesting traveler
     // (bookings are linked to trips, which are owned by the traveler).
     public async Task<PagedResult<HotelBookingSummaryDto>> GetMyBookingsAsync(
@@ -100,6 +135,31 @@ public class HotelBookingService : IHotelBookingService
 
         if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
             query = query.Where(b => b.Status == statusEnum);
+
+        query = query.OrderByDescending(b => b.CreatedAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(b => b.ToSummaryDto())
+            .ToListAsync();
+
+        return new PagedResult<HotelBookingSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
+
+    public async Task<PagedResult<HotelBookingSummaryDto>> GetMyHotelsBookingsAsync(
+        int ownerId, string? search, string? status, int page, int pageSize)
+    {
+        var query = _db.HotelBookings
+            .Include(b => b.Room).ThenInclude(r => r.Hotel)
+            .Where(b => b.Room.Hotel.OwnerId == ownerId);
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
+            query = query.Where(b => b.Status == statusEnum);
+
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(b => b.Room.Hotel.Name.Contains(search) || b.Room.RoomType.Contains(search));
 
         query = query.OrderByDescending(b => b.CreatedAt);
 
@@ -136,5 +196,34 @@ public class HotelBookingService : IHotelBookingService
         booking.Status    = BookingStatus.Cancelled;
         booking.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+    }
+
+    private async Task ValidateAndCheckAvailabilityAsync(
+        int roomId, DateTime checkInDate, DateTime checkOutDate, int numberOfRooms, Trip trip, int? excludeBookingId)
+    {
+        if (checkOutDate <= checkInDate)
+            throw new ValidationException("CheckOutDate must be after CheckInDate.");
+
+        if (checkInDate.Date < trip.StartDate.Date || checkOutDate.Date > trip.EndDate.Date)
+            throw new ValidationException(
+                $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
+
+        var room = await _db.Rooms
+            .Include(r => r.Hotel)
+            .FirstOrDefaultAsync(r => r.Id == roomId);
+        if (room == null)
+            throw new NotFoundException($"Room with ID {roomId} was not found.");
+        if (room.Status != RoomStatus.Active)
+            throw new ValidationException("This room type is not currently available for booking.");
+        if (room.Hotel.Status != HotelStatus.Active)
+            throw new ValidationException("This hotel is not currently accepting bookings.");
+
+        int alreadyBooked = await _hotelService.CountBookedRoomsAsync(
+            roomId, checkInDate, checkOutDate, excludeBookingId);
+        int available = room.TotalRooms - alreadyBooked;
+
+        if (numberOfRooms > available)
+            throw new ValidationException(
+                $"Not enough rooms available. Requested: {numberOfRooms}, available: {available}.");
     }
 }

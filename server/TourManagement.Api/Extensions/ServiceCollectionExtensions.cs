@@ -44,6 +44,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IHotelBookingService,     TourManagement.Api.Services.Implementations.HotelBookingService>();
         services.AddScoped<IVehicleService,     TourManagement.Api.Services.Implementations.VehicleService>();
         services.AddScoped<IVehicleBookingService, TourManagement.Api.Services.Implementations.VehicleBookingService>();
+        services.AddScoped<ISupplyService,      TourManagement.Api.Services.Implementations.SupplyService>();
+        services.AddScoped<IContractService,    TourManagement.Api.Services.Implementations.ContractService>();
+        services.AddScoped<IContractRequestService, TourManagement.Api.Services.Implementations.ContractRequestService>();
+        services.AddScoped<ISupplyOrderService,     TourManagement.Api.Services.Implementations.SupplyOrderService>();
+        services.AddScoped<IProfileService,         TourManagement.Api.Services.Implementations.ProfileService>();
 
         return services;
     }
