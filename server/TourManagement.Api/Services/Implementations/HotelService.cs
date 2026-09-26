@@ -93,14 +93,24 @@ public class HotelService : IHotelService
         return await LoadHotelDetailAsync(hotelId);
     }
 
-    // Soft-delete: sets Status = Inactive so booking history is not lost.
+    // Deletes the hotel permanently if there are no bookings, otherwise soft-deletes to preserve history.
     public async Task DeactivateHotelAsync(int hotelId, int requestingUserId)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
         CheckOwner(hotel, requestingUserId);
 
-        hotel.Status    = HotelStatus.Inactive;
-        hotel.UpdatedAt = DateTime.UtcNow;
+        bool hasBookings = await _db.HotelBookings.AnyAsync(b => b.Room.HotelId == hotelId);
+
+        if (hasBookings)
+        {
+            hotel.Status    = HotelStatus.Inactive;
+            hotel.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            _db.Hotels.Remove(hotel);
+        }
+
         await _db.SaveChangesAsync();
     }
 
