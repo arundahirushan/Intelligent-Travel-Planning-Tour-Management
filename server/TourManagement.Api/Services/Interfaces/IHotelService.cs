@@ -12,6 +12,7 @@ public interface IHotelService
     Task<HotelDetailDto> GetMyHotelByIdAsync(int hotelId, int ownerId);
     Task<HotelDetailDto> UpdateHotelAsync(int hotelId, UpdateHotelDto dto, int requestingUserId);
     Task DeactivateHotelAsync(int hotelId, int requestingUserId);  // sets Status = Inactive
+    Task RestoreHotelAsync(int hotelId, int requestingUserId);
 
     Task<PagedResult<RoomWithHotelDto>> GetMyRoomsAsync(int ownerId, string? search, string? status, int page, int pageSize);
 

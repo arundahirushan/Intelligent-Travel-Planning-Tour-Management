@@ -97,6 +97,15 @@ public class HotelsController : ControllerBase
         return Ok(ApiResponse.Ok("Hotel deactivated."));
     }
 
+    /// <summary>Restore an inactive hotel (sets Status = PendingApproval). HotelOwner only.</summary>
+    [HttpPatch("{id}/restore")]
+    [Authorize(Roles = Roles.HotelOwner)]
+    public async Task<ActionResult<ApiResponse>> Restore(int id)
+    {
+        await _hotelService.RestoreHotelAsync(id, GetCurrentUserId());
+        return Ok(ApiResponse.Ok("Hotel restored to Pending status."));
+    }
+
     /// <summary>Add a room type to the hotel. HotelOwner only.</summary>
     [HttpPost("{hotelId}/rooms")]
     [Authorize(Roles = Roles.HotelOwner)]

@@ -31,6 +31,10 @@ export async function deactivateHotel(id) {
   return apiClient.delete(`/hotels/${id}`).then(res => res.data);
 }
 
+export async function restoreHotel(id) {
+  return apiClient.patch(`/hotels/${id}/restore`).then(res => res.data);
+}
+
 // ── Rooms ────────────────────────────────────────────────────────
 
 export async function addRoom(hotelId, body) {
