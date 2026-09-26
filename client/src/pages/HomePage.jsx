@@ -156,7 +156,7 @@ export default function HomePage() {
             {/* Left Side - Image */}
             <div className="w-full lg:w-1/2 rounded-[32px] overflow-hidden shadow-soft flex">
               <img
-                src="/luxury_hotel.png"
+                src="/new_pool.png"
                 alt="Luxury Sri Lankan Hotel"
                 className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
               />
