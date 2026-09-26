@@ -206,13 +206,15 @@ export default function MyHotelsPage() {
                     >
                       <span className="material-symbols-outlined text-sm">edit</span>
                     </button>
-                    <button 
-                      onClick={(e) => handleDeleteClick(e, hotel)}
-                      className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-text-secondary hover:text-status-danger transition-colors"
-                      aria-label="Delete hotel"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                    </button>
+                    {hotel.status !== 'Inactive' && (
+                      <button 
+                        onClick={(e) => handleDeleteClick(e, hotel)}
+                        className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-text-secondary hover:text-status-danger transition-colors"
+                        aria-label="Delete hotel"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    )}
                   </div>
 
                   <h3 className="text-headline-sm font-heading font-bold text-text pr-20 mb-1 line-clamp-1">
