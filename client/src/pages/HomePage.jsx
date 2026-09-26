@@ -273,36 +273,145 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Features Row */}
-        <section className="w-full py-24 bg-white border-y border-border-blue/60" id="how-it-works">
-          <div className="max-w-7xl mx-auto px-6 lg:px-12">
-            <div className="mb-14 text-center max-w-2xl mx-auto">
-              <span className="font-heading text-xs font-bold uppercase tracking-widest text-primary block mb-2">Features</span>
-              <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-text uppercase">How It Works</h2>
-              <p className="font-body text-base text-text-secondary mt-3">Plan your trip seamlessly using our intelligent tools.</p>
+        {/* Features Row - How It Works */}
+        <section className="w-full pt-24 pb-32 bg-white relative overflow-hidden" id="how-it-works">
+          {/* Background Mountains & Tropical Scenery */}
+          <div className="absolute bottom-0 left-0 w-full h-[400px] z-0 pointer-events-none opacity-80">
+            <img src="/features_bg.png" alt="Travel Background" className="w-full h-full object-cover object-top opacity-50 mix-blend-multiply" />
+          </div>
+
+          {/* Background Decorative Wavy Line (Desktop only) */}
+          <div className="absolute top-[50%] left-0 w-full h-[300px] pointer-events-none -translate-y-1/2 z-0 hidden lg:block opacity-60">
+            <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 1000 300">
+              <path d="M -50 150 Q 200 350 500 100 T 1050 200" fill="transparent" stroke="#BAE6FD" strokeWidth="2" strokeDasharray="6 6" />
+            </svg>
+            
+            {/* Markers */}
+            <div className="absolute top-[185px] left-[18%] flex flex-col items-center">
+              <div className="w-4 h-4 rounded-full border-[4px] border-primary bg-white shadow-sm"></div>
+            </div>
+            
+            {/* Small Vehicle Illustration */}
+            <div className="absolute top-[170px] left-[42%] bg-white rounded-full p-2 shadow-lg border border-surface-blue flex items-center justify-center transform -rotate-12 z-20">
+              <span className="material-symbols-outlined text-primary text-[20px]">airport_shuttle</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <FeatureCard
-                icon="map"
-                title="Smart Itineraries"
-                description="Customized daily plans based on your interests."
-              />
-              <FeatureCard
-                icon="hotel"
-                title="Trusted Stays"
-                description="Verified hotel owners offering premium comfort."
-              />
-              <FeatureCard
-                icon="directions_car"
-                title="Easy Transport"
-                description="Book reliable local transport providers directly."
-              />
-              <FeatureCard
-                icon="hiking"
-                title="Curated Activities"
-                description="Unique experiences guided by local suppliers."
-              />
+            <div className="absolute top-[215px] left-[45%] flex flex-col items-center">
+              <div className="w-4 h-4 rounded-full border-[4px] border-primary bg-white shadow-sm"></div>
+            </div>
+            <div className="absolute top-[115px] left-[68%] flex flex-col items-center">
+              <div className="w-4 h-4 rounded-full border-[4px] border-primary bg-white shadow-sm"></div>
+            </div>
+            <div className="absolute top-[175px] left-[92%] flex flex-col items-center">
+              <div className="w-4 h-4 rounded-full border-[4px] border-primary bg-white shadow-sm"></div>
+            </div>
+          </div>
+
+          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
+            <div className="mb-20 text-center max-w-2xl mx-auto">
+              <span className="font-heading text-[10px] sm:text-xs font-bold uppercase tracking-widest text-primary block mb-3">Features</span>
+              <h2 className="font-heading text-4xl sm:text-5xl font-bold tracking-tight text-text mb-4">How It Works</h2>
+              <p className="font-body text-lg text-text-secondary">Plan your trip seamlessly using our intelligent tools.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4 xl:gap-8">
+              
+              {/* Feature 1 */}
+              <div className="relative group w-full max-w-[320px] mx-auto lg:mt-0">
+                <div className="absolute -top-2 -left-6 font-heading font-bold text-[80px] leading-none text-primary/20 z-20 pointer-events-none">01</div>
+                {/* Image Background */}
+                <div className="absolute top-0 right-0 w-[95%] h-[180px] rounded-[24px] overflow-hidden z-0 shadow-md">
+                  <img src="/1.jpg" alt="Smart Itineraries" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                </div>
+                {/* White Card Foreground */}
+                <div className="relative z-10 w-full mt-[110px] flex flex-col">
+                  {/* Tab */}
+                  <div className="w-[84px] h-[74px] bg-white rounded-t-[24px] flex items-center justify-center z-10 relative">
+                    <div className="absolute bottom-0 -right-6 w-6 h-6 bg-transparent rounded-bl-[20px] shadow-[-10px_10px_0_0_#fff]"></div>
+                    <div className="w-[52px] h-[52px] rounded-full bg-surface-blue flex items-center justify-center mt-2">
+                      <span className="material-symbols-outlined text-primary">map</span>
+                    </div>
+                  </div>
+                  {/* Body */}
+                  <div className="bg-white p-7 pt-5 rounded-[24px] rounded-tl-none shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] z-10">
+                    <h4 className="font-heading text-[15px] font-bold text-text mb-2 uppercase tracking-wide">Smart Itineraries</h4>
+                    <p className="font-body text-[13.5px] text-text-secondary leading-relaxed">Customize daily plans based on your interests.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="relative group w-full max-w-[320px] mx-auto lg:mt-24">
+                <div className="absolute -top-2 -left-6 font-heading font-bold text-[80px] leading-none text-primary/20 z-20 pointer-events-none">02</div>
+                {/* Image Background */}
+                <div className="absolute top-0 right-0 w-[95%] h-[180px] rounded-[24px] overflow-hidden z-0 shadow-md">
+                  <img src="/2.jpg" alt="Trusted Stays" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                </div>
+                {/* White Card Foreground */}
+                <div className="relative z-10 w-full mt-[110px] flex flex-col">
+                  {/* Tab */}
+                  <div className="w-[84px] h-[74px] bg-white rounded-t-[24px] flex items-center justify-center z-10 relative">
+                    <div className="absolute bottom-0 -right-6 w-6 h-6 bg-transparent rounded-bl-[20px] shadow-[-10px_10px_0_0_#fff]"></div>
+                    <div className="w-[52px] h-[52px] rounded-full bg-surface-blue flex items-center justify-center mt-2">
+                      <span className="material-symbols-outlined text-primary">hotel</span>
+                    </div>
+                  </div>
+                  {/* Body */}
+                  <div className="bg-white p-7 pt-5 rounded-[24px] rounded-tl-none shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] z-10">
+                    <h4 className="font-heading text-[15px] font-bold text-text mb-2 uppercase tracking-wide">Trusted Stays</h4>
+                    <p className="font-body text-[13.5px] text-text-secondary leading-relaxed">Verified hotel owners offering comfort and convenience.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="relative group w-full max-w-[320px] mx-auto lg:-mt-12">
+                <div className="absolute -top-2 -left-6 font-heading font-bold text-[80px] leading-none text-primary/20 z-20 pointer-events-none">03</div>
+                {/* Image Background */}
+                <div className="absolute top-0 right-0 w-[95%] h-[180px] rounded-[24px] overflow-hidden z-0 shadow-md">
+                  <img src="/vehicle_promo.png" alt="Easy Transport" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                </div>
+                {/* White Card Foreground */}
+                <div className="relative z-10 w-full mt-[110px] flex flex-col">
+                  {/* Tab */}
+                  <div className="w-[84px] h-[74px] bg-white rounded-t-[24px] flex items-center justify-center z-10 relative">
+                    <div className="absolute bottom-0 -right-6 w-6 h-6 bg-transparent rounded-bl-[20px] shadow-[-10px_10px_0_0_#fff]"></div>
+                    <div className="w-[52px] h-[52px] rounded-full bg-surface-blue flex items-center justify-center mt-2">
+                      <span className="material-symbols-outlined text-primary">directions_car</span>
+                    </div>
+                  </div>
+                  {/* Body */}
+                  <div className="bg-white p-7 pt-5 rounded-[24px] rounded-tl-none shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] z-10">
+                    <h4 className="font-heading text-[15px] font-bold text-text mb-2 uppercase tracking-wide">Easy Transport</h4>
+                    <p className="font-body text-[13.5px] text-text-secondary leading-relaxed">Book reliable local transport providers directly.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="relative group w-full max-w-[320px] mx-auto lg:mt-16">
+                <div className="absolute -top-2 -left-6 font-heading font-bold text-[80px] leading-none text-primary/20 z-20 pointer-events-none">04</div>
+                {/* Image Background */}
+                <div className="absolute top-0 right-0 w-[95%] h-[180px] rounded-[24px] overflow-hidden z-0 shadow-md">
+                  <img src="/6.jpg" alt="Curated Activities" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                </div>
+                {/* White Card Foreground */}
+                <div className="relative z-10 w-full mt-[110px] flex flex-col">
+                  {/* Tab */}
+                  <div className="w-[84px] h-[74px] bg-white rounded-t-[24px] flex items-center justify-center z-10 relative">
+                    <div className="absolute bottom-0 -right-6 w-6 h-6 bg-transparent rounded-bl-[20px] shadow-[-10px_10px_0_0_#fff]"></div>
+                    <div className="w-[52px] h-[52px] rounded-full bg-surface-blue flex items-center justify-center mt-2">
+                      <span className="material-symbols-outlined text-primary">hiking</span>
+                    </div>
+                  </div>
+                  {/* Body */}
+                  <div className="bg-white p-7 pt-5 rounded-[24px] rounded-tl-none shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] z-10">
+                    <h4 className="font-heading text-[15px] font-bold text-text mb-2 uppercase tracking-wide">Curated Activities</h4>
+                    <p className="font-body text-[13.5px] text-text-secondary leading-relaxed">Unique experiences guided by local suppliers.</p>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
