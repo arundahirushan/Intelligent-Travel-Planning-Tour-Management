@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ImageCard from '../components/ImageCard';
 import FeatureCard from '../components/FeatureCard';
@@ -7,6 +7,22 @@ import { useAuth } from '../context/AuthContext';
 export default function HomePage() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleNavClick = (e, targetId) => {
+    e.preventDefault();
+    const element = document.getElementById(targetId);
+    if (element) {
+      const headerOffset = 80;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.scrollY - headerOffset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+    setIsMobileMenuOpen(false);
+  };
 
   const getDashboardPath = () => {
     if (!user) return '/login';
@@ -31,8 +47,10 @@ export default function HomePage() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-9">
-            <a href="#destinations" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Destinations</a>
-            <a href="#how-it-works" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">How It Works</a>
+            <a href="#destinations" onClick={(e) => handleNavClick(e, 'destinations')} className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Destinations</a>
+            <a href="#accommodation" onClick={(e) => handleNavClick(e, 'accommodation')} className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Accommodation</a>
+            <a href="#vehicles" onClick={(e) => handleNavClick(e, 'vehicles')} className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Vehicles</a>
+            <a href="#how-it-works" onClick={(e) => handleNavClick(e, 'how-it-works')} className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">How It Works</a>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -52,17 +70,35 @@ export default function HomePage() {
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center">
+              <div className="flex items-center gap-5">
+                <Link to="/register" className="text-xs text-text hover:text-primary font-heading font-bold uppercase tracking-widest transition-colors">
+                  Register
+                </Link>
                 <Link to="/login" className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
                   Log in
-                </Link>
-                <Link to="/register" className="text-[11px] text-text-secondary hover:text-text underline mt-1 tracking-wide uppercase font-bold">
-                  Register
                 </Link>
               </div>
             )}
           </div>
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden ml-4 text-text-secondary hover:text-primary transition-colors flex items-center justify-center"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle Menu"
+          >
+            <span className="material-symbols-outlined text-3xl">{isMobileMenuOpen ? 'close' : 'menu'}</span>
+          </button>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden absolute top-20 left-0 w-full bg-white shadow-lg border-b border-border-blue/70 flex flex-col py-2 px-6 z-40">
+            <a href="#destinations" onClick={(e) => handleNavClick(e, 'destinations')} className="py-4 font-heading text-sm font-semibold text-text-secondary hover:text-primary border-b border-gray-100">Destinations</a>
+            <a href="#accommodation" onClick={(e) => handleNavClick(e, 'accommodation')} className="py-4 font-heading text-sm font-semibold text-text-secondary hover:text-primary border-b border-gray-100">Accommodation</a>
+            <a href="#vehicles" onClick={(e) => handleNavClick(e, 'vehicles')} className="py-4 font-heading text-sm font-semibold text-text-secondary hover:text-primary border-b border-gray-100">Vehicles</a>
+            <a href="#how-it-works" onClick={(e) => handleNavClick(e, 'how-it-works')} className="py-4 font-heading text-sm font-semibold text-text-secondary hover:text-primary">How It Works</a>
+          </div>
+        )}
       </header>
 
       <main className="w-full">
@@ -151,7 +187,7 @@ export default function HomePage() {
         </section>
 
         {/* Premium Accommodation Section */}
-        <section className="w-full py-24 px-6 lg:px-12 max-w-7xl mx-auto">
+        <section className="w-full py-24 px-6 lg:px-12 max-w-7xl mx-auto" id="accommodation">
           <div className="flex flex-col lg:flex-row items-stretch gap-12 lg:gap-16 lg:h-[550px]">
             {/* Left Side - Image */}
             <div className="w-full lg:w-1/2 rounded-[32px] overflow-hidden shadow-soft flex">
@@ -196,7 +232,7 @@ export default function HomePage() {
         </section>
 
         {/* Vehicle Booking Section */}
-        <section className="w-full py-24 bg-white relative overflow-hidden border-t border-border-blue/60">
+        <section className="w-full py-24 bg-white relative overflow-hidden border-t border-border-blue/60" id="vehicles">
           {/* Subtle background swoosh effect */}
           <div className="absolute bottom-0 left-0 w-3/4 h-1/2 bg-surface-blue/50 rounded-tr-[100%] -z-0 opacity-60"></div>
 
