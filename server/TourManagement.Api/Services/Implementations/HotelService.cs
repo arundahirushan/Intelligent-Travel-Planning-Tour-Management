@@ -114,6 +114,20 @@ public class HotelService : IHotelService
         await _db.SaveChangesAsync();
     }
 
+    public async Task RestoreHotelAsync(int hotelId, int requestingUserId)
+    {
+        var hotel = await GetHotelOrThrowAsync(hotelId);
+        CheckOwner(hotel, requestingUserId);
+
+        if (hotel.Status == HotelStatus.Inactive)
+        {
+            // Restoring sends it back to Pending Approval for admin review
+            hotel.Status = HotelStatus.PendingApproval;
+            hotel.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+    }
+
     // ── HotelOwner: manage rooms ─────────────────────────────────────────────
 
     public async Task<PagedResult<RoomWithHotelDto>> GetMyRoomsAsync(

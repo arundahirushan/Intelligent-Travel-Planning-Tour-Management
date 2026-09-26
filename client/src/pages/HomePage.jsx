@@ -150,6 +150,51 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Premium Accommodation Section */}
+        <section className="w-full py-24 px-6 lg:px-12 max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-stretch gap-12 lg:gap-16 lg:h-[550px]">
+            {/* Left Side - Image */}
+            <div className="w-full lg:w-1/2 rounded-[32px] overflow-hidden shadow-soft flex">
+              <img
+                src="/luxury_hotel.png"
+                alt="Luxury Sri Lankan Hotel"
+                className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
+              />
+            </div>
+            
+            {/* Right Side - Content */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center">
+              <div className="inline-flex items-center gap-2 text-primary font-heading text-xs font-bold uppercase tracking-widest mb-4">
+                <span className="w-2 h-2 rounded-full bg-primary"></span>
+                Your Home Away From Home
+              </div>
+              
+              <h2 className="font-heading text-4xl sm:text-5xl font-bold tracking-tight text-text leading-[1.1] mb-6">
+                Stay Somewhere<br />Extraordinary.
+              </h2>
+              
+              <p className="font-body text-lg text-text-secondary leading-relaxed mb-4 max-w-lg">
+                Discover beautiful stays across Sri Lanka, from coastal hideaways to peaceful mountain retreats.
+              </p>
+              
+              <p className="font-body text-lg text-text-secondary leading-relaxed mb-8 max-w-lg">
+                Find your perfect place to unwind and make every journey unforgettable.
+              </p>
+              
+              <p className="font-heading text-sm font-semibold tracking-wide text-text-secondary uppercase mb-8">
+                Thoughtful stays. Memorable journeys.
+              </p>
+              
+              <div>
+                <Link to={isAuthenticated ? getDashboardPath() : "/login"} className="inline-flex items-center justify-center px-8 py-3.5 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-md group">
+                  <span>Book a Hotel</span>
+                  <span className="material-symbols-outlined text-[18px] ml-2 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Features Row */}
         <section className="w-full py-24 bg-white border-y border-border-blue/60" id="how-it-works">
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
