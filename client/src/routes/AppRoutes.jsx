@@ -5,6 +5,7 @@ import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
 import DashboardPlaceholder from '../pages/DashboardPlaceholder';
 import ProtectedRoute from './ProtectedRoute';
+import DestinationPage from '../pages/DestinationPage';
 
 // Traveler Dashboard Pages
 import MyTripsPage from '../features/traveler/pages/MyTripsPage';
@@ -37,6 +38,7 @@ export default function AppRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/destinations/:id" element={<DestinationPage />} />
 
       {/* Traveler Dashboard */}
       <Route element={<ProtectedRoute allowedRoles={['Traveler']} />}>

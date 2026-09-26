@@ -1,11 +1,12 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ImageCard from '../components/ImageCard';
 import FeatureCard from '../components/FeatureCard';
 import { useAuth } from '../context/AuthContext';
 
 export default function HomePage() {
   const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
 
   const getDashboardPath = () => {
     if (!user) return '/login';
@@ -109,36 +110,42 @@ export default function HomePage() {
               category="CULTURAL TRIANGLE"
               description="5th-century ancient rock citadel & water gardens."
               imageUrl="/sigiriya.png"
+              onClick={() => navigate('/destinations/sigiriya')}
             />
             <ImageCard
               title="Ella - Nine Arches Bridge"
               category="CENTRAL HIGHLANDS"
               description="Discover the iconic Nine Arches Bridge hidden in the misty emerald highlands of Ella."
               imageUrl="/ella.png"
+              onClick={() => navigate('/destinations/nine-arches-bridge')}
             />
             <ImageCard
               title="Galle Fort"
               category="SOUTHERN COAST"
               description="Wander through the historic Galle Fort and its iconic lighthouse by the southern coastal swells."
               imageUrl="/galle_fort.png"
+              onClick={() => navigate('/destinations/galle-fort')}
             />
             <ImageCard
               title="Mirissa"
               category="SOUTHERN COAST"
               description="Relax on sun-drenched tropical beaches and enjoy vibrant southern coast sunsets."
               imageUrl="/4.jpg"
+              onClick={() => navigate('/destinations/mirissa')}
             />
             <ImageCard
               title="Nuwara Eliya"
               category="CENTRAL HIGHLANDS"
               description="Experience the cool green highlands and sprawling tea plantations of Little England."
               imageUrl="/5.jpg"
+              onClick={() => navigate('/destinations/nuwara-eliya')}
             />
             <ImageCard
               title="Matara - Paravi Duwa Temple"
               category="SOUTHERN COAST"
               description="Visit the serene island temple accessed by a beautiful pedestrian bridge over the ocean."
               imageUrl="/6.jpg"
+              onClick={() => navigate('/destinations/paravi-duwa-temple')}
             />
           </div>
         </section>
