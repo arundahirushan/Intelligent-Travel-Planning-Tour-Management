@@ -221,6 +221,17 @@ public class HotelsController : ControllerBase
 
     // ── Public / Traveler endpoints ──────────────────────────────────────────
 
+    /// <summary>Get all accepted hotels. Publicly accessible.</summary>
+    [HttpGet("accepted")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<PagedResult<HotelSummaryDto>>>> GetAcceptedHotels(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        var result = await _hotelService.GetAllHotelsAsync("Accepted", null, null, null, null, page, pageSize);
+        return Ok(ApiResponse<PagedResult<HotelSummaryDto>>.Ok(result));
+    }
+
     /// <summary>Search available hotels by destination, dates, guests, and budget. Any authenticated user.</summary>
     [HttpGet("search")]
     [Authorize]

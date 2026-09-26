@@ -6,6 +6,7 @@ import RegisterPage from '../pages/RegisterPage';
 import DashboardPlaceholder from '../pages/DashboardPlaceholder';
 import ProtectedRoute from './ProtectedRoute';
 import DestinationPage from '../pages/DestinationPage';
+import HotelsPage from '../pages/HotelsPage';
 
 // Traveler Dashboard Pages
 import MyTripsPage from '../features/traveler/pages/MyTripsPage';
@@ -36,6 +37,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/hotels" element={<HotelsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/destinations/:id" element={<DestinationPage />} />
