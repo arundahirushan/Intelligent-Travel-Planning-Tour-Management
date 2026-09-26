@@ -210,7 +210,7 @@ export default function MyHotelsPage() {
                       <button 
                         onClick={(e) => handleDeleteClick(e, hotel)}
                         className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-text-secondary hover:text-status-danger transition-colors"
-                        aria-label="Delete hotel"
+                        aria-label="Deactivate hotel"
                       >
                         <span className="material-symbols-outlined text-sm">delete</span>
                       </button>
@@ -279,9 +279,9 @@ export default function MyHotelsPage() {
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="Delete / Deactivate Hotel"
-        message="Are you sure you want to delete this hotel? If it has no bookings, it will be permanently deleted. Otherwise, it will be deactivated and hidden from travelers."
-        confirmLabel="Delete"
+        title="Deactivate Hotel"
+        message="Are you sure you want to deactivate this hotel? It will be hidden from travelers."
+        confirmLabel="Deactivate"
         isDanger
       />
     </DashboardLayout>
