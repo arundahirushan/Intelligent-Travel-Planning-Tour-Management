@@ -444,9 +444,17 @@ public class HotelService : IHotelService
     // conditions are kept inline below so EF can translate them to SQL.
     public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludeBookingId = null)
     {
+        var now = DateTime.UtcNow;
+
         var query = _db.HotelBookings
             .Where(b => b.RoomId == roomId
-                     && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+                     // A Confirmed booking always blocks availability.
+                     // A Held booking only blocks if it has NOT expired:
+                     //   - HoldExpiresAt is null  → legacy hold, treat as never-expiring.
+                     //   - HoldExpiresAt >= now   → hold is still active.
+                     && ((b.Status == BookingStatus.Confirmed)
+                         || (b.Status == BookingStatus.Held
+                             && (b.HoldExpiresAt == null || b.HoldExpiresAt > now)))
                      && b.CheckInDate  < checkOut   // overlap condition part 1
                      && b.CheckOutDate > checkIn);  // overlap condition part 2
 
@@ -462,13 +470,17 @@ public class HotelService : IHotelService
     {
         var hotelRooms = await _db.Rooms.Where(r => r.HotelId == hotelId).ToListAsync();
         int totalRooms = hotelRooms.Sum(r => r.TotalRooms);
-        
+
         if (totalRooms == 0) return 0;
+
+        var now = DateTime.UtcNow;
 
         var bookedCount = await _db.HotelBookings
             .Where(b => b.Room.HotelId == hotelId
-                     && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
-                     && b.CheckInDate <= today 
+                     && ((b.Status == BookingStatus.Confirmed)
+                         || (b.Status == BookingStatus.Held
+                             && (b.HoldExpiresAt == null || b.HoldExpiresAt > now)))
+                     && b.CheckInDate  <= today
                      && b.CheckOutDate >= today)
             .SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
 

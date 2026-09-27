@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractRequest> ContractRequests => Set<ContractRequest>();
     public DbSet<SupplyOrder> SupplyOrders => Set<SupplyOrder>();
+    public DbSet<TripCheckout> TripCheckouts => Set<TripCheckout>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -203,10 +204,22 @@ public class AppDbContext : DbContext
             entity.Property(b => b.Status)
                   .HasConversion<string>();
 
+            entity.Property(b => b.PriceSnapshot)
+                  .HasColumnType("decimal(18,2)");
+
             // All three columns are frequently used in WHERE clauses.
             entity.HasIndex(b => b.RoomId);
             entity.HasIndex(b => b.TripId);
             entity.HasIndex(b => b.Status);
+
+            // HoldExpiresAt is queried in every availability check — index it.
+            entity.HasIndex(b => b.HoldExpiresAt);
+
+            // CheckoutId FK — SetNull so deleting a checkout doesn't delete the booking.
+            entity.HasOne(b => b.Checkout)
+                  .WithMany(c => c.HotelBookings)
+                  .HasForeignKey(b => b.CheckoutId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── Vehicle ───────────────────────────────────────────────────────────
@@ -255,6 +268,15 @@ public class AppDbContext : DbContext
             entity.HasIndex(b => b.VehicleId);
             entity.HasIndex(b => b.TripId);
             entity.HasIndex(b => b.Status);
+
+            // HoldExpiresAt is queried in every availability check — index it.
+            entity.HasIndex(b => b.HoldExpiresAt);
+
+            // CheckoutId FK — SetNull so deleting a checkout doesn't delete the booking.
+            entity.HasOne(b => b.Checkout)
+                  .WithOne(c => c.VehicleBooking)
+                  .HasForeignKey<VehicleBooking>(b => b.CheckoutId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── Supply ────────────────────────────────────────────────────────────
@@ -340,6 +362,45 @@ public class AppDbContext : DbContext
                   .WithMany(s => s.SupplyOrders)
                   .HasForeignKey(so => so.SupplyId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── TripCheckout ──────────────────────────────────────────────────────
+
+        modelBuilder.Entity<TripCheckout>(entity =>
+        {
+            // Store CheckoutStatus as a string for readability.
+            entity.Property(c => c.Status)
+                  .HasConversion<string>();
+
+            // Price snapshots — stored with 2 decimal places like all LKR amounts.
+            entity.Property(c => c.HotelPriceSnapshot)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(c => c.VehiclePriceSnapshot)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(c => c.TotalPrice)
+                  .HasColumnType("decimal(18,2)");
+
+            // Columns used frequently in WHERE / ORDER BY.
+            entity.HasIndex(c => c.TripId);
+            entity.HasIndex(c => c.TravelerId);
+            entity.HasIndex(c => c.Status);
+            entity.HasIndex(c => c.HoldExpiresAt);
+            entity.HasIndex(c => c.ProposalId).IsUnique();
+
+            // Trip → TripCheckouts: RESTRICT deletion of a trip that still has checkouts.
+            entity.HasOne(c => c.Trip)
+                  .WithMany(t => t.TripCheckouts)
+                  .HasForeignKey(c => c.TripId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // TravelerId is a denormalized FK — RESTRICT deletion of a user with checkouts.
+            entity.HasOne(c => c.Traveler)
+                  .WithMany()
+                  .HasForeignKey(c => c.TravelerId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // HotelBookingId — one-to-one optional.  SetNull configured on HotelBooking side.
+            // VehicleBookingId — one-to-one optional.  SetNull configured on VehicleBooking side.
         });
     }
 }

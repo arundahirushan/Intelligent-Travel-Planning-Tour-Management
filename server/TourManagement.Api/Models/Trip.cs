@@ -39,4 +39,8 @@ public class Trip
 
     // Supply orders linked to this trip.
     public List<SupplyOrder> SupplyOrders { get; set; } = new();
+
+    // Hold sessions (checkouts) linked to this trip.
+    public List<TripCheckout> TripCheckouts { get; set; } = new();
 }
+

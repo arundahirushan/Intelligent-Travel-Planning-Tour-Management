@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TourManagement.Api.Data;
@@ -11,9 +12,11 @@ using TourManagement.Api.Data;
 namespace TourManagement.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926180458_SupportMultipleHotelsPerCheckout")]
+    partial class SupportMultipleHotelsPerCheckout
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -509,9 +512,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<decimal?>("HotelPriceSnapshot")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("ProposalId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -537,9 +537,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("HoldExpiresAt");
-
-                    b.HasIndex("ProposalId")
-                        .IsUnique();
 
                     b.HasIndex("Status");
 
