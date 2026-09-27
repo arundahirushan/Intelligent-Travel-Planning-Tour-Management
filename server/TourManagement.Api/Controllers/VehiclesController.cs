@@ -158,6 +158,17 @@ public class VehiclesController : ControllerBase
 
     // ── Public / Traveler endpoints ──────────────────────────────────────────
 
+    /// <summary>Get all accepted vehicles. Publicly accessible.</summary>
+    [HttpGet("accepted")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<PagedResult<VehicleSummaryDto>>>> GetAcceptedVehicles(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        var result = await _vehicleService.GetAllVehiclesAsync("Active", null, null, null, page, pageSize);
+        return Ok(ApiResponse<PagedResult<VehicleSummaryDto>>.Ok(result));
+    }
+
     /// <summary>Search available vehicles by dates, capacity, and price. Any authenticated user.</summary>
     [HttpGet("search")]
     [Authorize]

@@ -120,6 +120,13 @@ export async function deleteHotelBooking(id) {
 
 // ── Vehicle Search & Booking ──────────────────────────────────────────────────
 
+export async function getAcceptedVehicles({ page = 1, pageSize = 50 } = {}) {
+  const params = new URLSearchParams();
+  params.append('page', page);
+  params.append('pageSize', pageSize);
+  return apiClient.get(`/vehicles/accepted?${params.toString()}`).then(unwrap);
+}
+
 export async function searchVehicles({ startDate, endDate, minCapacity, maxPricePerDay } = {}) {
   const params = new URLSearchParams();
   params.append('startDate', startDate);

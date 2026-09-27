@@ -66,5 +66,8 @@ public static class SeedData
         // to match the updated HotelStatus and VehicleStatus enums.
         await db.Database.ExecuteSqlRawAsync("UPDATE \"Hotels\" SET \"Status\" = 'Active' WHERE \"Status\" = 'Approved'");
         await db.Database.ExecuteSqlRawAsync("UPDATE \"Vehicles\" SET \"Status\" = 'Active' WHERE \"Status\" = 'Approved'");
+
+        // Provide default images for vehicles that don't have one
+        await db.Database.ExecuteSqlRawAsync("UPDATE \"Vehicles\" SET \"ImageUrl\" = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&q=80&w=800' WHERE \"ImageUrl\" IS NULL OR \"ImageUrl\" = ''");
     }
 }

@@ -18,6 +18,7 @@ public static class VehicleMappings
             Capacity     = vehicle.Capacity,
             PricePerDay  = vehicle.PricePerDay,
             Status       = vehicle.Status,
+            ImageUrl     = vehicle.ImageUrl,
             ProviderName = vehicle.Provider?.FullName ?? string.Empty
         };
     }
@@ -36,6 +37,7 @@ public static class VehicleMappings
             Capacity           = vehicle.Capacity,
             PricePerDay        = vehicle.PricePerDay,
             Status             = vehicle.Status,
+            ImageUrl           = vehicle.ImageUrl,
             CreatedAt          = vehicle.CreatedAt,
             UpdatedAt          = vehicle.UpdatedAt
         };
@@ -53,6 +55,7 @@ public static class VehicleMappings
             RegistrationNumber = dto.RegistrationNumber,
             Capacity           = dto.Capacity,
             PricePerDay        = dto.PricePerDay,
+            ImageUrl           = dto.ImageUrl,
             Status             = VehicleStatus.PendingApproval,
             CreatedAt          = DateTime.UtcNow,
             UpdatedAt          = DateTime.UtcNow
@@ -67,6 +70,7 @@ public static class VehicleMappings
         vehicle.RegistrationNumber = dto.RegistrationNumber;
         vehicle.Capacity           = dto.Capacity;
         vehicle.PricePerDay        = dto.PricePerDay;
+        vehicle.ImageUrl           = dto.ImageUrl;
         vehicle.UpdatedAt          = DateTime.UtcNow;
     }
 }
