@@ -16,7 +16,7 @@ public class BookingUpdateAndDeleteTests
     private static AppDbContext CreateDb(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(dbName).ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         var db = new AppDbContext(options);
 
@@ -61,7 +61,7 @@ public class BookingUpdateAndDeleteTests
     {
         var db = CreateDb(Guid.NewGuid().ToString());
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService);
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
 
         // Pre-book room 2 completely for days 12-14
         db.HotelBookings.Add(new HotelBooking { Id = 10, TripId = 1, RoomId = 2, CheckInDate = DateTime.UtcNow.AddDays(12), CheckOutDate = DateTime.UtcNow.AddDays(14), NumberOfRooms = 1, Status = BookingStatus.Confirmed });
@@ -83,7 +83,7 @@ public class BookingUpdateAndDeleteTests
     {
         var db = CreateDb(Guid.NewGuid().ToString());
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService);
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
 
         var checkIn = DateTime.UtcNow.AddDays(12);
         var checkOut = DateTime.UtcNow.AddDays(14);
@@ -104,7 +104,7 @@ public class BookingUpdateAndDeleteTests
     {
         var db = CreateDb(Guid.NewGuid().ToString());
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService);
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
 
         var travelerBooking = new HotelBooking { Id = 11, TripId = 1, RoomId = 1, CheckInDate = DateTime.UtcNow.AddDays(12), CheckOutDate = DateTime.UtcNow.AddDays(14), NumberOfRooms = 1, Status = BookingStatus.Cancelled };
         db.HotelBookings.Add(travelerBooking);

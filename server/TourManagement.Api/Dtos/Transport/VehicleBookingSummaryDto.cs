@@ -21,8 +21,9 @@ public class VehicleBookingSummaryDto
     public string? PickupNote { get; set; }
 
     public BookingStatus Status { get; set; }
+    public DateTime? HoldExpiresAt { get; set; }
 
-    // PricePerDay × number of days. Calculated in mapping, not stored in the DB.
+    // PricePerDay × number of days. Can be a snapshot or calculated fallback.
     public decimal TotalPrice { get; set; }
 }
 

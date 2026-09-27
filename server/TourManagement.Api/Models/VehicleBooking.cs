@@ -28,11 +28,20 @@ public class VehicleBooking
     // Stored as a string in the DB (see AppDbContext). Uses the shared BookingStatus enum.
     public BookingStatus Status { get; set; } = BookingStatus.Held;
 
+    // UTC expiry for this hold.  Null = legacy hold (no expiry — was created before
+    // the checkout flow existed and should continue to block availability indefinitely).
+    // When set, an expired hold (HoldExpiresAt < UtcNow) does NOT block availability.
+    public DateTime? HoldExpiresAt { get; set; }
+
+    // Which TripCheckout created this hold.  Null for legacy holds.
+    public int? CheckoutId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties.
     public Trip Trip { get; set; } = null!;
     public Vehicle Vehicle { get; set; } = null!;
+    public TripCheckout? Checkout { get; set; }
 }
 

@@ -10,7 +10,7 @@ public class HotelOwnerAggregateEndpointsTests
     private static AppDbContext CreateDb(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(dbName).ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         var db = new AppDbContext(options);
@@ -71,7 +71,7 @@ public class HotelOwnerAggregateEndpointsTests
     {
         var db = CreateDb(nameof(GetMyHotelsBookingsAsync_ReturnsBookingsFromAllOwnedHotels));
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService);
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
 
         // Owner 1 has 2 bookings across their 2 hotels
         var result = await bookingService.GetMyHotelsBookingsAsync(10, null, null, 1, 10);

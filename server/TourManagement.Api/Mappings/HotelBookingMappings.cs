@@ -21,10 +21,11 @@ public static class HotelBookingMappings
             CheckOutDate  = booking.CheckOutDate,
             NumberOfRooms = booking.NumberOfRooms,
             Status        = booking.Status,
-            // PricePerNight × number of nights × number of rooms booked.
-            TotalPrice    = booking.Room != null
+            HoldExpiresAt = booking.HoldExpiresAt,
+            // Use the frozen snapshot from the checkout if available, otherwise calculate.
+            TotalPrice    = booking.Checkout?.HotelPriceSnapshot ?? (booking.Room != null
                 ? booking.Room.PricePerNight * nights * booking.NumberOfRooms
-                : 0m
+                : 0m)
         };
     }
 }

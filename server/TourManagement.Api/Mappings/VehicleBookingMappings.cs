@@ -24,10 +24,11 @@ public static class VehicleBookingMappings
             PickupLongitude    = booking.PickupLongitude,
             PickupNote         = booking.PickupNote,
             Status             = booking.Status,
-            // PricePerDay × number of days.
-            TotalPrice         = booking.Vehicle != null
+            HoldExpiresAt      = booking.HoldExpiresAt,
+            // Use the frozen snapshot from the checkout if available, otherwise calculate.
+            TotalPrice         = booking.Checkout?.VehiclePriceSnapshot ?? (booking.Vehicle != null
                 ? booking.Vehicle.PricePerDay * days
-                : 0m
+                : 0m)
         };
     }
 }

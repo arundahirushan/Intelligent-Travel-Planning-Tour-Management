@@ -17,23 +17,54 @@ public static class SeedData
 
         // Only seed if there is no SuperAdmin yet — prevents duplicates on restart.
         bool superAdminExists = await db.Users.AnyAsync(u => u.Role == Roles.SuperAdmin);
-        if (superAdminExists) return;
-
-        // TODO: Change this email and password before any real deployment.
-        // This is a placeholder that exists purely to bootstrap the system
-        // so that someone can log in and create real Admin accounts.
-        var superAdmin = new User
+        if (!superAdminExists)
         {
-            FullName     = "Super Admin",
-            Email        = "superadmin@tourmanagement.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("SuperAdmin@123"),
-            Role         = Roles.SuperAdmin,
-            Status       = UserStatus.Active,
-            CreatedAt    = DateTime.UtcNow,
-            UpdatedAt    = DateTime.UtcNow
-        };
+            // TODO: Change this email and password before any real deployment.
+            // This is a placeholder that exists purely to bootstrap the system
+            // so that someone can log in and create real Admin accounts.
+            var superAdmin = new User
+            {
+                FullName     = "Super Admin",
+                Email        = "superadmin@tourmanagement.com",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("SuperAdmin@123"),
+                Role         = Roles.SuperAdmin,
+                Status       = UserStatus.Active,
+                CreatedAt    = DateTime.UtcNow,
+                UpdatedAt    = DateTime.UtcNow
+            };
 
-        db.Users.Add(superAdmin);
-        await db.SaveChangesAsync();
+            db.Users.Add(superAdmin);
+            await db.SaveChangesAsync();
+        }
+
+        // Temporary dev fix: ensure all suppliers have a valid contract so the frontend testing works
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+
+        var suppliersWithoutContract = await db.Users
+            .Where(u => u.Role == Roles.Supplier && !db.Contracts.Any(c => c.SupplierId == u.Id && c.Status == ContractStatus.Active && c.EndDate >= today))
+            .ToListAsync();
+            
+        foreach (var supplier in suppliersWithoutContract)
+        {
+            db.Contracts.Add(new Contract
+            {
+                SupplierId = supplier.Id,
+                Status = ContractStatus.Active,
+                StartDate = now.AddDays(-1),
+                EndDate = now.AddYears(1),
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        if (suppliersWithoutContract.Any())
+        {
+            await db.SaveChangesAsync();
+        }
+
+        // Temporary dev fix: update old 'Approved' string values to 'Active' 
+        // to match the updated HotelStatus and VehicleStatus enums.
+        await db.Database.ExecuteSqlRawAsync("UPDATE \"Hotels\" SET \"Status\" = 'Active' WHERE \"Status\" = 'Approved'");
+        await db.Database.ExecuteSqlRawAsync("UPDATE \"Vehicles\" SET \"Status\" = 'Active' WHERE \"Status\" = 'Approved'");
     }
 }
