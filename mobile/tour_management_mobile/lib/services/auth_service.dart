@@ -73,7 +73,7 @@ class AuthService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['isSuccess'] == true && data['data'] != null) {
+        if (data['success'] == true && data['data'] != null) {
           final token = data['data']['token'];
           final userData = data['data']['user'];
           final expiresAt = data['data']['expiresAt']; // Match API DTO

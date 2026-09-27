@@ -30,11 +30,20 @@ We have created placeholders for each team member to work in independently:
    The `ApiClient` automatically handles the `Authorization` header containing the user's JWT token.
 4. **Hooking up to the Home Screen:** When your feature's main screen is ready, coordinate with the team to update `lib/screens/home_screen.dart`. Replace the placeholder `SnackBar` with a `Navigator.push` to your actual screen.
 
-## Running and Testing
+## Running and Testing (Physical Device)
 
-1. Open this folder (`mobile/tour_management_mobile`) in Antigravity or VS Code.
-2. Ensure you have run `flutter pub get`.
-3. Check `lib/core/config.dart` and update `apiBaseUrl` to point to your backend. If you're testing on an emulator, `10.0.2.2` works for `localhost`. If testing on a physical phone, ensure your phone and PC are on the same Wi-Fi and use your PC's IP address (e.g. `http://192.168.x.x:5160/api`).
-4. Select your device using `flutter devices` and run with `flutter run`.
+To test the application on the physical Samsung test device (`R83YC1NHQXT`), follow this exact process:
+
+1. **Start the backend server:** Ensure the ASP.NET Core API is running at `http://localhost:5160` (e.g. `dotnet run`).
+2. **Connect the phone:** Plug in the physical device via USB.
+3. **Forward the port:** Run the following ADB command to allow the phone to access the local backend:
+   ```bash
+   adb -s R83YC1NHQXT reverse tcp:5160 tcp:5160
+   ```
+   *Note: You may need to repeat this ADB reverse command if you disconnect the USB cable, restart the phone, or if the connection is lost.*
+4. **Run Flutter:** Launch the application on the device with the local API base URL:
+   ```bash
+   C:\src\flutter\bin\flutter.bat run -d R83YC1NHQXT --dart-define=API_BASE_URL=http://127.0.0.1:5160/api
+   ```
 
 Please avoid making large architectural changes in `lib/core` or `lib/services` without team consensus. Happy coding!

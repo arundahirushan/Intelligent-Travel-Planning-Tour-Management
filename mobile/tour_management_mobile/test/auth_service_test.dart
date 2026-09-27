@@ -18,7 +18,7 @@ void main() {
     final mockClient = MockClient((request) async {
       return http.Response(
           jsonEncode({
-            'isSuccess': true,
+            'success': true,
             'data': {
               'token': 'test_token',
               'user': {'role': 'Admin', 'email': 'admin@test.com'},
@@ -41,7 +41,7 @@ void main() {
     final mockClient = MockClient((request) async {
       return http.Response(
           jsonEncode({
-            'isSuccess': true,
+            'success': true,
             'data': {
               'token': 'test_token',
               'user': {'role': 'Traveler', 'email': 'traveler@test.com'},
@@ -57,6 +57,24 @@ void main() {
     expect(result, isFalse);
     expect(authService.isAuthenticated, isFalse);
     expect(authService.errorMessage, contains('Access denied'));
+  });
+
+  test('Login failed from backend', () async {
+    final authService = AuthService();
+    final mockClient = MockClient((request) async {
+      return http.Response(
+          jsonEncode({
+            'success': false,
+            'message': 'Invalid credentials provided by backend.'
+          }),
+          200);
+    });
+    ApiClient().client = mockClient;
+
+    final result = await authService.login('admin@test.com', 'wrong_password');
+    expect(result, isFalse);
+    expect(authService.isAuthenticated, isFalse);
+    expect(authService.errorMessage, contains('Invalid credentials provided by backend.'));
   });
 
   test('Logout clears session', () async {
