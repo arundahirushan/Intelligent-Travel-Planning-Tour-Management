@@ -374,7 +374,7 @@ public class HotelService : IHotelService
         foreach (var hotel in hotels)
         {
             foreach (var room in hotel.Rooms.Where(r => r.Status == RoomStatus.Active
-                                                     && r.Capacity >= request.NumberOfGuests))
+                                                     && (request.AllowMixedRooms || r.Capacity >= request.NumberOfGuests)))
             {
                 // Step 2: Calculate how many rooms of this type are already booked for these dates.
                 int bookedCount = await CountBookedRoomsAsync(room.Id, request.CheckInDate, request.CheckOutDate);
@@ -394,7 +394,10 @@ public class HotelService : IHotelService
                     RoomId             = room.Id,
                     RoomType           = room.RoomType,
                     PricePerNight      = room.PricePerNight,
-                    AvailableRoomCount = available
+                    AvailableRoomCount = available,
+                    DestinationId      = hotel.DestinationId,
+                    Capacity           = room.Capacity,
+                    Amenities          = room.Amenities
                 });
             }
         }
