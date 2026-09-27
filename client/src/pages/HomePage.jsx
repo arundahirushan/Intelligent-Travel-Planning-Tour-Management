@@ -71,11 +71,11 @@ export default function HomePage() {
               </>
             ) : (
               <div className="flex items-center gap-5">
-                <Link to="/register" className="text-xs text-text hover:text-primary font-heading font-bold uppercase tracking-widest transition-colors">
-                  Register
-                </Link>
                 <Link to="/login" className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
                   Log in
+                </Link>
+                <Link to="/register" className="text-xs text-text hover:text-primary font-heading font-bold uppercase tracking-widest transition-colors">
+                  Register
                 </Link>
               </div>
             )}

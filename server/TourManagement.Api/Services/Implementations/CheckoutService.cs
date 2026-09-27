@@ -81,56 +81,7 @@ public class CheckoutService : ICheckoutService
                 return await LoadCheckoutDtoAsync(existingCheckout.Id);
             }
 
-            var tripDestinationIds = trip.ItineraryItems.Select(i => i.DestinationId).ToHashSet();
-            
-            if (trip.StartDate.Date == trip.EndDate.Date)
-            {
-                if (allHotels.Any())
-                    throw new ValidationException("A one-day trip cannot have hotel stays.");
-            }
-            else
-            {
-                if (!allHotels.Any())
-                    throw new ValidationException("An empty hotel list is not permitted when the trip requires hotel stays.");
-
-                var roomIds = allHotels.Select(h => h.RoomId).ToList();
-                var rooms = await _db.Rooms.Include(r => r.Hotel).Where(r => roomIds.Contains(r.Id)).ToListAsync();
-                
-                var areaMap = new HashSet<int>();
-                foreach (var h in allHotels)
-                {
-                    var room = rooms.FirstOrDefault(r => r.Id == h.RoomId);
-                    if (room == null) throw new NotFoundException("Room not found.");
-                    
-                    var destId = room.Hotel.DestinationId;
-                    if (!tripDestinationIds.Contains(destId))
-                        throw new ValidationException($"Proposed hotel '{room.Hotel.Name}' is in an area not selected for this trip.");
-                    
-                    if (areaMap.Contains(destId))
-                        throw new ValidationException($"Cannot propose multiple hotel stays for the same area in this version.");
-                    areaMap.Add(destId);
-                }
-
-                if (areaMap.Count < tripDestinationIds.Count)
-                    throw new ValidationException("The proposal must include exactly one hotel stay for every selected destination area.");
-
-                var sortedHotels = allHotels.OrderBy(h => h.CheckInDate).ToList();
-                for (int i = 0; i < sortedHotels.Count; i++)
-                {
-                    var h = sortedHotels[i];
-                    if (h.CheckInDate.Date >= h.CheckOutDate.Date)
-                        throw new ValidationException("Each hotel stay must contain at least one night.");
-
-                    if (i == 0 && h.CheckInDate.Date != trip.StartDate.Date)
-                        throw new ValidationException("The first hotel stay must check in on the trip StartDate.");
-                    
-                    if (i == sortedHotels.Count - 1 && h.CheckOutDate.Date != trip.EndDate.Date)
-                        throw new ValidationException("The final hotel stay must check out on the trip EndDate.");
-                    
-                    if (i < sortedHotels.Count - 1 && h.CheckOutDate.Date != sortedHotels[i + 1].CheckInDate.Date)
-                        throw new ValidationException("Hotel stays must be contiguous with no gaps or overlaps.");
-                }
-            }
+            await ValidateAgenticProposalAsync(dto, trip);
         }
 
         var now = DateTime.UtcNow;
@@ -275,6 +226,67 @@ public class CheckoutService : ICheckoutService
         }
 
         return true;
+    }
+
+    public async Task ValidateAgenticProposalAsync(CreateCheckoutDto dto, Trip trip)
+    {
+        var allHotels = dto.Hotels?.ToList() ?? new List<HotelCheckoutItemDto>();
+        if (dto.Hotel != null && !allHotels.Any(h => h.RoomId == dto.Hotel.RoomId))
+        {
+            allHotels.Add(dto.Hotel);
+        }
+
+        var tripDestinationIds = trip.ItineraryItems.Select(i => i.DestinationId).ToHashSet();
+            
+        if (trip.StartDate.Date == trip.EndDate.Date)
+        {
+            if (allHotels.Any())
+                throw new ValidationException("A one-day trip cannot have hotel stays.");
+        }
+        else
+        {
+            if (!allHotels.Any())
+                throw new ValidationException("An empty hotel list is not permitted when the trip requires hotel stays.");
+
+            var roomIds = allHotels.Select(h => h.RoomId).ToList();
+            var rooms = await _db.Rooms.Include(r => r.Hotel).Where(r => roomIds.Contains(r.Id)).ToListAsync();
+                
+            var stays = allHotels
+                .GroupBy(h => {
+                    var r = rooms.First(room => room.Id == h.RoomId);
+                    return new { CheckIn = h.CheckInDate.Date, CheckOut = h.CheckOutDate.Date, HotelId = r.HotelId, DestinationId = r.Hotel.DestinationId, HotelName = r.Hotel.Name };
+                })
+                .ToList();
+
+            var areaMap = new HashSet<int>();
+            foreach (var stay in stays)
+            {
+                var destId = stay.Key.DestinationId;
+                if (!tripDestinationIds.Contains(destId))
+                    throw new ValidationException($"Proposed hotel '{stay.Key.HotelName}' is in an area not selected for this trip.");
+                    
+                if (areaMap.Contains(destId))
+                    throw new ValidationException($"Cannot propose multiple separate hotel stays for the same area.");
+                areaMap.Add(destId);
+            }
+
+            var sortedStays = stays.OrderBy(s => s.Key.CheckIn).ToList();
+            for (int i = 0; i < sortedStays.Count; i++)
+            {
+                var s = sortedStays[i].Key;
+                if (s.CheckIn >= s.CheckOut)
+                    throw new ValidationException("Each hotel stay must contain at least one night.");
+
+                if (i == 0 && s.CheckIn != trip.StartDate.Date)
+                    throw new ValidationException("The first hotel stay must check in on the trip StartDate.");
+                    
+                if (i == sortedStays.Count - 1 && s.CheckOut != trip.EndDate.Date)
+                    throw new ValidationException("The final hotel stay must check out on the trip EndDate.");
+                    
+                if (i < sortedStays.Count - 1 && s.CheckOut != sortedStays[i + 1].Key.CheckIn)
+                    throw new ValidationException("Hotel stays must be contiguous with no gaps or overlaps.");
+            }
+        }
     }
 
     // ── GetByIdAsync ──────────────────────────────────────────────────────────
