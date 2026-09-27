@@ -72,6 +72,13 @@ export async function getDestinations({ search, sort, page = 1, pageSize = 100 }
 
 // ── Hotel Search & Booking ────────────────────────────────────────────────────
 
+export async function getAcceptedHotels({ page = 1, pageSize = 50 } = {}) {
+  const params = new URLSearchParams();
+  params.append('page', page);
+  params.append('pageSize', pageSize);
+  return apiClient.get(`/hotels/accepted?${params.toString()}`).then(unwrap);
+}
+
 export async function searchHotels({ destinationId, checkInDate, checkOutDate, maxBudgetPerNight, numberOfGuests = 1 }) {
   const params = new URLSearchParams();
   params.append('destinationId', destinationId);

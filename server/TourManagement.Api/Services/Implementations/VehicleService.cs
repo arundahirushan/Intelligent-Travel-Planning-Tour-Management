@@ -324,9 +324,17 @@ public class VehicleService : IVehicleService
     // conditions are kept inline below so EF can translate them to SQL.
     public async Task<bool> IsVehicleAvailableAsync(int vehicleId, DateTime startDate, DateTime endDate, int? excludeBookingId = null)
     {
+        var now = DateTime.UtcNow;
+
         var query = _db.VehicleBookings.Where(b =>
             b.VehicleId == vehicleId
-            && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+            // A Confirmed booking always blocks.
+            // A Held booking only blocks if it has NOT expired:
+            //   - HoldExpiresAt is null  → legacy hold, treat as never-expiring.
+            //   - HoldExpiresAt >= now   → hold is still active.
+            && ((b.Status == BookingStatus.Confirmed)
+                || (b.Status == BookingStatus.Held
+                    && (b.HoldExpiresAt == null || b.HoldExpiresAt > now)))
             && b.StartDate < endDate    // overlap condition part 1
             && b.EndDate   > startDate  // overlap condition part 2
         );
@@ -343,11 +351,15 @@ public class VehicleService : IVehicleService
 
     public async Task<bool> IsVehicleBookedOnDateAsync(int vehicleId, DateTime date)
     {
+        var now = DateTime.UtcNow;
+
         return await _db.VehicleBookings.AnyAsync(b =>
             b.VehicleId == vehicleId
-            && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+            && ((b.Status == BookingStatus.Confirmed)
+                || (b.Status == BookingStatus.Held
+                    && (b.HoldExpiresAt == null || b.HoldExpiresAt > now)))
             && b.StartDate.Date <= date.Date
-            && b.EndDate.Date >= date.Date
+            && b.EndDate.Date   >= date.Date
         );
     }
 

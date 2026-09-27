@@ -20,7 +20,7 @@ public class HotelServiceTests
     private static AppDbContext CreateDb(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(dbName).ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         var db = new AppDbContext(options);
@@ -135,7 +135,7 @@ public class HotelServiceTests
         db.SaveChanges();
 
         var hotelService   = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService);
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
 
         // Act: traveler tries to book 2 rooms — but only 1 is available.
         var dto = new CreateHotelBookingDto
@@ -213,7 +213,7 @@ public class HotelServiceTests
         db.SaveChanges();
 
         var hotelService   = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService);
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
 
         // CheckOutDate (Oct 7) is after Trip.EndDate (Oct 5) — must be rejected.
         var dto = new CreateHotelBookingDto

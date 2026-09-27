@@ -15,52 +15,38 @@ namespace TourManagement.Api.Services.Implementations;
 public class VehicleBookingService : IVehicleBookingService
 {
     private readonly AppDbContext _db;
-    private readonly IVehicleService _vehicleService;  // reuses IsVehicleAvailableAsync
+    private readonly IVehicleService _vehicleService;
+    private readonly ICheckoutService _checkoutService;
 
-    public VehicleBookingService(AppDbContext db, IVehicleService vehicleService)
+    public VehicleBookingService(AppDbContext db, IVehicleService vehicleService, ICheckoutService checkoutService)
     {
-        _db             = db;
-        _vehicleService = vehicleService;
+        _db              = db;
+        _vehicleService  = vehicleService;
+        _checkoutService = checkoutService;
     }
 
-    // Create a new vehicle booking (starts as Held).
-    // Validates dates, checks that the trip belongs to this traveler, and
-    // ensures the vehicle is available for the requested dates.
     public async Task<VehicleBookingSummaryDto> CreateAsync(CreateVehicleBookingDto dto, int travelerId)
     {
-        // Force UTC for Npgsql timestamp with time zone columns
-        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
-        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
-
-        var trip = await _db.Trips.FindAsync(dto.TripId);
-        if (trip == null)
-            throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
-        if (trip.TravelerId != travelerId)
-            throw new ForbiddenException("You can only create bookings for your own trips.");
-
-        await ValidateAndCheckAvailabilityAsync(
-            dto.VehicleId, dto.StartDate, dto.EndDate, trip, null);
-
-        var booking = new VehicleBooking
-        {
-            TripId          = dto.TripId,
-            VehicleId       = dto.VehicleId,
-            StartDate       = dto.StartDate,
-            EndDate         = dto.EndDate,
-            PickupLatitude  = dto.PickupLatitude,
-            PickupLongitude = dto.PickupLongitude,
-            PickupNote      = dto.PickupNote,
-            Status          = BookingStatus.Held,
-            CreatedAt       = DateTime.UtcNow,
-            UpdatedAt       = DateTime.UtcNow
+        var checkoutDto = new TourManagement.Api.Dtos.Checkout.CreateCheckoutDto 
+        { 
+            TripId  = dto.TripId, 
+            Vehicle = new TourManagement.Api.Dtos.Checkout.VehicleCheckoutItemDto 
+            {
+                VehicleId       = dto.VehicleId,
+                StartDate       = dto.StartDate,
+                EndDate         = dto.EndDate,
+                PickupLatitude  = dto.PickupLatitude,
+                PickupLongitude = dto.PickupLongitude,
+                PickupNote      = dto.PickupNote
+            }
         };
 
-        _db.VehicleBookings.Add(booking);
-        await _db.SaveChangesAsync();
+        var checkoutResponse = await _checkoutService.PlaceHoldAsync(checkoutDto, travelerId);
 
         var saved = await _db.VehicleBookings
             .Include(b => b.Vehicle)
-            .FirstAsync(b => b.Id == booking.Id);
+            .Include(b => b.Checkout)
+            .FirstAsync(b => b.Id == checkoutResponse.VehicleItem!.VehicleBookingId);
 
         return saved.ToSummaryDto();
     }
@@ -84,21 +70,43 @@ public class VehicleBookingService : IVehicleBookingService
         if (booking.Status != BookingStatus.Held)
             throw new ValidationException($"Cannot modify a booking that is already {booking.Status}.");
 
-        await ValidateAndCheckAvailabilityAsync(
-            dto.VehicleId, dto.StartDate, dto.EndDate, booking.Trip, booking.Id);
+        // Guard: do not allow editing an expired hold.
+        if (booking.HoldExpiresAt.HasValue && booking.HoldExpiresAt < DateTime.UtcNow)
+            throw new ValidationException(
+                "This hold has expired. Please place a new checkout hold to rebook.");
 
-        booking.VehicleId = dto.VehicleId;
-        booking.StartDate = dto.StartDate;
-        booking.EndDate = dto.EndDate;
-        booking.PickupLatitude = dto.PickupLatitude;
-        booking.PickupLongitude = dto.PickupLongitude;
-        booking.PickupNote = dto.PickupNote;
-        booking.UpdatedAt = DateTime.UtcNow;
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            if (_db.Database.IsRelational())
+            {
+                long vehicleLockKey = 2_000_000L + dto.VehicleId;
+                await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({vehicleLockKey})");
+            }
 
-        await _db.SaveChangesAsync();
+            await ValidateAndCheckAvailabilityAsync(
+                dto.VehicleId, dto.StartDate, dto.EndDate, booking.Trip, booking.Id);
+
+            booking.VehicleId = dto.VehicleId;
+            booking.StartDate = dto.StartDate;
+            booking.EndDate = dto.EndDate;
+            booking.PickupLatitude = dto.PickupLatitude;
+            booking.PickupLongitude = dto.PickupLongitude;
+            booking.PickupNote = dto.PickupNote;
+            booking.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         var saved = await _db.VehicleBookings
             .Include(b => b.Vehicle)
+            .Include(b => b.Checkout)
             .FirstAsync(b => b.Id == booking.Id);
 
         return saved.ToSummaryDto();
@@ -134,6 +142,7 @@ public class VehicleBookingService : IVehicleBookingService
         var query = _db.VehicleBookings
             .Include(b => b.Vehicle)
             .Include(b => b.Trip)
+            .Include(b => b.Checkout)
             .Where(b => b.Trip.TravelerId == travelerId)
             .OrderByDescending(b => b.CreatedAt);
 

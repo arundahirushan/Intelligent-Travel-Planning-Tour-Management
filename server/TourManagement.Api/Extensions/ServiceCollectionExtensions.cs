@@ -50,6 +50,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupplyOrderService,     TourManagement.Api.Services.Implementations.SupplyOrderService>();
         services.AddScoped<IProfileService,         TourManagement.Api.Services.Implementations.ProfileService>();
 
+        // Checkout (hold) flow — the shared operation for manual and future agentic booking.
+        services.AddScoped<ICheckoutService,         TourManagement.Api.Services.Implementations.CheckoutService>();
+
+        // Background service that marks expired checkouts as Expired and
+        // cancels their linked Held bookings.  Cosmetic only — availability
+        // checks in HotelService and VehicleService are already expiry-aware.
+        services.AddHostedService<TourManagement.Api.Services.Implementations.ExpiredHoldCleanupService>();
+
         return services;
     }
 }

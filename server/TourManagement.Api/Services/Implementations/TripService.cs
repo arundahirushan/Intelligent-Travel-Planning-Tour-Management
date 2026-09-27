@@ -24,6 +24,9 @@ public class TripService : ITripService
     // Create a new trip for the logged-in traveler. Starts in Draft status.
     public async Task<TripDetailDto> CreateAsync(CreateTripDto dto, int travelerId)
     {
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
         ValidateTripDates(dto.StartDate, dto.EndDate);
 
         var trip = new Trip
@@ -99,6 +102,9 @@ public class TripService : ITripService
         // Only Draft trips can be edited — once the status advances, the plan is locked.
         if (trip.Status != TripStatus.Draft)
             throw new ValidationException("Trip can only be edited while in Draft status.");
+
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
 
         ValidateTripDates(dto.StartDate, dto.EndDate);
 

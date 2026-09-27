@@ -4,6 +4,8 @@ import HomePage from '../pages/HomePage';
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
 import ProtectedRoute from './ProtectedRoute';
+import DestinationPage from '../pages/DestinationPage';
+import HotelsPage from '../pages/HotelsPage';
 
 // Supplier Dashboard Pages
 import SuppliesPage from '../features/supplier/pages/SuppliesPage';
@@ -40,8 +42,10 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/hotels" element={<HotelsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/destinations/:id" element={<DestinationPage />} />
 
       {/* Traveler Dashboard */}
       <Route element={<ProtectedRoute allowedRoles={['Traveler']} />}>
