@@ -261,8 +261,11 @@ public class VehicleService : IVehicleService
     // available for the whole window or it isn't (simpler than room-type math).
     public async Task<List<VehicleSearchResultDto>> SearchAsync(VehicleSearchRequestDto request)
     {
-        if (request.EndDate <= request.StartDate)
-            throw new ValidationException("EndDate must be after StartDate.");
+        if (request.EndDate < request.StartDate)
+            throw new ValidationException("EndDate must not be before StartDate.");
+
+        if (request.EndDate == request.StartDate)
+            request.EndDate = request.StartDate.AddDays(1);
 
         // PostgreSQL (Npgsql) requires DateTime to be UTC when querying timestamp with time zone columns.
         // Query string dates bind as Unspecified, so we force them to UTC here.

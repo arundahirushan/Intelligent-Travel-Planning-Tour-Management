@@ -14,6 +14,9 @@ public class TripDetailDto
     public decimal Budget { get; set; }
     public int GroupSize { get; set; }
     public string? Interests { get; set; }
+    public decimal? PickupLatitude { get; set; }
+    public decimal? PickupLongitude { get; set; }
+    public string? PickupNote { get; set; }
     public TripStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

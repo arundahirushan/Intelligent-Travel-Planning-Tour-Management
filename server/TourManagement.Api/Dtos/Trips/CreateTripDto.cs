@@ -26,4 +26,8 @@ public class CreateTripDto
 
     // Optional comma-separated interests, e.g. "hiking,beach,food".
     public string? Interests { get; set; }
+
+    public decimal? PickupLatitude { get; set; }
+    public decimal? PickupLongitude { get; set; }
+    public string? PickupNote { get; set; }
 }

@@ -22,9 +22,13 @@ def m4_validation_node(state: WorkflowState) -> WorkflowState:
         "TripId": state["trip_id"],
         "ProposalId": state["proposal_id"],
         "Hotels": checkout_hotels,
-        "Vehicle": state.get("vehicles", [None])[0] if state.get("vehicles") else None
+        "Vehicle": state.get("vehicles", [None])[0] if state.get("vehicles") else None,
+        "PartialPlan": state.get("plan"),
+        "PartialAccommodation": state.get("accommodation_summary"),
+        "PartialTransport": state.get("transport_summary"),
+        "PartialWeather": state.get("weather")
     }
-    
+
     # Check if prior nodes were unimplemented or failed
     has_unimplemented = any(
         s.status == "AgentNotImplemented" for s in state.get("execution_summaries", [])
@@ -33,10 +37,11 @@ def m4_validation_node(state: WorkflowState) -> WorkflowState:
         s.status == "AgentFailed" for s in state.get("execution_summaries", [])
     )
 
+    state["final_payload"] = json.dumps(payload)
+
     if has_failed:
         state["is_valid"] = False
         state["validation_errors"] = ["Upstream nodes failed."]
-        state["final_payload"] = "{}"
         
         state["execution_summaries"].append(AgentExecutionSummary(
             agentIdentity="m4_validation",
@@ -46,7 +51,6 @@ def m4_validation_node(state: WorkflowState) -> WorkflowState:
     elif has_unimplemented:
         state["is_valid"] = False
         state["validation_errors"] = ["Upstream nodes are not implemented."]
-        state["final_payload"] = "{}"
         
         state["execution_summaries"].append(AgentExecutionSummary(
             agentIdentity="m4_validation",
@@ -54,14 +58,14 @@ def m4_validation_node(state: WorkflowState) -> WorkflowState:
             finalOutcome="NotImplemented"
         ))
     else:
-        state["is_valid"] = True
-        state["validation_errors"] = []
-        state["final_payload"] = json.dumps(payload)
+        # M4 itself is unfinished, so even if M1-M3 succeed, we must not falsely approve.
+        state["is_valid"] = False
+        state["validation_errors"] = ["M4 validation is not yet implemented."]
         
         state["execution_summaries"].append(AgentExecutionSummary(
             agentIdentity="m4_validation",
-            status="Success",
-            finalOutcome="Pass"
+            status="AgentNotImplemented",
+            finalOutcome="NotImplemented"
         ))
     
     return state

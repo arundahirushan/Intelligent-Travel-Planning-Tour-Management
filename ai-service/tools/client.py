@@ -34,7 +34,7 @@ class InternalAgentClient:
         payload = {
             "startDate": start_date,
             "endDate": end_date,
-            "capacity": capacity
+            "minCapacity": capacity
         }
         response = requests.post(f"{self.base_url}/vehicles/search", json=payload, headers=self.headers, timeout=10)
         response.raise_for_status()

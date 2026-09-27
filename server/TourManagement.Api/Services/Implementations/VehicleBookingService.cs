@@ -56,6 +56,9 @@ public class VehicleBookingService : IVehicleBookingService
         // Force UTC for Npgsql timestamp with time zone columns
         dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
         dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+        
+        if (dto.EndDate < dto.StartDate)
+            throw new ValidationException("EndDate must not be before StartDate.");
 
         var booking = await _db.VehicleBookings
             .Include(b => b.Trip)
@@ -238,12 +241,15 @@ public class VehicleBookingService : IVehicleBookingService
     private async Task ValidateAndCheckAvailabilityAsync(
         int vehicleId, DateTime startDate, DateTime endDate, Trip trip, int? excludeBookingId)
     {
-        if (endDate <= startDate)
-            throw new ValidationException("EndDate must be after StartDate.");
+        if (endDate < startDate)
+            throw new ValidationException("EndDate must not be before StartDate.");
 
         if (startDate.Date < trip.StartDate.Date || endDate.Date > trip.EndDate.Date)
             throw new ValidationException(
                 $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
+
+        if (endDate == startDate)
+            endDate = startDate.AddDays(1);
 
         var vehicle = await _db.Vehicles.FindAsync(vehicleId);
         if (vehicle == null)

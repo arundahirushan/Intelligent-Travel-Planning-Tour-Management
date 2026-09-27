@@ -14,10 +14,24 @@ def build_graph():
     builder.add_node("transport_weather", m3_transport_weather_node)
     builder.add_node("validation", m4_validation_node)
     
+    # Define conditional routing to skip to validation on failure
+    def route_planning(state):
+        if any(s.status == "AgentFailed" for s in state.get("execution_summaries", [])):
+            return "validation"
+        return "accommodation"
+        
+    def route_accommodation(state):
+        if any(s.status == "AgentFailed" for s in state.get("execution_summaries", [])):
+            return "validation"
+        return "transport_weather"
+        
+    def route_transport(state):
+        return "validation"
+
     # Add edges
     builder.set_entry_point("planning")
-    builder.add_edge("planning", "accommodation")
-    builder.add_edge("accommodation", "transport_weather")
+    builder.add_conditional_edges("planning", route_planning, {"accommodation": "accommodation", "validation": "validation"})
+    builder.add_conditional_edges("accommodation", route_accommodation, {"transport_weather": "transport_weather", "validation": "validation"})
     builder.add_edge("transport_weather", "validation")
     builder.add_edge("validation", END)
     
