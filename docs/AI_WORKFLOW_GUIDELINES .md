@@ -677,8 +677,8 @@ These were discussed but not confirmed in the supplied conversation. This docume
 
 | Decision | When to settle it | Simple options |
 | --- | --- | --- |
-| Initial AI provider/model | Before M1's real model integration | Start with one supported model; add another provider later if needed. Verify its current capabilities when selected. |
-| Itinerary detail | Before finalizing M1 output | Area-level plan, or area plan plus clearly labeled activity/attraction suggestions. |
+| Initial AI provider/model | Confirmed for M1 | Gemini 3.5 Flash-Lite (via google-genai SDK). Configurable via GEMINI_MODEL. |
+| Itinerary detail | Confirmed for M1 | Area-level plan (daily visits and overnight stops). No attraction lists or schedules. |
 | Vehicle requirement | Before M3 selection logic | Use an existing explicit trip preference if available; otherwise ask whether the vehicle is required, optional or conditional. Do not infer an answer from a missing database field. |
 | Weather provider and missing-weather policy | Before M3/M4 weather integration | Agree the data source and when unavailability is a warning versus a revision blocker. No fabricated forecasts. |
 | Missing mandatory pickup or other input | When actual contracts show it is required | Reuse existing collected input, or ask the owner how it should be collected. Do not invent defaults. |
@@ -706,3 +706,4 @@ After each implementation task, report changed files, actual interfaces, migrati
 | --- | --- | --- |
 | 1.0 | 2026-09-27 | Initial guideline based on the agreed foundation prompt. Records Option B day visits, four-agent boundaries, persisted review flow, Admin-only hold creation, payment deferral and verification limits. |
 | 1.1 | 2026-09-27 | Adds the flexible shared implementation plan, sequential member/merge handoffs, data connections, assembly ownership, incomplete-agent testing, shared-file coordination and open decisions. Updates reported foundation progress without claiming independent verification. Clarifies Option A hotel coverage alongside Option B day visits, manual-booking boundaries, post-hold checkout identity and deferred approval consistency work. Restores normal Markdown formatting. |
+| 1.2 | 2026-09-27 | Implements M1 Trip Planning & Coordination agent. Confirms Gemini 3.5 Flash-Lite and area-level planning. Types output plan. |

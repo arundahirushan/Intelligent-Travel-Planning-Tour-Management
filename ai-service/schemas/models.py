@@ -23,3 +23,28 @@ class AgentProposalResult(BaseModel):
     status: str
     payload: str = "{}" # JSON string
     executionSummaries: List[AgentExecutionSummary] = Field(default_factory=list)
+
+class DailyVisit(BaseModel):
+    day_number: int
+    date: str
+    visited_area_ids: List[int]
+    visited_area_names: List[str]
+    overnight_area_id: Optional[int]
+    overnight_area_name: Optional[str]
+    explanation: str
+
+class OvernightSection(BaseModel):
+    overnight_area_id: int
+    overnight_area_name: str
+    check_in_date: str
+    check_out_date: str
+    night_count: int
+
+class PlanningSummary(BaseModel):
+    explanation: str
+    warnings_or_limitations: List[str]
+
+class TripPlan(BaseModel):
+    daily_visits: List[DailyVisit]
+    overnight_sections: List[OvernightSection]
+    planning_summary: PlanningSummary
