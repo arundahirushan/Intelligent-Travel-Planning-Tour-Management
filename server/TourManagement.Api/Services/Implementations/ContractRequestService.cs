@@ -23,14 +23,14 @@ public class ContractRequestService : IContractRequestService
     {
         var today = DateTime.UtcNow.Date;
 
-        // 1. Reject if supplier already has a valid contract (Status == Active AND EndDate >= today)
+        // 1. Check if they have an active valid contract
         var hasValidContract = await _db.Contracts.AnyAsync(c =>
             c.SupplierId == supplierId &&
             c.Status == ContractStatus.Active &&
             c.EndDate.Date >= today);
 
         if (hasValidContract)
-            throw new ValidationException("Cannot submit a new contract request while you already hold an active, valid contract.");
+            throw new ValidationException("Cannot submit a contract request while you already hold an active, valid contract.");
 
         // 2. Reject if supplier already has a pending request
         var hasPending = await _db.ContractRequests.AnyAsync(r =>
@@ -53,14 +53,13 @@ public class ContractRequestService : IContractRequestService
             if (existing.SupplierId != supplierId)
                 throw new ForbiddenException("The specified contract does not belong to your supplier account.");
 
-            if (dto.RequestedEndDate <= existing.EndDate)
-                throw new ValidationException("RequestedEndDate must extend beyond the existing contract's EndDate.");
+            if (dto.RequestedStartDate.HasValue && dto.RequestedStartDate.Value.AddYears(dto.DurationInYears) <= existing.EndDate)
+                throw new ValidationException("Requested contract period must extend beyond the existing contract's EndDate.");
         }
         else
         {
             var startDate = dto.RequestedStartDate ?? today;
-            if (dto.RequestedEndDate <= startDate)
-                throw new ValidationException("RequestedEndDate must be after the start date.");
+            // End date validation is now implicitly handled by DurationInYears
         }
 
         var request = dto.ToEntity(supplierId);
@@ -148,6 +147,34 @@ public class ContractRequestService : IContractRequestService
 
         if (request.Status != ContractRequestStatus.Pending)
             throw new ValidationException($"Only Pending requests can be approved. Current status is {request.Status}.");
+
+        // 1. Prevent overlapping valid contracts.
+        //    NOTE: Do NOT use "c.Id != request.ExistingContractId" here — when ExistingContractId
+        //    is null, SQL evaluates "c.Id != NULL" as unknown/false, silently disabling the guard.
+        var today = DateTime.UtcNow.Date;
+        bool hasValidContract;
+
+        if (request.RequestType == ContractRequestType.Renewal && request.ExistingContractId.HasValue)
+        {
+            // For a Renewal: block if there is ANY active valid contract OTHER than the one being renewed
+            var excludeId = request.ExistingContractId.Value;
+            hasValidContract = await _db.Contracts.AnyAsync(c =>
+                c.SupplierId == request.SupplierId &&
+                c.Status == ContractStatus.Active &&
+                c.EndDate.Date >= today &&
+                c.Id != excludeId);
+        }
+        else
+        {
+            // For a New request: block if ANY active valid contract exists at all
+            hasValidContract = await _db.Contracts.AnyAsync(c =>
+                c.SupplierId == request.SupplierId &&
+                c.Status == ContractStatus.Active &&
+                c.EndDate.Date >= today);
+        }
+
+        if (hasValidContract)
+            throw new ValidationException("Cannot approve this request because the supplier already has a valid active contract.");
 
         if (request.RequestType == ContractRequestType.Renewal)
         {

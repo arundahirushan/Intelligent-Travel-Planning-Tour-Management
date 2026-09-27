@@ -5,7 +5,7 @@ import StatusBadge from '../../../components/StatusBadge';
 import EmptyState from '../../../components/EmptyState';
 import ErrorBanner from '../../../components/ErrorBanner';
 import ContractRequestModal from '../components/ContractRequestModal';
-import { getMyContractRequests } from '../../../services/supplierApi';
+import { getMyContractRequests, getMyContractStatus, getMyContracts } from '../../../services/supplierApi';
 import { SUPPLIER_NAV_ITEMS } from './SuppliesPage';
 
 // ContractRequestStatus values from backend
@@ -15,49 +15,74 @@ const STATUS_LABEL_MAP = {
   Rejected: { label: 'Rejected', colorClass: 'bg-status-danger/15 text-status-danger' },
 };
 
-// ContractRequestType labels
 const TYPE_LABEL = { New: 'New Contract', Renewal: 'Renewal' };
 
 export default function ContractsPage() {
   const [requests, setRequests] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [contractStatus, setContractStatus] = useState(null);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
-  const fetchRequests = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getMyContractRequests({ pageSize: 100 });
-      setRequests(data.items || []);
+      const [requestsData, statusData, contractsData] = await Promise.all([
+        getMyContractRequests({ pageSize: 100 }),
+        getMyContractStatus(),
+        getMyContracts({ pageSize: 100 })
+      ]);
+      setRequests(requestsData.items || []);
+      setContractStatus(statusData);
+      setContracts(contractsData.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load contract requests. Please try again.');
+      setError(err.response?.data?.message || 'Failed to load contract information. Please try again.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
-
-  // ── Infer contract state from request history ──────────────────────────────
-  //
-  // NOTE: There is no Supplier-authorized GET /api/contracts endpoint.
-  // We derive state from request history:
-  //   - If any request is Pending → show "pending review" state, disable submit button
-  //   - Else if any request is Approved → supplier has a contract → offer "New" request if needed
-  //   - If all requests are Rejected or no requests → offer "New" request
+    fetchData();
+  }, [fetchData]);
 
   const hasPendingRequest = useMemo(() =>
     requests.some((r) => r.status === 'Pending'), [requests]);
 
-  const hasApprovedRequest = useMemo(() =>
-    requests.some((r) => r.status === 'Approved'), [requests]);
+  const isValidContract = contractStatus?.isValid;
 
-  // For contract status banner
+  // Determine if Supplier can request a contract
+  const canRequestContract = !hasPendingRequest && !isValidContract;
+
+  // Find the current active contract from the history based on the ID from status
+  const currentContract = useMemo(() => {
+    if (!contractStatus?.contractId) return null;
+    return contracts.find(c => c.id === contractStatus.contractId) || {
+      id: contractStatus.contractId,
+      status: contractStatus.status,
+      endDate: contractStatus.endDate
+    };
+  }, [contractStatus, contracts]);
+
+  const contractHistory = useMemo(() => {
+    if (!contractStatus?.contractId) return contracts;
+    return contracts.filter(c => c.id !== contractStatus.contractId);
+  }, [contractStatus, contracts]);
+
   const contractStatusInfo = useMemo(() => {
     if (loading) return null;
+    if (isValidContract) {
+      return {
+        icon: 'verified',
+        title: 'Active Contract',
+        body: 'You have a valid, active supplier contract. Only one active contract is allowed at a time.',
+        colorClass: 'bg-status-success/10 border-status-success/30',
+        titleColor: 'text-status-success',
+      };
+    }
     if (hasPendingRequest) {
       return {
         icon: 'pending',
@@ -67,23 +92,14 @@ export default function ContractsPage() {
         titleColor: 'text-status-warning',
       };
     }
-    if (hasApprovedRequest) {
-      return {
-        icon: 'verified',
-        title: 'Contract Granted',
-        body: 'A supplier contract has been approved for your account. You can now create and list supply items. If your contract has expired, submit a new request to renew.',
-        colorClass: 'bg-status-success/10 border-status-success/30',
-        titleColor: 'text-status-success',
-      };
-    }
     return {
       icon: 'info',
       title: 'No Active Contract',
-      body: 'You do not have a supplier contract yet. Submit a contract request below — an admin will review it and issue your contract.',
+      body: 'You do not have a valid supplier contract. Submit a contract request below — an admin will review it and issue your contract.',
       colorClass: 'bg-surface-blue border-border-blue',
       titleColor: 'text-primary',
     };
-  }, [loading, hasPendingRequest, hasApprovedRequest]);
+  }, [loading, hasPendingRequest, isValidContract]);
 
   return (
     <DashboardLayout navItems={SUPPLIER_NAV_ITEMS} roleBadge="Supply Partner" profileRoute="/supplier/profile">
@@ -98,17 +114,22 @@ export default function ContractsPage() {
             Contracts
           </h1>
           <p className="text-body-md text-text-secondary">
-            View your contract request history and submit new requests.
+            View your contract history and submit new requests.
           </p>
         </div>
 
-        {/* Submit button — disabled while a request is pending */}
         {!loading && (
           <div>
             <Button
               onClick={() => setIsRequestModalOpen(true)}
-              disabled={hasPendingRequest}
-              title={hasPendingRequest ? 'You already have a request pending review' : undefined}
+              disabled={!canRequestContract}
+              title={
+                hasPendingRequest 
+                  ? 'You already have a request pending review' 
+                  : isValidContract 
+                    ? 'You already have an active valid contract' 
+                    : undefined
+              }
             >
               {hasPendingRequest ? '↻ Request Pending…' : '+ Request Contract'}
             </Button>
@@ -138,39 +159,53 @@ export default function ContractsPage() {
         </div>
       )}
 
-      {/* Important note about the contract limitation */}
-      <div className="bg-surface-neutral/50 border border-border-neutral rounded-xl p-4 mb-8 flex items-start gap-3">
-        <span className="material-symbols-outlined text-text-secondary text-lg mt-0.5">info</span>
-        <p className="text-body-sm text-text-secondary">
-          <strong className="text-text">Note:</strong> Contract details (start/end dates, terms) are managed by your admin.
-          This page shows your submitted requests. Contact your admin for contract specifics.
-        </p>
-      </div>
+      {/* Current Contract Section */}
+      <h2 className="text-headline-sm font-heading font-bold text-text mb-4">Current Contract</h2>
+      {!loading && currentContract && currentContract.status === 'Active' && isValidContract ? (
+        <div className="bg-white border border-border-neutral rounded-xl overflow-hidden mb-8 p-6">
+          <div className="flex flex-col md:flex-row gap-8 justify-between">
+            <div>
+              <p className="text-body-sm text-text-secondary mb-1">Status</p>
+              <StatusBadge status="Active" size="lg" />
+            </div>
+            <div>
+              <p className="text-body-sm text-text-secondary mb-1">Start Date</p>
+              <p className="font-semibold text-text">{currentContract.startDate ? new Date(currentContract.startDate).toLocaleDateString() : 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-body-sm text-text-secondary mb-1">End Date</p>
+              <p className="font-semibold text-text">{currentContract.endDate ? new Date(currentContract.endDate).toLocaleDateString() : 'N/A'}</p>
+            </div>
+          </div>
+          {currentContract.terms && (
+            <div className="mt-6 border-t border-border-neutral pt-4">
+              <p className="text-body-sm text-text-secondary mb-2">Terms & Conditions</p>
+              <p className="text-body-md text-text">{currentContract.terms}</p>
+            </div>
+          )}
+        </div>
+      ) : !loading ? (
+         <div className="bg-surface-neutral/50 border border-border-neutral rounded-xl p-6 mb-8 text-center">
+            <p className="text-body-md text-text-secondary">No active current contract.</p>
+         </div>
+      ) : null}
 
-      {/* Section title */}
+
+      {/* Request History */}
       <h2 className="text-headline-sm font-heading font-bold text-text mb-4">Request History</h2>
-
-      {/* Request history table */}
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
+        <div className="space-y-3 mb-8">
+          {[1].map((i) => (
             <div key={i} className="h-16 bg-surface-neutral/50 animate-pulse rounded-xl border border-border-neutral" />
           ))}
         </div>
       ) : requests.length === 0 ? (
-        <EmptyState
-          icon="description"
-          title="No contract requests yet"
-          description="Submit a contract request to get started as a supplier."
-          action={
-            <Button onClick={() => setIsRequestModalOpen(true)}>
-              Request a Contract
-            </Button>
-          }
-        />
+        <div className="bg-surface-neutral/50 border border-border-neutral rounded-xl p-6 mb-8 text-center">
+          <p className="text-body-md text-text-secondary">No contract requests found.</p>
+        </div>
       ) : (
-        <div className="bg-white border border-border-neutral rounded-xl overflow-hidden">
-          <table className="w-full text-left" aria-label="Contract request history">
+        <div className="bg-white border border-border-neutral rounded-xl overflow-hidden mb-8">
+          <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border-neutral bg-surface-neutral/50">
                 <th className="px-6 py-3 text-label-uppercase text-text-secondary tracking-widest">Type</th>
@@ -222,11 +257,48 @@ export default function ContractsPage() {
         </div>
       )}
 
+      {/* Contract History */}
+      {contractHistory.length > 0 && (
+        <>
+          <h2 className="text-headline-sm font-heading font-bold text-text mb-4 mt-8">Contract History</h2>
+          <div className="bg-white border border-border-neutral rounded-xl overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border-neutral bg-surface-neutral/50">
+                  <th className="px-6 py-3 text-label-uppercase text-text-secondary tracking-widest">Status</th>
+                  <th className="px-6 py-3 text-label-uppercase text-text-secondary tracking-widest">Start Date</th>
+                  <th className="px-6 py-3 text-label-uppercase text-text-secondary tracking-widest">End Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-neutral">
+                {contractHistory.map((c) => (
+                  <tr key={c.id} className="hover:bg-surface-neutral/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="text-body-sm font-semibold text-text">{c.status}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-body-sm text-text-secondary">
+                        {new Date(c.startDate).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-body-sm text-text-secondary">
+                        {new Date(c.endDate).toLocaleDateString()}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       {/* Contract Request Modal */}
       <ContractRequestModal
         isOpen={isRequestModalOpen}
         onClose={() => setIsRequestModalOpen(false)}
-        onSuccess={fetchRequests}
+        onSuccess={fetchData}
         requestType="New"
       />
     </DashboardLayout>

@@ -32,7 +32,7 @@ export default function ContractRequestModal({
 
   const [formData, setFormData] = useState({
     RequestedStartDate: '',
-    RequestedEndDate: '',
+    DurationInYears: 1,
     RequestedTerms: '',
   });
   const [fieldErrors, setFieldErrors] = useState({});
@@ -46,7 +46,7 @@ export default function ContractRequestModal({
       setFieldErrors({});
       setFormData({
         RequestedStartDate: '',
-        RequestedEndDate: '',
+        DurationInYears: 1,
         RequestedTerms: '',
       });
     }
@@ -62,24 +62,8 @@ export default function ContractRequestModal({
 
   const validate = () => {
     const errors = {};
-    if (!formData.RequestedEndDate) {
-      errors.RequestedEndDate = 'Requested end date is required.';
-    } else {
-      const endDate = new Date(formData.RequestedEndDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (isRenewal && existingEndDate) {
-        const existingEnd = new Date(existingEndDate);
-        if (endDate <= existingEnd) {
-          errors.RequestedEndDate = `End date must be after the existing contract end date (${new Date(existingEndDate).toLocaleDateString()}).`;
-        }
-      } else if (!isRenewal) {
-        const startDate = formData.RequestedStartDate ? new Date(formData.RequestedStartDate) : today;
-        if (endDate <= startDate) {
-          errors.RequestedEndDate = 'End date must be after the start date.';
-        }
-      }
+    if (!formData.DurationInYears || formData.DurationInYears < 1 || formData.DurationInYears > 3) {
+      errors.DurationInYears = 'Please select a valid duration (1, 2, or 3 years).';
     }
 
     if (formData.RequestedTerms.length > 2000) {
@@ -99,7 +83,7 @@ export default function ContractRequestModal({
 
     const payload = {
       RequestType: requestType,
-      RequestedEndDate: new Date(formData.RequestedEndDate).toISOString(),
+      DurationInYears: Number(formData.DurationInYears),
       ...(formData.RequestedStartDate && { RequestedStartDate: new Date(formData.RequestedStartDate).toISOString() }),
       ...(formData.RequestedTerms.trim() && { RequestedTerms: formData.RequestedTerms.trim() }),
       ...(isRenewal && existingContractId && { ExistingContractId: existingContractId }),
@@ -161,25 +145,28 @@ export default function ContractRequestModal({
           </div>
         )}
 
-        {/* End date — required */}
+        {/* Duration — required dropdown */}
         <div className="flex flex-col">
-          <label htmlFor="req-end-date" className="mb-1.5 font-heading text-sm font-semibold text-text-secondary">
-            Requested End Date <span className="text-status-danger">*</span>
+          <label htmlFor="req-duration" className="mb-1.5 font-heading text-sm font-semibold text-text-secondary">
+            Contract Duration <span className="text-status-danger">*</span>
           </label>
-          <input
-            id="req-end-date"
-            type="date"
-            name="RequestedEndDate"
-            value={formData.RequestedEndDate}
+          <select
+            id="req-duration"
+            name="DurationInYears"
+            value={formData.DurationInYears}
             onChange={handleChange}
             className={`bg-white border rounded-md px-4 py-2.5 font-body text-text outline-none transition-all
-              ${fieldErrors.RequestedEndDate
+              ${fieldErrors.DurationInYears
                 ? 'border-status-danger focus:ring-1 focus:ring-status-danger'
                 : 'border-border-neutral focus:border-primary focus:ring-1 focus:ring-primary'
               }`}
-          />
-          {fieldErrors.RequestedEndDate && (
-            <span className="mt-1.5 text-xs text-status-danger font-body">{fieldErrors.RequestedEndDate}</span>
+          >
+            <option value={1}>1 Year</option>
+            <option value={2}>2 Years</option>
+            <option value={3}>3 Years</option>
+          </select>
+          {fieldErrors.DurationInYears && (
+            <span className="mt-1.5 text-xs text-status-danger font-body">{fieldErrors.DurationInYears}</span>
           )}
         </div>
 

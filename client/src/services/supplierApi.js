@@ -86,6 +86,15 @@ export async function submitContractRequest(body) {
   return apiClient.post('/contract-requests', body).then(unwrap);
 }
 
+export async function getMyContractStatus() {
+  return apiClient.get('/contracts/my/status').then(unwrap);
+}
+
+export async function getMyContracts({ page = 1, pageSize = 20 } = {}) {
+  const params = new URLSearchParams({ page, pageSize });
+  return apiClient.get(`/contracts/my?${params.toString()}`).then(unwrap);
+}
+
 // ── Incoming Supply Orders ────────────────────────────────────────────────────
 
 /**

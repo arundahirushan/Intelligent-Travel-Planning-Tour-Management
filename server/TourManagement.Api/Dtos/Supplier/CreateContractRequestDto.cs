@@ -15,8 +15,9 @@ public class CreateContractRequestDto
     // Meaningful for New requests; optional.
     public DateTime? RequestedStartDate { get; set; }
 
-    [Required(ErrorMessage = "RequestedEndDate is required.")]
-    public DateTime RequestedEndDate { get; set; }
+    [Required(ErrorMessage = "DurationInYears is required.")]
+    [Range(1, 3, ErrorMessage = "Contract duration must be 1, 2, or 3 years.")]
+    public int DurationInYears { get; set; }
 
     [StringLength(2000, ErrorMessage = "RequestedTerms cannot exceed 2000 characters.")]
     public string? RequestedTerms { get; set; }
