@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
 
 class AuthService extends ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
+  final _storage = const FlutterSecureStorage();
 
   bool _isAuthenticated = false;
   bool _isLoading = true;
@@ -17,22 +18,42 @@ class AuthService extends ChangeNotifier {
   Map<String, dynamic>? get user => _user;
 
   AuthService() {
+    _apiClient.onUnauthorized = logout;
     _checkToken();
   }
 
   Future<void> _checkToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
-    final userStr = prefs.getString('user_data');
+    final token = await _storage.read(key: 'jwt_token');
+    final userStr = await _storage.read(key: 'user_data');
+    final expiresAtStr = await _storage.read(key: 'expires_at');
 
-    if (token != null && token.isNotEmpty && userStr != null) {
-      _user = jsonDecode(userStr);
-      // Validate role
-      if (_user?['role'] == 'Admin' || _user?['role'] == 'SuperAdmin') {
-        _isAuthenticated = true;
-      } else {
+    if (token != null &&
+        token.isNotEmpty &&
+        userStr != null &&
+        expiresAtStr != null) {
+      try {
+        final expiresAt = DateTime.parse(expiresAtStr);
+        if (DateTime.now().isAfter(expiresAt)) {
+          // Token is expired
+          await logout();
+          return; // logout will set isLoading to false
+        }
+
+        _user = jsonDecode(userStr);
+        // Validate role is strictly admin-level
+        if (_user?['role'] == 'Admin' || _user?['role'] == 'SuperAdmin') {
+          _isAuthenticated = true;
+        } else {
+          await logout();
+          return;
+        }
+      } catch (_) {
         await logout();
+        return;
       }
+    } else {
+      await logout();
+      return;
     }
 
     _isLoading = false;
@@ -55,6 +76,7 @@ class AuthService extends ChangeNotifier {
         if (data['isSuccess'] == true && data['data'] != null) {
           final token = data['data']['token'];
           final userData = data['data']['user'];
+          final expiresAt = data['data']['expiresAt']; // Match API DTO
 
           final role = userData['role'];
           if (role != 'Admin' && role != 'SuperAdmin') {
@@ -65,9 +87,11 @@ class AuthService extends ChangeNotifier {
             return false;
           }
 
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('jwt_token', token);
-          await prefs.setString('user_data', jsonEncode(userData));
+          await _storage.write(key: 'jwt_token', value: token);
+          await _storage.write(key: 'user_data', value: jsonEncode(userData));
+          if (expiresAt != null) {
+            await _storage.write(key: 'expires_at', value: expiresAt);
+          }
 
           _user = userData;
           _isAuthenticated = true;
@@ -96,12 +120,13 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token');
-    await prefs.remove('user_data');
+    await _storage.delete(key: 'jwt_token');
+    await _storage.delete(key: 'user_data');
+    await _storage.delete(key: 'expires_at');
 
     _isAuthenticated = false;
     _user = null;
+    _isLoading = false;
     notifyListeners();
   }
 }

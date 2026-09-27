@@ -1,47 +1,68 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/config.dart';
 
 class ApiClient {
-  final http.Client _client = http.Client();
+  static final ApiClient _instance = ApiClient._internal();
+  factory ApiClient() => _instance;
+  ApiClient._internal();
 
-  // Reusable request wrapper that automatically attaches the token
+  @visibleForTesting
+  http.Client client = http.Client();
+  final _storage = const FlutterSecureStorage();
+
+  VoidCallback? onUnauthorized;
+
   Future<http.Response> get(String endpoint) async {
     final headers = await _getHeaders();
-    return await _client.get(Uri.parse('${Config.apiBaseUrl}$endpoint'),
-        headers: headers);
+    final response = await client
+        .get(Uri.parse('${Config.apiBaseUrl}$endpoint'), headers: headers);
+    _handleUnauthorized(response);
+    return response;
   }
 
   Future<http.Response> post(String endpoint,
       {Map<String, dynamic>? body}) async {
     final headers = await _getHeaders();
-    return await _client.post(
+    final response = await client.post(
       Uri.parse('${Config.apiBaseUrl}$endpoint'),
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
     );
+    _handleUnauthorized(response);
+    return response;
   }
 
   Future<http.Response> put(String endpoint,
       {Map<String, dynamic>? body}) async {
     final headers = await _getHeaders();
-    return await _client.put(
+    final response = await client.put(
       Uri.parse('${Config.apiBaseUrl}$endpoint'),
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
     );
+    _handleUnauthorized(response);
+    return response;
   }
 
   Future<http.Response> delete(String endpoint) async {
     final headers = await _getHeaders();
-    return await _client.delete(Uri.parse('${Config.apiBaseUrl}$endpoint'),
-        headers: headers);
+    final response = await client
+        .delete(Uri.parse('${Config.apiBaseUrl}$endpoint'), headers: headers);
+    _handleUnauthorized(response);
+    return response;
+  }
+
+  void _handleUnauthorized(http.Response response) {
+    if (response.statusCode == 401 && onUnauthorized != null) {
+      onUnauthorized!();
+    }
   }
 
   Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    final token = await _storage.read(key: 'jwt_token');
 
     final headers = {
       'Content-Type': 'application/json',
