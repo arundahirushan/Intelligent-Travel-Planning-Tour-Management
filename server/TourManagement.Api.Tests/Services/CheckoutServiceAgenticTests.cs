@@ -127,7 +127,7 @@ public class CheckoutServiceAgenticTests
         };
 
         var ex = await Assert.ThrowsAsync<ValidationException>(() => service.PlaceApprovedProposalHoldAsync(dto, 20));
-        Assert.Contains("multiple hotel stays for the same area", ex.Message);
+        Assert.Contains("Cannot propose multiple separate hotel stays for the same area", ex.Message);
     }
 
     [Fact]
@@ -186,12 +186,14 @@ public class CheckoutServiceAgenticTests
     }
 
     [Fact]
-    public async Task AgenticHold_MissingArea_Throws()
+    public async Task AgenticHold_MissingArea_Succeeds()
     {
-        var db = CreateDb(nameof(AgenticHold_MissingArea_Throws));
+        var db = CreateDb(nameof(AgenticHold_MissingArea_Succeeds));
         var service = BuildService(db);
 
         // Trip 1 has areas 1 and 2. We only provide hotel for area 1.
+        // As per Option B, missing a hotel in a selected area is allowed
+        // provided the nights are fully covered.
         var dto = new CreateCheckoutDto
         {
             TripId = 1,
@@ -202,8 +204,8 @@ public class CheckoutServiceAgenticTests
             }
         };
 
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.PlaceApprovedProposalHoldAsync(dto, 20));
-        Assert.Contains("exactly one hotel stay for every selected destination area", ex.Message);
+        var result = await service.PlaceApprovedProposalHoldAsync(dto, 20);
+        Assert.Equal(CheckoutStatus.Active, result.Status);
     }
 
     [Fact]
