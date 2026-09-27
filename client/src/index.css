@@ -14,6 +14,32 @@
   --color-border-neutral: #CBD5E1;
   --color-hero: #0A1120;
 
+  /* Status colors */
+  --color-status-success: #16A34A;
+  --color-status-warning: #D97706;
+  --color-status-danger: #DC2626;
+  --color-status-neutral: #64748B;
+
+  /* Named typography scale */
+  --text-display: 3rem;
+  --text-headline-lg: 2.25rem;
+  --text-headline-md: 1.5rem;
+  --text-headline-sm: 1.125rem;
+  --text-body-lg: 1.125rem;
+  --text-body-md: 0.9375rem;
+  --text-body-sm: 0.8125rem;
+  --text-label-button: 0.875rem;
+  --text-label-badge: 0.75rem;
+  --text-label-uppercase: 0.6875rem;
+
+  /* Named spacing scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-gutter: 1.5rem;
+  --space-margin: 2rem;
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;

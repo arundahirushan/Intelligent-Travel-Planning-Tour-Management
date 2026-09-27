@@ -44,6 +44,27 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IHotelBookingService,     TourManagement.Api.Services.Implementations.HotelBookingService>();
         services.AddScoped<IVehicleService,     TourManagement.Api.Services.Implementations.VehicleService>();
         services.AddScoped<IVehicleBookingService, TourManagement.Api.Services.Implementations.VehicleBookingService>();
+        services.AddScoped<ISupplyService,      TourManagement.Api.Services.Implementations.SupplyService>();
+        services.AddScoped<IContractService,    TourManagement.Api.Services.Implementations.ContractService>();
+        services.AddScoped<IContractRequestService, TourManagement.Api.Services.Implementations.ContractRequestService>();
+        services.AddScoped<ISupplyOrderService,     TourManagement.Api.Services.Implementations.SupplyOrderService>();
+        services.AddScoped<IProfileService,         TourManagement.Api.Services.Implementations.ProfileService>();
+        services.AddScoped<IWorkflowService,        TourManagement.Api.Services.Implementations.WorkflowService>();
+
+        // Checkout (hold) flow — the shared operation for manual and future agentic booking.
+        services.AddScoped<ICheckoutService,         TourManagement.Api.Services.Implementations.CheckoutService>();
+
+        // Background service that marks expired checkouts as Expired and
+        services.AddHostedService<TourManagement.Api.Services.Implementations.ExpiredHoldCleanupService>();
+
+        // AI Agent Client
+        services.AddHttpClient<TourManagement.Api.AgentIntegration.IAgentServiceClient, TourManagement.Api.AgentIntegration.AgentServiceClient>((serviceProvider, client) =>
+        {
+            var config = serviceProvider.GetRequiredService<IConfiguration>();
+            var baseUrl = config.GetValue<string>("AiServiceSettings:BaseUrl") ?? "http://localhost:8000";
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromMinutes(5); // Generous timeout for generation
+        });
 
         return services;
     }

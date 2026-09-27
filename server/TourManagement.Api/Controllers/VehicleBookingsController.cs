@@ -54,6 +54,19 @@ public class VehicleBookingsController : ControllerBase
         return Ok(ApiResponse<PagedResult<VehicleBookingSummaryDto>>.Ok(result));
     }
 
+    /// <summary>Get all bookings across all vehicles owned by the TransportProvider.</summary>
+    [HttpGet("my-vehicles")]
+    [Authorize(Roles = Roles.TransportProvider)]
+    public async Task<ActionResult<ApiResponse<PagedResult<VehicleBookingSummaryDto>>>> GetMyVehiclesBookings(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await _bookingService.GetMyVehiclesBookingsAsync(GetCurrentUserId(), search, status, page, pageSize);
+        return Ok(ApiResponse<PagedResult<VehicleBookingSummaryDto>>.Ok(result));
+    }
+
     /// <summary>Cancel a vehicle booking. Trip owner or Admin/SuperAdmin only.</summary>
     [HttpPost("{id}/cancel")]
     [Authorize]
@@ -61,6 +74,22 @@ public class VehicleBookingsController : ControllerBase
     {
         await _bookingService.CancelAsync(id, GetCurrentUserId(), GetCurrentUserRole());
         return Ok(ApiResponse.Ok("Vehicle booking cancelled."));
+    }
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = Roles.Traveler)]
+    public async Task<ActionResult<ApiResponse<VehicleBookingSummaryDto>>> Update(int id, [FromBody] UpdateVehicleBookingDto dto)
+    {
+        var result = await _bookingService.UpdateAsync(id, dto, GetCurrentUserId());
+        return Ok(ApiResponse<VehicleBookingSummaryDto>.Ok(result, "Vehicle booking updated."));
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
+    {
+        await _bookingService.DeleteAsync(id, GetCurrentUserId(), GetCurrentUserRole());
+        return Ok(ApiResponse.Ok("Vehicle booking deleted."));
     }
 
     // ── Admin / SuperAdmin endpoints ─────────────────────────────────────────

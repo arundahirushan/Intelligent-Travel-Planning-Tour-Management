@@ -16,16 +16,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const data = await loginUser(email, password);
+      const responseData = await loginUser(email, password);
       
-      // Expected backend response: { token, user: { id, fullName, email, role } }
-      // This might differ based on the actual LoginResponseDto, but we store what we get.
-      const authToken = data.token || data.Token;
+      // Handle ApiResponse wrapper if present
+      const payload = responseData.data ? responseData.data : responseData;
+      
+      const authToken = payload.token || payload.Token;
+      const userObj = payload.user || payload.User || payload;
+      
       const userData = {
-        id: data.id || data.Id || data.userId || data.UserId,
-        fullName: data.fullName || data.FullName,
-        email: data.email || data.Email,
-        role: data.role || data.Role,
+        id: userObj.id || userObj.Id || userObj.userId || userObj.UserId,
+        fullName: userObj.fullName || userObj.FullName,
+        email: userObj.email || userObj.Email,
+        role: userObj.role || userObj.Role,
       };
 
       setToken(authToken);

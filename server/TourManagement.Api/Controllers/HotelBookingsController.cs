@@ -56,6 +56,19 @@ public class HotelBookingsController : ControllerBase
         return Ok(ApiResponse<PagedResult<HotelBookingSummaryDto>>.Ok(result));
     }
 
+    /// <summary>Get all hotel bookings across all hotels owned by the current user. HotelOwner only.</summary>
+    [HttpGet("my-hotels")]
+    [Authorize(Roles = Roles.HotelOwner)]
+    public async Task<ActionResult<ApiResponse<PagedResult<HotelBookingSummaryDto>>>> GetMyHotelsBookings(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await _bookingService.GetMyHotelsBookingsAsync(GetCurrentUserId(), search, status, page, pageSize);
+        return Ok(ApiResponse<PagedResult<HotelBookingSummaryDto>>.Ok(result));
+    }
+
     /// <summary>Cancel a hotel booking. Trip owner or Admin/SuperAdmin only.</summary>
     [HttpPost("{id}/cancel")]
     [Authorize]
@@ -63,5 +76,21 @@ public class HotelBookingsController : ControllerBase
     {
         await _bookingService.CancelAsync(id, GetCurrentUserId(), GetCurrentUserRole());
         return Ok(ApiResponse.Ok("Hotel booking cancelled."));
+    }
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = Roles.Traveler)]
+    public async Task<ActionResult<ApiResponse<HotelBookingSummaryDto>>> Update(int id, [FromBody] UpdateHotelBookingDto dto)
+    {
+        var result = await _bookingService.UpdateAsync(id, dto, GetCurrentUserId());
+        return Ok(ApiResponse<HotelBookingSummaryDto>.Ok(result, "Hotel booking updated."));
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
+    {
+        await _bookingService.DeleteAsync(id, GetCurrentUserId(), GetCurrentUserRole());
+        return Ok(ApiResponse.Ok("Hotel booking deleted."));
     }
 }

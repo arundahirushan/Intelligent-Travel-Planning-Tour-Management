@@ -19,6 +19,13 @@ public class AppDbContext : DbContext
     public DbSet<HotelBooking> HotelBookings => Set<HotelBooking>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<VehicleBooking> VehicleBookings => Set<VehicleBooking>();
+    public DbSet<Supply> Supplies => Set<Supply>();
+    public DbSet<Contract> Contracts => Set<Contract>();
+    public DbSet<ContractRequest> ContractRequests => Set<ContractRequest>();
+    public DbSet<SupplyOrder> SupplyOrders => Set<SupplyOrder>();
+    public DbSet<TripCheckout> TripCheckouts => Set<TripCheckout>();
+    public DbSet<TripProposal> TripProposals => Set<TripProposal>();
+    public DbSet<ExecutionSummary> ExecutionSummaries => Set<ExecutionSummary>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,6 +64,25 @@ public class AppDbContext : DbContext
             entity.HasMany(u => u.Vehicles)
                   .WithOne(v => v.Provider)
                   .HasForeignKey(v => v.ProviderId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // A Supplier can have many supplies. RESTRICT deletion:
+            // deleting a supplier with supplies would break inventory records.
+            entity.HasMany(u => u.Supplies)
+                  .WithOne(s => s.Supplier)
+                  .HasForeignKey(s => s.SupplierId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // A Supplier can have many contracts. RESTRICT deletion to preserve legal/audit history.
+            entity.HasMany(u => u.Contracts)
+                  .WithOne(c => c.Supplier)
+                  .HasForeignKey(c => c.SupplierId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // A Supplier can have many contract requests. RESTRICT deletion to preserve audit history.
+            entity.HasMany(u => u.ContractRequests)
+                  .WithOne(cr => cr.Supplier)
+                  .HasForeignKey(cr => cr.SupplierId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -180,10 +206,22 @@ public class AppDbContext : DbContext
             entity.Property(b => b.Status)
                   .HasConversion<string>();
 
+            entity.Property(b => b.PriceSnapshot)
+                  .HasColumnType("decimal(18,2)");
+
             // All three columns are frequently used in WHERE clauses.
             entity.HasIndex(b => b.RoomId);
             entity.HasIndex(b => b.TripId);
             entity.HasIndex(b => b.Status);
+
+            // HoldExpiresAt is queried in every availability check — index it.
+            entity.HasIndex(b => b.HoldExpiresAt);
+
+            // CheckoutId FK — SetNull so deleting a checkout doesn't delete the booking.
+            entity.HasOne(b => b.Checkout)
+                  .WithMany(c => c.HotelBookings)
+                  .HasForeignKey(b => b.CheckoutId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── Vehicle ───────────────────────────────────────────────────────────
@@ -232,6 +270,177 @@ public class AppDbContext : DbContext
             entity.HasIndex(b => b.VehicleId);
             entity.HasIndex(b => b.TripId);
             entity.HasIndex(b => b.Status);
+
+            // HoldExpiresAt is queried in every availability check — index it.
+            entity.HasIndex(b => b.HoldExpiresAt);
+
+            // CheckoutId FK — SetNull so deleting a checkout doesn't delete the booking.
+            entity.HasOne(b => b.Checkout)
+                  .WithOne(c => c.VehicleBooking)
+                  .HasForeignKey<VehicleBooking>(b => b.CheckoutId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ── Supply ────────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Supply>(entity =>
+        {
+            // Store enums as strings for readability.
+            entity.Property(s => s.Status)
+                  .HasConversion<string>();
+
+            entity.Property(s => s.RemovalReason)
+                  .HasConversion<string>();
+
+            // PricePerUnit is money in LKR — store with 2 decimal places.
+            entity.Property(s => s.PricePerUnit)
+                  .HasColumnType("decimal(18,2)");
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(s => s.SupplierId);
+            entity.HasIndex(s => s.Status);
+        });
+
+        // ── Contract ──────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Contract>(entity =>
+        {
+            // Store ContractStatus as string (Active, Terminated).
+            entity.Property(c => c.Status)
+                  .HasConversion<string>();
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(c => c.SupplierId);
+            entity.HasIndex(c => c.Status);
+
+            // Renewal requests referencing this contract.
+            entity.HasMany(c => c.ContractRequests)
+                  .WithOne(cr => cr.ExistingContract)
+                  .HasForeignKey(cr => cr.ExistingContractId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── ContractRequest ───────────────────────────────────────────────────
+
+        modelBuilder.Entity<ContractRequest>(entity =>
+        {
+            // Store enums as string.
+            entity.Property(cr => cr.RequestType)
+                  .HasConversion<string>();
+
+            entity.Property(cr => cr.Status)
+                  .HasConversion<string>();
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(cr => cr.SupplierId);
+            entity.HasIndex(cr => cr.Status);
+        });
+
+        // ── SupplyOrder ───────────────────────────────────────────────────────
+
+        modelBuilder.Entity<SupplyOrder>(entity =>
+        {
+            // Store BookingStatus as a string.
+            entity.Property(so => so.Status)
+                  .HasConversion<string>();
+
+            // PriceAtOrderTime is money — store with 2 decimal places.
+            entity.Property(so => so.PriceAtOrderTime)
+                  .HasColumnType("decimal(18,2)");
+
+            // Frequent lookup and filtering columns.
+            entity.HasIndex(so => so.TripId);
+            entity.HasIndex(so => so.SupplyId);
+            entity.HasIndex(so => so.Status);
+
+            // RESTRICT trip deletion if it has supply orders.
+            entity.HasOne(so => so.Trip)
+                  .WithMany(t => t.SupplyOrders)
+                  .HasForeignKey(so => so.TripId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // RESTRICT supply deletion if it has supply orders.
+            entity.HasOne(so => so.Supply)
+                  .WithMany(s => s.SupplyOrders)
+                  .HasForeignKey(so => so.SupplyId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── TripCheckout ──────────────────────────────────────────────────────
+
+        modelBuilder.Entity<TripCheckout>(entity =>
+        {
+            // Store CheckoutStatus as a string for readability.
+            entity.Property(c => c.Status)
+                  .HasConversion<string>();
+
+            // Price snapshots — stored with 2 decimal places like all LKR amounts.
+            entity.Property(c => c.HotelPriceSnapshot)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(c => c.VehiclePriceSnapshot)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(c => c.TotalPrice)
+                  .HasColumnType("decimal(18,2)");
+
+            // Columns used frequently in WHERE / ORDER BY.
+            entity.HasIndex(c => c.TripId);
+            entity.HasIndex(c => c.TravelerId);
+            entity.HasIndex(c => c.Status);
+            entity.HasIndex(c => c.HoldExpiresAt);
+            entity.HasIndex(c => c.ProposalId).IsUnique();
+
+            // Trip → TripCheckouts: RESTRICT deletion of a trip that still has checkouts.
+            entity.HasOne(c => c.Trip)
+                  .WithMany(t => t.TripCheckouts)
+                  .HasForeignKey(c => c.TripId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // TravelerId is a denormalized FK — RESTRICT deletion of a user with checkouts.
+            entity.HasOne(c => c.Traveler)
+                  .WithMany()
+                  .HasForeignKey(c => c.TravelerId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // HotelBookingId — one-to-one optional.  SetNull configured on HotelBooking side.
+            // VehicleBookingId — one-to-one optional.  SetNull configured on VehicleBooking side.
+        });
+
+        // ── TripProposal ──────────────────────────────────────────────────────
+        modelBuilder.Entity<TripProposal>(entity =>
+        {
+            entity.Property(p => p.Status)
+                  .HasConversion<string>();
+
+            entity.HasIndex(p => p.ProposalId).IsUnique();
+            entity.HasIndex(p => new { p.TripId, p.Version }).IsUnique();
+            entity.HasIndex(p => p.RequestId);
+            entity.HasIndex(p => p.Status);
+
+            entity.HasOne(p => p.Trip)
+                  .WithMany()
+                  .HasForeignKey(p => p.TripId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.Checkout)
+                  .WithMany()
+                  .HasForeignKey(p => p.CheckoutId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(p => p.Admin)
+                  .WithMany()
+                  .HasForeignKey(p => p.AdminId)
+                  .OnDelete(DeleteBehavior.Restrict);
+                  
+            entity.HasMany(p => p.ExecutionSummaries)
+                  .WithOne(e => e.TripProposal)
+                  .HasForeignKey(e => e.TripProposalId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── ExecutionSummary ──────────────────────────────────────────────────
+        modelBuilder.Entity<ExecutionSummary>(entity =>
+        {
+            entity.HasIndex(e => e.TripProposalId);
         });
     }
 }

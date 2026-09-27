@@ -21,4 +21,7 @@ public class HotelSearchRequestDto
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "NumberOfGuests must be at least 1.")]
     public int NumberOfGuests { get; set; }
+
+    // If true, rooms smaller than NumberOfGuests are included so the caller can combine them.
+    public bool AllowMixedRooms { get; set; }
 }

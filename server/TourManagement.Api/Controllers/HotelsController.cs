@@ -66,6 +66,19 @@ public class HotelsController : ControllerBase
         return Ok(ApiResponse<HotelDetailDto>.Ok(result));
     }
 
+    /// <summary>Get all rooms across all hotels owned by the owner. HotelOwner only.</summary>
+    [HttpGet("my/rooms")]
+    [Authorize(Roles = Roles.HotelOwner)]
+    public async Task<ActionResult<ApiResponse<PagedResult<RoomWithHotelDto>>>> GetMyRooms(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await _hotelService.GetMyRoomsAsync(GetCurrentUserId(), search, status, page, pageSize);
+        return Ok(ApiResponse<PagedResult<RoomWithHotelDto>>.Ok(result));
+    }
+
     /// <summary>Update hotel details. HotelOwner only (ownership checked in service).</summary>
     [HttpPut("{id}")]
     [Authorize(Roles = Roles.HotelOwner)]
@@ -82,6 +95,15 @@ public class HotelsController : ControllerBase
     {
         await _hotelService.DeactivateHotelAsync(id, GetCurrentUserId());
         return Ok(ApiResponse.Ok("Hotel deactivated."));
+    }
+
+    /// <summary>Restore an inactive hotel (sets Status = PendingApproval). HotelOwner only.</summary>
+    [HttpPatch("{id}/restore")]
+    [Authorize(Roles = Roles.HotelOwner)]
+    public async Task<ActionResult<ApiResponse>> Restore(int id)
+    {
+        await _hotelService.RestoreHotelAsync(id, GetCurrentUserId());
+        return Ok(ApiResponse.Ok("Hotel restored to Pending status."));
     }
 
     /// <summary>Add a room type to the hotel. HotelOwner only.</summary>
@@ -198,6 +220,17 @@ public class HotelsController : ControllerBase
     }
 
     // ── Public / Traveler endpoints ──────────────────────────────────────────
+
+    /// <summary>Get all accepted hotels. Publicly accessible.</summary>
+    [HttpGet("accepted")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<PagedResult<HotelSummaryDto>>>> GetAcceptedHotels(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        var result = await _hotelService.GetAllHotelsAsync("Accepted", null, null, null, null, page, pageSize);
+        return Ok(ApiResponse<PagedResult<HotelSummaryDto>>.Ok(result));
+    }
 
     /// <summary>Search available hotels by destination, dates, guests, and budget. Any authenticated user.</summary>
     [HttpGet("search")]

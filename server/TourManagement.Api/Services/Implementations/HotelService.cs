@@ -62,6 +62,12 @@ public class HotelService : IHotelService
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
+
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -87,18 +93,67 @@ public class HotelService : IHotelService
         return await LoadHotelDetailAsync(hotelId);
     }
 
-    // Soft-delete: sets Status = Inactive so booking history is not lost.
+    // Deletes the hotel permanently if there are no bookings, otherwise soft-deletes to preserve history.
     public async Task DeactivateHotelAsync(int hotelId, int requestingUserId)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
         CheckOwner(hotel, requestingUserId);
 
-        hotel.Status    = HotelStatus.Inactive;
-        hotel.UpdatedAt = DateTime.UtcNow;
+        bool hasBookings = await _db.HotelBookings.AnyAsync(b => b.Room.HotelId == hotelId);
+
+        if (hasBookings)
+        {
+            hotel.Status    = HotelStatus.Inactive;
+            hotel.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            _db.Hotels.Remove(hotel);
+        }
+
         await _db.SaveChangesAsync();
     }
 
+    public async Task RestoreHotelAsync(int hotelId, int requestingUserId)
+    {
+        var hotel = await GetHotelOrThrowAsync(hotelId);
+        CheckOwner(hotel, requestingUserId);
+
+        if (hotel.Status == HotelStatus.Inactive)
+        {
+            // Restoring sends it back to Pending Approval for admin review
+            hotel.Status = HotelStatus.PendingApproval;
+            hotel.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+    }
+
     // ── HotelOwner: manage rooms ─────────────────────────────────────────────
+
+    public async Task<PagedResult<RoomWithHotelDto>> GetMyRoomsAsync(
+        int ownerId, string? search, string? status, int page, int pageSize)
+    {
+        var query = _db.Rooms
+            .Include(r => r.Hotel)
+            .Where(r => r.Hotel.OwnerId == ownerId);
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<RoomStatus>(status, out var statusEnum))
+            query = query.Where(r => r.Status == statusEnum);
+
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(r => r.RoomType.Contains(search) || r.Hotel.Name.Contains(search));
+
+        query = query.OrderByDescending(r => r.CreatedAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => r.ToRoomWithHotelDto())
+            .ToListAsync();
+
+        return new PagedResult<RoomWithHotelDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+    }
 
     public async Task<HotelDetailDto> AddRoomAsync(int hotelId, CreateRoomDto dto, int requestingUserId)
     {
@@ -195,6 +250,12 @@ public class HotelService : IHotelService
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
 
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
+
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
@@ -212,6 +273,12 @@ public class HotelService : IHotelService
             .Take(pageSize)
             .Select(h => h.ToSummaryDto())
             .ToListAsync();
+
+        var today = DateTime.UtcNow.Date;
+        foreach (var item in items)
+        {
+            item.OccupancyPercentage = await ComputeOccupancyAsync(item.Id, today);
+        }
 
         return new PagedResult<HotelSummaryDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
     }
@@ -291,6 +358,11 @@ public class HotelService : IHotelService
         if (request.CheckOutDate <= request.CheckInDate)
             throw new ValidationException("CheckOutDate must be after CheckInDate.");
 
+        // PostgreSQL (Npgsql) requires DateTime to be UTC when querying timestamp with time zone columns.
+        // Query string dates bind as Unspecified, so we force them to UTC here.
+        request.CheckInDate = DateTime.SpecifyKind(request.CheckInDate, DateTimeKind.Utc);
+        request.CheckOutDate = DateTime.SpecifyKind(request.CheckOutDate, DateTimeKind.Utc);
+
         // Step 1: Get all active hotels at the requested destination.
         var hotels = await _db.Hotels
             .Include(h => h.Rooms)
@@ -302,7 +374,7 @@ public class HotelService : IHotelService
         foreach (var hotel in hotels)
         {
             foreach (var room in hotel.Rooms.Where(r => r.Status == RoomStatus.Active
-                                                     && r.Capacity >= request.NumberOfGuests))
+                                                     && (request.AllowMixedRooms || r.Capacity >= request.NumberOfGuests)))
             {
                 // Step 2: Calculate how many rooms of this type are already booked for these dates.
                 int bookedCount = await CountBookedRoomsAsync(room.Id, request.CheckInDate, request.CheckOutDate);
@@ -322,7 +394,10 @@ public class HotelService : IHotelService
                     RoomId             = room.Id,
                     RoomType           = room.RoomType,
                     PricePerNight      = room.PricePerNight,
-                    AvailableRoomCount = available
+                    AvailableRoomCount = available,
+                    DestinationId      = hotel.DestinationId,
+                    Capacity           = room.Capacity,
+                    Amenities          = room.Amenities
                 });
             }
         }
@@ -370,16 +445,49 @@ public class HotelService : IHotelService
     // See Common/DateRangeHelper.cs for the canonical definition used in non-EF code.
     // EF Core LINQ cannot call DateRangeHelper.HasOverlap directly, so the two
     // conditions are kept inline below so EF can translate them to SQL.
-    public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut)
+    public async Task<int> CountBookedRoomsAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludeBookingId = null)
     {
-        var booked = await _db.HotelBookings
+        var now = DateTime.UtcNow;
+
+        var query = _db.HotelBookings
             .Where(b => b.RoomId == roomId
-                     && (b.Status == BookingStatus.Held || b.Status == BookingStatus.Confirmed)
+                     // A Confirmed booking always blocks availability.
+                     // A Held booking only blocks if it has NOT expired:
+                     //   - HoldExpiresAt is null  → legacy hold, treat as never-expiring.
+                     //   - HoldExpiresAt >= now   → hold is still active.
+                     && ((b.Status == BookingStatus.Confirmed)
+                         || (b.Status == BookingStatus.Held
+                             && (b.HoldExpiresAt == null || b.HoldExpiresAt > now)))
                      && b.CheckInDate  < checkOut   // overlap condition part 1
-                     && b.CheckOutDate > checkIn)   // overlap condition part 2
+                     && b.CheckOutDate > checkIn);  // overlap condition part 2
+
+        if (excludeBookingId.HasValue)
+        {
+            query = query.Where(b => b.Id != excludeBookingId.Value);
+        }
+
+        return await query.SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
+    }
+
+    public async Task<int> ComputeOccupancyAsync(int hotelId, DateTime today)
+    {
+        var hotelRooms = await _db.Rooms.Where(r => r.HotelId == hotelId).ToListAsync();
+        int totalRooms = hotelRooms.Sum(r => r.TotalRooms);
+
+        if (totalRooms == 0) return 0;
+
+        var now = DateTime.UtcNow;
+
+        var bookedCount = await _db.HotelBookings
+            .Where(b => b.Room.HotelId == hotelId
+                     && ((b.Status == BookingStatus.Confirmed)
+                         || (b.Status == BookingStatus.Held
+                             && (b.HoldExpiresAt == null || b.HoldExpiresAt > now)))
+                     && b.CheckInDate  <= today
+                     && b.CheckOutDate >= today)
             .SumAsync(b => (int?)b.NumberOfRooms) ?? 0;
 
-        return booked;
+        return (int)Math.Round((double)bookedCount * 100 / totalRooms);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -396,7 +504,9 @@ public class HotelService : IHotelService
         if (hotel == null)
             throw new NotFoundException($"Hotel with ID {hotelId} was not found.");
 
-        return hotel.ToDetailDto();
+        var dto = hotel.ToDetailDto();
+        dto.OccupancyPercentage = await ComputeOccupancyAsync(hotelId, DateTime.UtcNow.Date);
+        return dto;
     }
 
     // Fetches a Hotel by ID or throws NotFoundException.
