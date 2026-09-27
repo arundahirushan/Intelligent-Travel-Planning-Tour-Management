@@ -102,13 +102,25 @@ public class VehicleService : IVehicleService
     }
 
     // Soft-delete: sets Status = Inactive so booking history is not lost.
-    public async Task DeactivateVehicleAsync(int vehicleId, int requestingUserId)
+    public async Task DeleteVehicleAsync(int vehicleId, int requestingUserId)
     {
         var vehicle = await GetVehicleOrThrowAsync(vehicleId);
         CheckOwner(vehicle, requestingUserId);
 
-        vehicle.Status    = VehicleStatus.Inactive;
-        vehicle.UpdatedAt = DateTime.UtcNow;
+        bool hasBookings = await _db.VehicleBookings.AnyAsync(b => b.VehicleId == vehicleId);
+        
+        if (hasBookings)
+        {
+            // Soft delete to preserve booking history
+            vehicle.Status    = VehicleStatus.Inactive;
+            vehicle.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            // Hard delete if it's just a test vehicle with no history
+            _db.Vehicles.Remove(vehicle);
+        }
+        
         await _db.SaveChangesAsync();
     }
 

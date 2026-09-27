@@ -14,6 +14,7 @@ public class VehicleDetailDto
     public int Capacity { get; set; }
     public decimal PricePerDay { get; set; }
     public VehicleStatus Status { get; set; }
+    public string? ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
