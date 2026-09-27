@@ -11,7 +11,7 @@ import ErrorBanner from '../../../components/ErrorBanner';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import AddEditHotelModal from '../components/AddEditHotelModal';
 import { useMyHotels } from '../hooks/useMyHotels';
-import { deactivateHotel } from '../../../services/hotelOwnerApi';
+import { deactivateHotel, restoreHotel } from '../../../services/hotelOwnerApi';
 
 const NAV_ITEMS = [
   { icon: 'hotel', label: 'Hotels', path: '/hotel-owner/hotels' },
@@ -33,6 +33,8 @@ export default function MyHotelsPage() {
   const [editingHotel, setEditingHotel] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [hotelToDelete, setHotelToDelete] = useState(null);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [hotelToRestore, setHotelToRestore] = useState(null);
 
   // Metrics (calculated over all fetched hotels)
   const activeCount = hotels.filter(h => h.status === 'Active').length;
@@ -75,9 +77,22 @@ export default function MyHotelsPage() {
     setDeleteConfirmOpen(true);
   };
 
+  const handleRestoreClick = (e, hotel) => {
+    e.preventDefault();
+    setHotelToRestore(hotel);
+    setRestoreConfirmOpen(true);
+  };
+
   const handleConfirmDelete = async () => {
     if (hotelToDelete) {
       await deactivateHotel(hotelToDelete.id);
+      await refetch();
+    }
+  };
+
+  const handleConfirmRestore = async () => {
+    if (hotelToRestore) {
+      await restoreHotel(hotelToRestore.id);
       await refetch();
     }
   };
@@ -206,13 +221,22 @@ export default function MyHotelsPage() {
                     >
                       <span className="material-symbols-outlined text-sm">edit</span>
                     </button>
-                    {hotel.status !== 'Inactive' && (
+                    {hotel.status !== 'Inactive' ? (
                       <button 
                         onClick={(e) => handleDeleteClick(e, hotel)}
                         className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-text-secondary hover:text-status-danger transition-colors"
                         aria-label="Deactivate hotel"
                       >
                         <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={(e) => handleRestoreClick(e, hotel)}
+                        className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-text-secondary hover:text-status-success transition-colors"
+                        aria-label="Restore hotel"
+                        title="Restore Hotel"
+                      >
+                        <span className="material-symbols-outlined text-sm">restore</span>
                       </button>
                     )}
                   </div>
@@ -283,6 +307,15 @@ export default function MyHotelsPage() {
         message="Are you sure you want to deactivate this hotel? It will be hidden from travelers."
         confirmLabel="Deactivate"
         isDanger
+      />
+
+      <ConfirmDialog
+        isOpen={restoreConfirmOpen}
+        onClose={() => setRestoreConfirmOpen(false)}
+        onConfirm={handleConfirmRestore}
+        title="Restore Hotel"
+        message="Are you sure you want to restore this hotel? It will be sent for Admin approval before becoming active again."
+        confirmLabel="Restore"
       />
     </DashboardLayout>
   );

@@ -93,15 +93,39 @@ public class HotelService : IHotelService
         return await LoadHotelDetailAsync(hotelId);
     }
 
-    // Soft-delete: sets Status = Inactive so booking history is not lost.
+    // Deletes the hotel permanently if there are no bookings, otherwise soft-deletes to preserve history.
     public async Task DeactivateHotelAsync(int hotelId, int requestingUserId)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
         CheckOwner(hotel, requestingUserId);
 
-        hotel.Status    = HotelStatus.Inactive;
-        hotel.UpdatedAt = DateTime.UtcNow;
+        bool hasBookings = await _db.HotelBookings.AnyAsync(b => b.Room.HotelId == hotelId);
+
+        if (hasBookings)
+        {
+            hotel.Status    = HotelStatus.Inactive;
+            hotel.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            _db.Hotels.Remove(hotel);
+        }
+
         await _db.SaveChangesAsync();
+    }
+
+    public async Task RestoreHotelAsync(int hotelId, int requestingUserId)
+    {
+        var hotel = await GetHotelOrThrowAsync(hotelId);
+        CheckOwner(hotel, requestingUserId);
+
+        if (hotel.Status == HotelStatus.Inactive)
+        {
+            // Restoring sends it back to Pending Approval for admin review
+            hotel.Status = HotelStatus.PendingApproval;
+            hotel.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
     }
 
     // ── HotelOwner: manage rooms ─────────────────────────────────────────────
@@ -350,7 +374,7 @@ public class HotelService : IHotelService
         foreach (var hotel in hotels)
         {
             foreach (var room in hotel.Rooms.Where(r => r.Status == RoomStatus.Active
-                                                     && r.Capacity >= request.NumberOfGuests))
+                                                     && (request.AllowMixedRooms || r.Capacity >= request.NumberOfGuests)))
             {
                 // Step 2: Calculate how many rooms of this type are already booked for these dates.
                 int bookedCount = await CountBookedRoomsAsync(room.Id, request.CheckInDate, request.CheckOutDate);
@@ -370,7 +394,10 @@ public class HotelService : IHotelService
                     RoomId             = room.Id,
                     RoomType           = room.RoomType,
                     PricePerNight      = room.PricePerNight,
-                    AvailableRoomCount = available
+                    AvailableRoomCount = available,
+                    DestinationId      = hotel.DestinationId,
+                    Capacity           = room.Capacity,
+                    Amenities          = room.Amenities
                 });
             }
         }

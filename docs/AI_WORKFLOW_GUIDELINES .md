@@ -2,7 +2,7 @@
 
 **Project:** Intelligent Travel Planning & Tour Management  
 
-**Version:** 1.1  
+**Version:** 1.3  
 
 **Last updated:** 2026-09-27  
 
@@ -631,9 +631,13 @@ Preserve backend identity and original trip inputs throughout. Use the actual sh
 
 **M1:** Include all selected areas, allocate every hotel night, and explain a reasonable visit order using supported information. It plans overnight areas; M2 chooses actual inventory. If the trip cannot be planned using the supplied constraints, return a clear issue instead of silently dropping an area or changing dates.
 
-**M2:** Select real rooms for M1's overnight sections. Check supported capacity, dates, area and prices through tools. An empty hotel result is valid for a one-day trip. For an overnight trip, unavailable accommodation is a failure or revision need, never a successful empty list. Do not silently move an overnight stop to another area; return the constraint for coordinated revision.
+**M2:** Select real rooms for M1's overnight sections. Check supported capacity, dates, area and prices through tools. It evaluates combinations of room types (mixed rooms) inside ONE hotel per section using backtracking to find valid capacity matches.
+- Affordable-hotels-first policy: Choose the lowest-cost valid accommodation that satisfies requirements. Calculates total stay cost (`PricePerNight * quantity * night_count`) and deducts it from the group's total trip budget. The remaining budget is passed to M3 in `accommodation_summary`.
+- One-day trips: If no overnight sections exist, M2 stores an empty accommodation list, sets cost to 0, and preserves the full budget for M3 without calling Gemini.
+- Failure: If no hotel is found for an overnight trip or if accommodation exceeds the total budget, M2 returns a NeedsRevision failure, preserving M1's plan. M2 also fails the generation if an LLM selects a more expensive combination when a cheaper valid one is available.
+- Gemini's Role: Receives valid, pre-calculated candidate room combinations and selects the best fit based on the affordable-first policy and tie-breakers (e.g. amenities or ratings). It does NOT invent prices, inventory, or perform monetary arithmetic.
 
-**M3:** Assess vehicle suitability and travel conditions from supported data. It may use M2's actual hotel locations and priced subtotal where those fields are available. “No vehicle needed” is different from “no suitable vehicle found” and from a failed search. Missing mandatory transport inputs must be visible. Weather outside the provider's supported coverage, or an unavailable weather tool, must be reported honestly; do not turn general seasonal advice into a dated forecast.
+**M3:** Assess vehicle suitability and travel conditions from supported data. It receives `state["accommodation_summary"]["remaining_budget"]` and `state["accommodation_summary"]["cost"]` from M2. It may use M2's actual hotel locations and priced subtotal where those fields are available. “No vehicle needed” is different from “no suitable vehicle found” and from a failed search. Missing mandatory transport inputs must be visible. Weather outside the provider's supported coverage, or an unavailable weather tool, must be reported honestly; do not turn general seasonal advice into a dated forecast.
 
 **M4:** Combine deterministic checks with clear reasoning about feasibility, suitability and warnings. Never let an LLM explanation override failed date, coverage, capacity, identity, availability or price checks. Distinguish a valid one-day empty booking list from missing upstream results. Validate the priced portion of the budget and state which costs are not included.
 
@@ -643,7 +647,7 @@ Agents may explain their decisions and rank options. They cannot grant human app
 
 After M1 is complete, a full run may still end in `GenerationFailed` because M2 is unfinished. That does not by itself mean M1 failed.
 
-- Test the completed agent independently using the real typed contract and injected tool/model responses where appropriate.
+- Test the completed agent independently using the real typed contract and injected tool/model responses where appropriate. For example, run `python smoke_test_m2.py` in `ai-service` to inspect M2 output when M3/M4 are unfinished.
 - Keep completed outputs and execution summaries inspectable when a later node is unavailable. The exact storage/read path must be verified and documented in the handoff.
 - Stop normal execution when a required agent fails or is unimplemented. A final error/diagnostic step may record the reason, but later agents must not appear successful.
 - Use successful fake nodes only in isolated tests. Do not add an approvable production mock mode.
@@ -707,3 +711,4 @@ After each implementation task, report changed files, actual interfaces, migrati
 | 1.0 | 2026-09-27 | Initial guideline based on the agreed foundation prompt. Records Option B day visits, four-agent boundaries, persisted review flow, Admin-only hold creation, payment deferral and verification limits. |
 | 1.1 | 2026-09-27 | Adds the flexible shared implementation plan, sequential member/merge handoffs, data connections, assembly ownership, incomplete-agent testing, shared-file coordination and open decisions. Updates reported foundation progress without claiming independent verification. Clarifies Option A hotel coverage alongside Option B day visits, manual-booking boundaries, post-hold checkout identity and deferred approval consistency work. Restores normal Markdown formatting. |
 | 1.2 | 2026-09-27 | Implements M1 Trip Planning & Coordination agent. Confirms Gemini 3.5 Flash-Lite and area-level planning. Types output plan. |
+| 1.3 | 2026-09-27 | Implements M2 Accommodation agent. Documents mixed room support per section, affordable-first budget policy, remaining budget pass-through to M3, and updated C# internal hotel search contract to support mixed-capacity filtering and comprehensive payload mappings. |
