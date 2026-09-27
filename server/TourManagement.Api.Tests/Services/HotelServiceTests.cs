@@ -230,4 +230,59 @@ public class HotelServiceTests
 
         Assert.Contains("trip's date range", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+    
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 5: AllowMixedRooms includes rooms smaller than NumberOfGuests
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Search_AllowMixedRooms_IncludesSmallerRooms()
+    {
+        var db = CreateDb(nameof(Search_AllowMixedRooms_IncludesSmallerRooms));
+        
+        // Add a smaller room (capacity 1)
+        var smallRoom = new Room
+        {
+            Id            = 2,
+            HotelId       = 1,
+            RoomType      = "Single",
+            PricePerNight = 3000m,
+            Capacity      = 1,
+            TotalRooms    = 2,
+            Status        = RoomStatus.Active
+        };
+        db.Rooms.Add(smallRoom);
+        db.SaveChanges();
+
+        var service = new HotelService(db);
+
+        // Act: search with NumberOfGuests = 2, but AllowMixedRooms = true
+        var mixedResults = await service.SearchAsync(new HotelSearchRequestDto
+        {
+            DestinationId   = 1,
+            CheckInDate     = new DateTime(2026, 10, 1),
+            CheckOutDate    = new DateTime(2026, 10, 5),
+            NumberOfGuests  = 2,
+            AllowMixedRooms = true
+        });
+
+        // Act: search with NumberOfGuests = 2, AllowMixedRooms = false (default)
+        var standardResults = await service.SearchAsync(new HotelSearchRequestDto
+        {
+            DestinationId   = 1,
+            CheckInDate     = new DateTime(2026, 10, 1),
+            CheckOutDate    = new DateTime(2026, 10, 5),
+            NumberOfGuests  = 2,
+            AllowMixedRooms = false
+        });
+
+        // Assert: mixed search should find both rooms (capacity 2 and capacity 1)
+        Assert.Equal(2, mixedResults.Count);
+        Assert.Contains(mixedResults, r => r.RoomId == 1);
+        Assert.Contains(mixedResults, r => r.RoomId == 2);
+
+        // Assert: standard search should only find the room with capacity 2
+        Assert.Single(standardResults);
+        Assert.Equal(1, standardResults[0].RoomId);
+    }
 }

@@ -356,4 +356,34 @@ public class CheckoutServiceAgenticTests
         var ex = await Assert.ThrowsAsync<ValidationException>(() => service.PlaceApprovedProposalHoldAsync(dto2, 20));
         Assert.Contains("contains different items or dates", ex.Message);
     }
+
+    [Fact]
+    public async Task AgenticHold_MixedRooms_Success()
+    {
+        var db = CreateDb(nameof(AgenticHold_MixedRooms_Success));
+        var service = BuildService(db);
+
+        // Kandy Hotel (Id=1) has Room 1 (added in CreateDb). Let's add another room (Room 4) to it.
+        db.Rooms.Add(new Room { Id = 4, HotelId = 1, RoomType = "Triple", PricePerNight = 8000m, Capacity = 3, TotalRooms = 1, Status = RoomStatus.Active });
+        await db.SaveChangesAsync();
+
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            ProposalId = "prop-mixed",
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                // Both rooms are at Hotel 1 for the same dates
+                new HotelCheckoutItemDto { RoomId = 1, CheckInDate = new DateTime(2026, 1, 1), CheckOutDate = new DateTime(2026, 1, 10), NumberOfRooms = 1 },
+                new HotelCheckoutItemDto { RoomId = 4, CheckInDate = new DateTime(2026, 1, 1), CheckOutDate = new DateTime(2026, 1, 10), NumberOfRooms = 1 }
+            }
+        };
+
+        var result = await service.PlaceApprovedProposalHoldAsync(dto, 20);
+        
+        Assert.Equal(CheckoutStatus.Active, result.Status);
+        Assert.Equal(2, result.Hotels.Count);
+        // Total Price: 9 nights * (5000 + 8000) = 9 * 13000 = 117000
+        Assert.Equal(117000m, result.TotalPrice);
+    }
 }

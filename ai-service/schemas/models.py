@@ -48,3 +48,24 @@ class TripPlan(BaseModel):
     daily_visits: List[DailyVisit]
     overnight_sections: List[OvernightSection]
     planning_summary: PlanningSummary
+
+class SelectedRoomLine(BaseModel):
+    RoomId: int
+    RoomType: str
+    Quantity: int
+    CapacityPerRoom: int
+    PricePerNight: float
+    LineCost: float
+
+class AccommodationSelection(BaseModel):
+    OvernightAreaId: int
+    OvernightAreaName: str
+    CheckInDate: str
+    CheckOutDate: str
+    NightCount: int
+    HotelId: int
+    HotelName: str
+    RoomLines: List[SelectedRoomLine]
+    SectionCapacity: int
+    SectionCost: float
+    Explanation: str

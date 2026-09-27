@@ -18,12 +18,13 @@ class InternalAgentClient:
         response.raise_for_status()
         return response.json().get("data", {})
 
-    def search_hotels(self, destination_id: int, check_in: str, check_out: str) -> List[Dict[str, Any]]:
+    def search_hotels(self, destination_id: int, check_in: str, check_out: str, group_size: int) -> List[Dict[str, Any]]:
         payload = {
             "destinationId": destination_id,
             "checkInDate": check_in,
             "checkOutDate": check_out,
-            "capacity": 1
+            "numberOfGuests": group_size,
+            "allowMixedRooms": True
         }
         response = requests.post(f"{self.base_url}/hotels/search", json=payload, headers=self.headers, timeout=10)
         response.raise_for_status()

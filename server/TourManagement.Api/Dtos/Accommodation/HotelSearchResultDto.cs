@@ -13,4 +13,9 @@ public class HotelSearchResultDto
 
     // TotalRooms minus already-booked rooms for the requested dates.
     public int AvailableRoomCount { get; set; }
+
+    // Additional fields for agentic mixed-room planning.
+    public int DestinationId { get; set; }
+    public int Capacity { get; set; }
+    public string? Amenities { get; set; }
 }

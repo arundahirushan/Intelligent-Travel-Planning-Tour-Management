@@ -9,6 +9,7 @@ class WorkflowState(TypedDict):
     # Internal state populated by agents
     plan: Optional[Dict[str, Any]] # Typed as Dict for state, populated from TripPlan.model_dump()
     hotels: List[Dict[str, Any]]
+    accommodation_summary: Optional[Dict[str, Any]]
     vehicles: List[Dict[str, Any]]
     weather: Optional[Dict[str, Any]]
     
