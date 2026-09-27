@@ -252,6 +252,11 @@ public class VehicleService : IVehicleService
         if (request.EndDate <= request.StartDate)
             throw new ValidationException("EndDate must be after StartDate.");
 
+        // PostgreSQL (Npgsql) requires DateTime to be UTC when querying timestamp with time zone columns.
+        // Query string dates bind as Unspecified, so we force them to UTC here.
+        request.StartDate = DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
+        request.EndDate = DateTime.SpecifyKind(request.EndDate, DateTimeKind.Utc);
+
         // Step 1: Get all active vehicles.
         var vehicles = await _db.Vehicles
             .Where(v => v.Status == VehicleStatus.Active)

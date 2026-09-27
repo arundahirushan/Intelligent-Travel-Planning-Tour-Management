@@ -28,6 +28,10 @@ public class HotelBookingService : IHotelBookingService
     // ensures the room has enough availability for the requested dates.
     public async Task<HotelBookingSummaryDto> CreateAsync(CreateHotelBookingDto dto, int travelerId)
     {
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.CheckInDate = DateTime.SpecifyKind(dto.CheckInDate, DateTimeKind.Utc);
+        dto.CheckOutDate = DateTime.SpecifyKind(dto.CheckOutDate, DateTimeKind.Utc);
+
         var trip = await _db.Trips.FindAsync(dto.TripId);
         if (trip == null)
             throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
@@ -62,6 +66,10 @@ public class HotelBookingService : IHotelBookingService
 
     public async Task<HotelBookingSummaryDto> UpdateAsync(int id, UpdateHotelBookingDto dto, int travelerId)
     {
+        // Force UTC for Npgsql timestamp with time zone columns
+        dto.CheckInDate = DateTime.SpecifyKind(dto.CheckInDate, DateTimeKind.Utc);
+        dto.CheckOutDate = DateTime.SpecifyKind(dto.CheckOutDate, DateTimeKind.Utc);
+
         var booking = await _db.HotelBookings
             .Include(b => b.Trip)
             .FirstOrDefaultAsync(b => b.Id == id);
@@ -196,7 +204,7 @@ public class HotelBookingService : IHotelBookingService
         if (checkOutDate <= checkInDate)
             throw new ValidationException("CheckOutDate must be after CheckInDate.");
 
-        if (checkInDate < trip.StartDate || checkOutDate > trip.EndDate)
+        if (checkInDate.Date < trip.StartDate.Date || checkOutDate.Date > trip.EndDate.Date)
             throw new ValidationException(
                 $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
 

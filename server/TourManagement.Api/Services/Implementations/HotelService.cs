@@ -93,15 +93,39 @@ public class HotelService : IHotelService
         return await LoadHotelDetailAsync(hotelId);
     }
 
-    // Soft-delete: sets Status = Inactive so booking history is not lost.
+    // Deletes the hotel permanently if there are no bookings, otherwise soft-deletes to preserve history.
     public async Task DeactivateHotelAsync(int hotelId, int requestingUserId)
     {
         var hotel = await GetHotelOrThrowAsync(hotelId);
         CheckOwner(hotel, requestingUserId);
 
-        hotel.Status    = HotelStatus.Inactive;
-        hotel.UpdatedAt = DateTime.UtcNow;
+        bool hasBookings = await _db.HotelBookings.AnyAsync(b => b.Room.HotelId == hotelId);
+
+        if (hasBookings)
+        {
+            hotel.Status    = HotelStatus.Inactive;
+            hotel.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            _db.Hotels.Remove(hotel);
+        }
+
         await _db.SaveChangesAsync();
+    }
+
+    public async Task RestoreHotelAsync(int hotelId, int requestingUserId)
+    {
+        var hotel = await GetHotelOrThrowAsync(hotelId);
+        CheckOwner(hotel, requestingUserId);
+
+        if (hotel.Status == HotelStatus.Inactive)
+        {
+            // Restoring sends it back to Pending Approval for admin review
+            hotel.Status = HotelStatus.PendingApproval;
+            hotel.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
     }
 
     // ── HotelOwner: manage rooms ─────────────────────────────────────────────
@@ -333,6 +357,11 @@ public class HotelService : IHotelService
     {
         if (request.CheckOutDate <= request.CheckInDate)
             throw new ValidationException("CheckOutDate must be after CheckInDate.");
+
+        // PostgreSQL (Npgsql) requires DateTime to be UTC when querying timestamp with time zone columns.
+        // Query string dates bind as Unspecified, so we force them to UTC here.
+        request.CheckInDate = DateTime.SpecifyKind(request.CheckInDate, DateTimeKind.Utc);
+        request.CheckOutDate = DateTime.SpecifyKind(request.CheckOutDate, DateTimeKind.Utc);
 
         // Step 1: Get all active hotels at the requested destination.
         var hotels = await _db.Hotels
