@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TourManagement.Api.Data;
@@ -11,9 +12,11 @@ using TourManagement.Api.Data;
 namespace TourManagement.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926090025_AddCheckoutHoldFlow")]
+    partial class AddCheckoutHoldFlow
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -232,9 +235,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<int>("NumberOfRooms")
                         .HasColumnType("integer");
 
-                    b.Property<decimal?>("PriceSnapshot")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int>("RoomId")
                         .HasColumnType("integer");
 
@@ -250,7 +250,8 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CheckoutId");
+                    b.HasIndex("CheckoutId")
+                        .IsUnique();
 
                     b.HasIndex("HoldExpiresAt");
 
@@ -509,9 +510,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<decimal?>("HotelPriceSnapshot")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("ProposalId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -537,9 +535,6 @@ namespace TourManagement.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("HoldExpiresAt");
-
-                    b.HasIndex("ProposalId")
-                        .IsUnique();
 
                     b.HasIndex("Status");
 
@@ -755,8 +750,8 @@ namespace TourManagement.Api.Data.Migrations
             modelBuilder.Entity("TourManagement.Api.Models.HotelBooking", b =>
                 {
                     b.HasOne("TourManagement.Api.Models.TripCheckout", "Checkout")
-                        .WithMany("HotelBookings")
-                        .HasForeignKey("CheckoutId")
+                        .WithOne("HotelBooking")
+                        .HasForeignKey("TourManagement.Api.Models.HotelBooking", "CheckoutId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("TourManagement.Api.Models.Room", "Room")
@@ -947,7 +942,7 @@ namespace TourManagement.Api.Data.Migrations
 
             modelBuilder.Entity("TourManagement.Api.Models.TripCheckout", b =>
                 {
-                    b.Navigation("HotelBookings");
+                    b.Navigation("HotelBooking");
 
                     b.Navigation("VehicleBooking");
                 });
