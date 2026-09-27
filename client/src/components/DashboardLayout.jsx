@@ -48,10 +48,8 @@ export default function DashboardLayout({ navItems, roleBadge, profileRoute = '/
         
         {/* Left: Logo & Mobile Toggle */}
         <div className="flex items-center gap-4">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
-              <span className="material-symbols-outlined font-bold">flight_takeoff</span>
-            </div>
+          <Link to="/" className="flex items-center gap-3 group">
+            <img src="/logo.png" alt="Easy Planner Logo" className="h-[72px] w-auto object-contain scale-[1.15]" />
             <span className="hidden sm:block font-heading text-xl font-bold text-text">EasyPlanner</span>
           </Link>
           

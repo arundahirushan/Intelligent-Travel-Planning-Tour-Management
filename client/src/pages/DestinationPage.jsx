@@ -35,10 +35,15 @@ export default function DestinationPage() {
       {/* Navbar overlay header (we'll just use a small dark gradient at top to make nav readable if it's transparent, or assume global nav works) */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-canvas/90 backdrop-blur-md border-b border-border-blue/70 transition-all">
         <div className="max-w-7xl mx-auto h-20 px-6 lg:px-12 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
-            <img src="/logo.png" alt="Easy Planner Logo" className="h-8 w-auto object-contain" />
-            <span className="font-heading text-xl font-bold tracking-tight text-text hidden sm:inline-block">Easy Planner</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/" className="text-text-secondary hover:text-primary transition-colors flex items-center justify-center bg-white/50 hover:bg-white rounded-full w-9 h-9 backdrop-blur shadow-sm" title="Back to Home">
+              <span className="material-symbols-outlined text-xl">arrow_back</span>
+            </Link>
+            <Link to="/" className="flex items-center gap-3 group">
+              <img src="/logo.png" alt="Easy Planner Logo" className="h-8 w-auto object-contain" />
+              <span className="font-heading text-xl font-bold tracking-tight text-text hidden sm:inline-block">Easy Planner</span>
+            </Link>
+          </div>
 
           <nav className="hidden md:flex items-center gap-9">
             <Link to="/#destinations" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Destinations</Link>
