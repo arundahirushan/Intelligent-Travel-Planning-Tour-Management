@@ -14,7 +14,7 @@ public class SupplyOrderServiceTests
     private static AppDbContext CreateDb(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(dbName).ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         var db = new AppDbContext(options);

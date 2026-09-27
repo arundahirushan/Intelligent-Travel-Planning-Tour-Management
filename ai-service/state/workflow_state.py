@@ -1,23 +1,20 @@
-"""
-state/workflow_state.py — Shared workflow state (placeholder)
+from typing import TypedDict, List, Dict, Any, Optional
+from schemas.models import AgentExecutionSummary
 
-Defines the TypedDict / Pydantic model that is passed between all agent nodes
-in the LangGraph StateGraph. Every agent reads from and writes to this state
-object, which is persisted at each step of the pipeline.
-
-Fields will be added in a later prompt when the agent logic is implemented.
-"""
-
-from typing import Any, Optional
-# from pydantic import BaseModel
-# from typing import TypedDict
-
-# class WorkflowState(TypedDict):
-#     trip_id: str
-#     user_id: str
-#     itinerary: Optional[dict]
-#     recommendations: Optional[dict]
-#     weather_data: Optional[dict]
-#     validation_result: Optional[dict]
-#     status: str
-#     errors: list[str]
+class WorkflowState(TypedDict):
+    trip_id: int
+    proposal_id: str
+    input_snapshot: Dict[str, Any]
+    
+    # Internal state populated by agents
+    plan: Optional[Dict[str, Any]] # Typed as Dict for state, populated from TripPlan.model_dump()
+    hotels: List[Dict[str, Any]]
+    vehicles: List[Dict[str, Any]]
+    weather: Optional[Dict[str, Any]]
+    
+    # Validations & outputs
+    validation_errors: List[str]
+    is_valid: bool
+    final_payload: str # JSON representation of CreateCheckoutDto
+    
+    execution_summaries: List[AgentExecutionSummary]

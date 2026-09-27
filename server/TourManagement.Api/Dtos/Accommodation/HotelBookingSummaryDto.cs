@@ -12,8 +12,8 @@ public class HotelBookingSummaryDto
     public DateTime CheckOutDate { get; set; }
     public int NumberOfRooms { get; set; }
     public BookingStatus Status { get; set; }
+    public DateTime? HoldExpiresAt { get; set; }
 
-    // Computed: PricePerNight × nights × NumberOfRooms.
-    // Not stored in the DB — calculated in the mapping method.
+    // This should now be the frozen price from TripCheckout, or the calculated fallback.
     public decimal TotalPrice { get; set; }
 }
