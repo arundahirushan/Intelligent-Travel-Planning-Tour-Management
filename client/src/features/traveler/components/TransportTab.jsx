@@ -90,6 +90,13 @@ export default function TransportTab({ trip }) {
   const isHeld = (b) => b.status === 'Held';
   const heldOrConfirmed = (b) => b.status === 'Held' || b.status === 'Confirmed';
 
+  const getDisplayStatus = (b) => {
+    if (b.status === 'Held' && b.holdExpiresAt && new Date(b.holdExpiresAt) < new Date()) {
+      return 'Expired';
+    }
+    return b.status;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -134,6 +141,7 @@ export default function TransportTab({ trip }) {
       ) : (
         <div className="space-y-4">
           {bookings.map((b) => {
+            const displayStatus = getDisplayStatus(b);
             const days = Math.max(0, Math.round((new Date(b.endDate) - new Date(b.startDate)) / (1000 * 60 * 60 * 24)));
             return (
               <div key={b.id} className="bg-white border border-border-neutral rounded-xl p-5 shadow-soft">
@@ -141,7 +149,7 @@ export default function TransportTab({ trip }) {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <p className="font-heading font-bold text-text">{b.model}</p>
-                      <StatusBadge status={b.status} />
+                      <StatusBadge status={displayStatus} />
                     </div>
                     <p className="text-body-sm text-text-secondary mb-3">
                       {b.vehicleType} · {b.registrationNumber}
@@ -160,8 +168,18 @@ export default function TransportTab({ trip }) {
                         <p className="text-sm font-heading font-bold text-primary">{formatLKR(b.totalPrice)}</p>
                       </div>
                     </div>
+                    {displayStatus === 'Held' && b.holdExpiresAt && (
+                      <p className="mt-3 text-label-badge text-status-warning font-medium">
+                        Hold expires exactly at: {new Date(b.holdExpiresAt).toLocaleString()}
+                      </p>
+                    )}
+                    {displayStatus === 'Expired' && (
+                      <p className="mt-3 text-label-badge text-status-danger font-medium">
+                        This hold has expired. The vehicle is no longer reserved.
+                      </p>
+                    )}
                     {isHeld(b) && (
-                      <p className="mt-3 text-label-badge text-text-secondary italic">
+                      <p className="mt-1 text-label-badge text-text-secondary italic">
                         To change dates or pickup location, cancel and place a new booking.
                       </p>
                     )}

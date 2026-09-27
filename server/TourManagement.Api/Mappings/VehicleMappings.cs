@@ -14,6 +14,7 @@ public static class VehicleMappings
             Id           = vehicle.Id,
             VehicleType  = vehicle.VehicleType,
             Model        = vehicle.Model,
+            RegistrationNumber = vehicle.RegistrationNumber,
             Capacity     = vehicle.Capacity,
             PricePerDay  = vehicle.PricePerDay,
             Status       = vehicle.Status,
