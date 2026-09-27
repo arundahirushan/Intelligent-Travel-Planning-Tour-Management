@@ -287,7 +287,7 @@ export default function HomePage() {
                 </div>
 
                 <div>
-                  <Link to={isAuthenticated ? getDashboardPath() : "/login"} className="inline-flex items-center justify-center px-8 py-3.5 bg-primary text-white font-heading text-sm font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-md group">
+                  <Link to="/vehicles" className="inline-flex items-center justify-center px-8 py-3.5 bg-primary text-white font-heading text-sm font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-md group">
                     <span>Book a Vehicle</span>
                     <span className="material-symbols-outlined text-[18px] ml-2 group-hover:translate-x-1 transition-transform">arrow_forward</span>
                   </Link>
