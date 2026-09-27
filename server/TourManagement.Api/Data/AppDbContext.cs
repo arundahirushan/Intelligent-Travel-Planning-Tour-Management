@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
     public DbSet<ContractRequest> ContractRequests => Set<ContractRequest>();
     public DbSet<SupplyOrder> SupplyOrders => Set<SupplyOrder>();
     public DbSet<TripCheckout> TripCheckouts => Set<TripCheckout>();
+    public DbSet<TripProposal> TripProposals => Set<TripProposal>();
+    public DbSet<ExecutionSummary> ExecutionSummaries => Set<ExecutionSummary>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -401,6 +403,44 @@ public class AppDbContext : DbContext
 
             // HotelBookingId — one-to-one optional.  SetNull configured on HotelBooking side.
             // VehicleBookingId — one-to-one optional.  SetNull configured on VehicleBooking side.
+        });
+
+        // ── TripProposal ──────────────────────────────────────────────────────
+        modelBuilder.Entity<TripProposal>(entity =>
+        {
+            entity.Property(p => p.Status)
+                  .HasConversion<string>();
+
+            entity.HasIndex(p => p.ProposalId).IsUnique();
+            entity.HasIndex(p => new { p.TripId, p.Version }).IsUnique();
+            entity.HasIndex(p => p.RequestId);
+            entity.HasIndex(p => p.Status);
+
+            entity.HasOne(p => p.Trip)
+                  .WithMany()
+                  .HasForeignKey(p => p.TripId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.Checkout)
+                  .WithMany()
+                  .HasForeignKey(p => p.CheckoutId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(p => p.Admin)
+                  .WithMany()
+                  .HasForeignKey(p => p.AdminId)
+                  .OnDelete(DeleteBehavior.Restrict);
+                  
+            entity.HasMany(p => p.ExecutionSummaries)
+                  .WithOne(e => e.TripProposal)
+                  .HasForeignKey(e => e.TripProposalId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── ExecutionSummary ──────────────────────────────────────────────────
+        modelBuilder.Entity<ExecutionSummary>(entity =>
+        {
+            entity.HasIndex(e => e.TripProposalId);
         });
     }
 }
