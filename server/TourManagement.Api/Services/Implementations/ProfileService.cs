@@ -46,6 +46,26 @@ public class ProfileService : IProfileService
         return user.ToSummaryDto();
     }
 
+    public async Task ChangePasswordAsync(int userId, ChangePasswordDto dto)
+    {
+        var user = await GetUserOrThrowAsync(userId);
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+        {
+            throw new ValidationException("The current password you entered is incorrect.");
+        }
+
+        if (dto.NewPassword == dto.CurrentPassword)
+        {
+            throw new ValidationException("New password cannot be the same as your current password.");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+    }
+
     public async Task<DeletionEligibilityDto> CheckDeletionEligibilityAsync(int userId, string role)
     {
         IAccountDeletionGuard? guard = role switch

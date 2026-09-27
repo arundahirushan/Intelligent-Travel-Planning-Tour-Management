@@ -7,18 +7,20 @@ import StatusBadge from '../../../components/StatusBadge';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import ConfirmDialog from '../../../components/ConfirmDialog';
-import { getMyProfile, updateMyProfile, getDeletionEligibility, deleteMyAccount } from '../../../services/profileApi';
+import { getMyProfile, updateMyProfile, getDeletionEligibility, deleteMyAccount, changeMyPassword } from '../../../services/profileApi';
 import { useAuth } from '../../../context/AuthContext';
 
-// Shared ProfilePage used by every role dashboard.
-// Props:
-//   navItems           — same format as DashboardLayout navItems
-//   roleBadge          — e.g. "Hotel Partner", "Transport Partner"
-//   profileRoute       — passed through to DashboardLayout
-//   dashboardHomePath  — path for the "View My [X]" link in the danger zone (e.g. "/hotel-owner/hotels")
-//   dashboardHomeLabel — label for that link (e.g. "My Hotels", "My Vehicles")
+const ROLE_LABELS = {
+  Traveler: 'Traveler',
+  HotelOwner: 'Hotel Partner',
+  TransportProvider: 'Transport Partner',
+  Admin: 'Administrator',
+  SuperAdmin: 'Super Administrator',
+  Supplier: 'Supplier'
+};
+
 export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboardHomePath, dashboardHomeLabel, showDangerZone = true }) {
-  const { logout } = useAuth();
+  const { logout, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -29,6 +31,15 @@ export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboa
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const [passwordData, setPasswordData] = useState({ CurrentPassword: '', NewPassword: '', ConfirmNewPassword: '' });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [eligibility, setEligibility] = useState(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(true);
@@ -66,9 +77,14 @@ export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboa
     fetchEligibility();
   }, [fetchProfile, fetchEligibility]);
 
-  const handleChange = (e) => {
+  const handleInfoChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSaveProfile = async (e) => {
@@ -80,12 +96,53 @@ export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboa
       setSaveSuccess(false);
       const updated = await updateMyProfile(formData);
       setProfile(updated);
+      
+      // Update global AuthContext state so navbar immediately reflects changes
+      updateUser({ fullName: updated.fullName, email: updated.email });
+      
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       setSaveError(err.response?.data?.message || 'Failed to update profile.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    if (!passwordData.CurrentPassword || !passwordData.NewPassword || !passwordData.ConfirmNewPassword) {
+        setPasswordError('All password fields are required.');
+        return;
+    }
+    if (passwordData.NewPassword !== passwordData.ConfirmNewPassword) {
+        setPasswordError('New password and confirmation do not match.');
+        return;
+    }
+    if (passwordData.NewPassword.length < 6) {
+        setPasswordError('New password must be at least 6 characters long.');
+        return;
+    }
+
+    try {
+      setPasswordSaving(true);
+      setPasswordError(null);
+      setPasswordSuccess(false);
+      
+      await changeMyPassword(passwordData);
+      
+      setPasswordSuccess(true);
+      setPasswordData({ CurrentPassword: '', NewPassword: '', ConfirmNewPassword: '' });
+      
+      setTimeout(() => {
+          logout();
+          navigate('/login');
+      }, 2000);
+      
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Failed to update password.');
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -113,124 +170,206 @@ export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboa
     );
   }
 
+  const roleLabel = ROLE_LABELS[profile.role] || profile.role;
+  const initials = profile.fullName ? profile.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
+  const memberSince = new Date(profile.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+
   return (
     <DashboardLayout navItems={navItems} roleBadge={roleBadge} profileRoute={profileRoute}>
-      {/* Page Header */}
-      <div className="mb-8">
-        <span className="text-label-uppercase text-primary tracking-widest block mb-2">
-          ● MY ACCOUNT
-        </span>
-        <h1 className="text-headline-lg font-heading font-bold text-text mb-1">
-          Profile Settings
-        </h1>
-        <p className="text-body-md text-text-secondary">
-          Update your account information.
-        </p>
-      </div>
+      <div className="max-w-3xl mx-auto w-full pb-12">
+        {/* Page Header */}
+        <div className="mb-8">
+          <span className="text-label-uppercase text-primary tracking-widest block mb-2 font-bold font-heading">
+            MY ACCOUNT
+          </span>
+          <h1 className="text-headline-lg font-heading font-bold text-text mb-2">
+            Profile Settings
+          </h1>
+          <p className="text-body-md text-text-secondary">
+            Manage your personal information and account security.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-
-          {/* Profile Form Card */}
-          <div className="bg-white border border-border-neutral rounded-xl shadow-soft p-[var(--space-xl)]">
-            <h2 className="text-headline-md font-heading font-bold text-text mb-6 border-b border-border-neutral pb-4">
-              Personal Information
-            </h2>
-
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              {saveError && <ErrorBanner message={saveError} />}
-              {saveSuccess && (
-                <div className="bg-status-success/10 text-status-success border border-status-success/30 rounded-md p-3 mb-4 text-sm font-semibold">
-                  Profile updated successfully.
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Full Name"
-                  name="FullName"
-                  value={formData.FullName}
-                  onChange={handleChange}
-                  required
-                />
-                <Input
-                  label="Email Address"
-                  name="Email"
-                  type="email"
-                  value={formData.Email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="bg-surface-neutral/30 rounded-md p-4 space-y-3 mt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-body-sm text-text-secondary font-bold font-heading">Role</span>
-                  <span className="text-body-md text-text font-medium">{profile.role}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-body-sm text-text-secondary font-bold font-heading">Account Status</span>
-                  <StatusBadge status={profile.status} />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-body-sm text-text-secondary font-bold font-heading">Member Since</span>
-                  <span className="text-body-md text-text">{new Date(profile.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={saving || !formData.FullName.trim() || !formData.Email.trim()}>
-                  {saving ? <LoadingSpinner size="sm" /> : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
+        {/* Profile Summary */}
+        <div className="bg-surface-light border border-border-blue/50 rounded-[20px] shadow-soft p-6 md:p-8 mb-8 flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          <div className="w-20 h-20 shrink-0 rounded-full bg-gradient-to-br from-primary to-accent text-white flex items-center justify-center font-heading font-bold text-3xl shadow-md border-2 border-white">
+            {initials}
           </div>
-
-          {/* Danger Zone Card — hidden for roles where deletion is unreliable */}
-          {showDangerZone && (
-          <div className="border border-status-danger/30 bg-status-danger/5 rounded-xl p-[var(--space-lg)]">
-            <div className="text-status-danger text-label-uppercase tracking-widest mb-2 font-bold font-heading">
-              DANGER ZONE
+          <div className="flex-1 text-center sm:text-left flex flex-col justify-center min-h-[80px]">
+            <h2 className="text-headline-sm font-heading font-bold text-text mb-1">{profile.fullName}</h2>
+            <p className="text-body-md text-text-secondary mb-3">{profile.email}</p>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+              <span className="inline-flex items-center px-3 py-1 bg-surface-blue text-primary font-heading font-bold text-xs uppercase tracking-wider rounded-pill">
+                {roleLabel}
+              </span>
+              <StatusBadge status={profile.status} />
             </div>
-            <h2 className="text-headline-sm font-heading font-bold text-text mb-2">
-              Delete Account
+          </div>
+          <div className="text-center sm:text-right flex flex-col justify-center sm:min-h-[80px]">
+            <span className="text-xs font-heading font-bold uppercase tracking-wider text-text-secondary block mb-1">
+              Member Since
+            </span>
+            <span className="text-sm font-body text-text font-medium">{memberSince}</span>
+          </div>
+        </div>
+
+        {/* Personal Information */}
+        <div className="bg-white border border-border-neutral rounded-[20px] shadow-soft p-6 md:p-8 mb-8">
+          <h2 className="text-headline-sm font-heading font-bold text-text mb-6">
+            Personal Information
+          </h2>
+          <form onSubmit={handleSaveProfile} className="space-y-6">
+            {saveError && <ErrorBanner message={saveError} />}
+            {saveSuccess && (
+              <div className="bg-status-success/10 text-status-success border border-status-success/30 rounded-md p-4 text-sm font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                Profile information updated successfully.
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Full Name"
+                name="FullName"
+                value={formData.FullName}
+                onChange={handleInfoChange}
+                required
+              />
+              <Input
+                label="Email Address"
+                name="Email"
+                type="email"
+                value={formData.Email}
+                onChange={handleInfoChange}
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={saving || !formData.FullName.trim() || !formData.Email.trim()} className="active:scale-95">
+                {saving ? <LoadingSpinner size="sm" /> : 'SAVE CHANGES'}
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        {/* Password & Security */}
+        <div className="bg-white border border-border-neutral rounded-[20px] shadow-soft p-6 md:p-8 mb-8">
+          <div className="mb-6">
+            <h2 className="text-headline-sm font-heading font-bold text-text mb-1">
+              Password & Security
             </h2>
-            <p className="text-body-md text-text-secondary mb-6">
+            <p className="text-body-sm text-text-secondary">
+              Update your password to keep your account secure.
+            </p>
+          </div>
+          
+          <form onSubmit={handleUpdatePassword} className="space-y-6">
+            {passwordError && <ErrorBanner message={passwordError} />}
+            {passwordSuccess && (
+              <div className="bg-status-success/10 text-status-success border border-status-success/30 rounded-md p-4 text-sm font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                Password updated successfully. You will be redirected to log in.
+              </div>
+            )}
+            
+            <div className="max-w-md">
+              <div className="relative">
+                <Input
+                  label="Current Password"
+                  name="CurrentPassword"
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={passwordData.CurrentPassword}
+                  onChange={handlePasswordChange}
+                  required
+                />
+                <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-[36px] text-text-secondary hover:text-text transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">{showCurrentPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
+
+              <div className="relative">
+                <Input
+                  label="New Password"
+                  name="NewPassword"
+                  type={showNewPassword ? "text" : "password"}
+                  value={passwordData.NewPassword}
+                  onChange={handlePasswordChange}
+                  required
+                />
+                <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-[36px] text-text-secondary hover:text-text transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">{showNewPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
+
+              <div className="relative">
+                <Input
+                  label="Confirm New Password"
+                  name="ConfirmNewPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={passwordData.ConfirmNewPassword}
+                  onChange={handlePasswordChange}
+                  required
+                />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-[36px] text-text-secondary hover:text-text transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">{showConfirmPassword ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex justify-start pt-2">
+              <Button type="submit" disabled={passwordSaving || !passwordData.CurrentPassword || !passwordData.NewPassword || !passwordData.ConfirmNewPassword} className="active:scale-95">
+                {passwordSaving ? <LoadingSpinner size="sm" /> : 'UPDATE PASSWORD'}
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        {/* Danger Zone */}
+        {showDangerZone && (
+          <div className="bg-red-50/50 border border-red-200 rounded-[20px] shadow-sm p-6 md:p-8">
+            <div className="flex items-center gap-2 text-status-danger mb-4">
+              <span className="material-symbols-outlined text-[24px]">warning</span>
+              <h2 className="text-headline-sm font-heading font-bold">
+                Delete Account
+              </h2>
+            </div>
+            <p className="text-body-md text-text-secondary mb-6 max-w-2xl">
               Permanently delete your account and all associated data. This action cannot be undone.
             </p>
 
             {eligibilityLoading ? (
               <LoadingSpinner size="sm" />
             ) : eligibility?.canDelete === false ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <button
                   disabled
-                  className="px-6 py-2.5 rounded-pill font-heading text-xs font-bold uppercase tracking-widest bg-status-danger text-white opacity-50 cursor-not-allowed"
+                  className="px-7 py-3 rounded-pill font-heading text-xs font-bold uppercase tracking-widest bg-status-danger text-white opacity-50 cursor-not-allowed"
                 >
-                  Delete My Account
+                  DELETE MY ACCOUNT
                 </button>
-                <p className="text-status-danger text-body-sm font-semibold">
-                  {eligibility.blockingMessage}
-                </p>
-                {/* Helper link: tells the user exactly where to go to resolve the block */}
-                <Link
-                  to={dashboardHomePath}
-                  className="text-primary hover:underline text-sm font-bold inline-flex items-center gap-1"
-                >
-                  <span>→</span> View {dashboardHomeLabel}
-                </Link>
+                <div className="bg-white border border-red-200 rounded-lg p-4">
+                  <p className="text-status-danger text-sm font-semibold mb-2">
+                    {eligibility.blockingMessage}
+                  </p>
+                  <Link
+                    to={dashboardHomePath}
+                    className="text-primary hover:underline text-sm font-bold inline-flex items-center gap-1"
+                  >
+                    <span>→</span> View {dashboardHomeLabel}
+                  </Link>
+                </div>
               </div>
             ) : (
               <button
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="px-6 py-2.5 rounded-pill font-heading text-xs font-bold uppercase tracking-widest bg-status-danger hover:bg-red-700 text-white transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-status-danger"
+                className="px-7 py-3 rounded-pill font-heading text-xs font-bold uppercase tracking-widest bg-status-danger hover:bg-red-700 text-white transition-all active:scale-95 focus:ring-2 focus:ring-offset-2 focus:ring-status-danger shadow-soft"
               >
-                Delete My Account
+                DELETE MY ACCOUNT
               </button>
             )}
           </div>
-          )}
-        </div>
+        )}
       </div>
 
       <ConfirmDialog
@@ -245,4 +384,3 @@ export default function ProfilePage({ navItems, roleBadge, profileRoute, dashboa
     </DashboardLayout>
   );
 }
-

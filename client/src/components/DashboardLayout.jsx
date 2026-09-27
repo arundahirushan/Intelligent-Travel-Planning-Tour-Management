@@ -103,7 +103,8 @@ export default function DashboardLayout({ navItems, roleBadge, profileRoute = '/
                 <span className="font-heading font-semibold text-text text-sm">
                   {user?.fullName || 'User'}
                 </span>
-                <span className="text-xs text-text-secondary font-body">
+                <span className="text-xs text-text-secondary font-body flex items-center justify-end gap-1">
+                  <span className="material-symbols-outlined text-text-secondary text-[16px]">expand_more</span>
                   {user?.role || 'User'}
                 </span>
               </div>

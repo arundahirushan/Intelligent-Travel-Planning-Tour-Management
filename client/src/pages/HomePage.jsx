@@ -1,13 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ImageCard from '../components/ImageCard';
 import FeatureCard from '../components/FeatureCard';
 import { useAuth } from '../context/AuthContext';
 
 export default function HomePage() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  // Click outside profile dropdown to close
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const handleNavClick = (e, targetId) => {
     e.preventDefault();
@@ -36,6 +54,19 @@ export default function HomePage() {
       default: return '/';
     }
   };
+
+  const getProfilePath = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'HotelOwner': return '/hotel-owner/profile';
+      case 'Traveler': return '/traveler/profile';
+      case 'TransportProvider': return '/transport-provider/profile';
+      case 'Supplier': return '/supplier/profile';
+      case 'SuperAdmin': return '/admin/profile';
+      case 'Admin': return '/admin/profile';
+      default: return '/';
+    }
+  };
   return (
     <div className="min-h-screen bg-canvas">
       {/* Navbar */}
@@ -59,14 +90,47 @@ export default function HomePage() {
                 <Link to={getDashboardPath()} className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
                   Dashboard
                 </Link>
-                <div className="hidden md:flex items-center gap-3 text-right ml-2">
-                  <div className="flex flex-col justify-center">
-                    <span className="font-heading font-bold text-sm text-text leading-tight">{user?.fullName || 'User'}</span>
-                    <span className="font-body text-xs text-text-secondary">{user?.role || ''}</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg">
-                    {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U'}
-                  </div>
+                <div className="hidden md:block relative ml-2" ref={profileDropdownRef}>
+                  <button 
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    className="flex items-center gap-3 focus:outline-none"
+                  >
+                    <div className="flex flex-col justify-center text-right">
+                      <span className="font-heading font-bold text-sm text-text leading-tight">{user?.fullName || 'User'}</span>
+                      <span className="font-body text-xs text-text-secondary flex items-center justify-end gap-1">
+                        <span className="material-symbols-outlined text-text-secondary text-[16px]">expand_more</span>
+                        {user?.role || ''}
+                      </span>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg hover:opacity-90 transition-opacity">
+                      {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U'}
+                    </div>
+                  </button>
+
+                  {isProfileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-border-blue/70 overflow-hidden z-50">
+                      <ul className="py-1">
+                        <li>
+                          <Link 
+                            to={getProfilePath()}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-text hover:bg-surface-blue transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">person</span>
+                            Profile
+                          </Link>
+                        </li>
+                        <li>
+                          <button 
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">logout</span>
+                            Sign Out
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

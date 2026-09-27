@@ -13,6 +13,10 @@ export async function updateMyProfile(body) {
   return apiClient.put('/profile/me', body).then(unwrap);
 }
 
+export async function changeMyPassword(body) {
+  return apiClient.put('/profile/me/password', body).then(res => res.data);
+}
+
 export async function getDeletionEligibility() {
   return apiClient.get('/profile/me/deletion-eligibility').then(unwrap);
 }
