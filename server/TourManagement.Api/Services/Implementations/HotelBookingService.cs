@@ -15,51 +15,37 @@ namespace TourManagement.Api.Services.Implementations;
 public class HotelBookingService : IHotelBookingService
 {
     private readonly AppDbContext _db;
-    private readonly IHotelService _hotelService;  // reuses CountBookedRoomsAsync
+    private readonly IHotelService _hotelService;
+    private readonly ICheckoutService _checkoutService;
 
-    public HotelBookingService(AppDbContext db, IHotelService hotelService)
+    public HotelBookingService(AppDbContext db, IHotelService hotelService, ICheckoutService checkoutService)
     {
-        _db           = db;
-        _hotelService = hotelService;
+        _db              = db;
+        _hotelService    = hotelService;
+        _checkoutService = checkoutService;
     }
 
-    // Create a new hotel booking (starts as Held).
-    // Validates dates, checks that the trip belongs to this traveler, and
-    // ensures the room has enough availability for the requested dates.
     public async Task<HotelBookingSummaryDto> CreateAsync(CreateHotelBookingDto dto, int travelerId)
     {
-        // Force UTC for Npgsql timestamp with time zone columns
-        dto.CheckInDate = DateTime.SpecifyKind(dto.CheckInDate, DateTimeKind.Utc);
-        dto.CheckOutDate = DateTime.SpecifyKind(dto.CheckOutDate, DateTimeKind.Utc);
-
-        var trip = await _db.Trips.FindAsync(dto.TripId);
-        if (trip == null)
-            throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
-        if (trip.TravelerId != travelerId)
-            throw new ForbiddenException("You can only create bookings for your own trips.");
-
-        await ValidateAndCheckAvailabilityAsync(
-            dto.RoomId, dto.CheckInDate, dto.CheckOutDate, dto.NumberOfRooms, trip, null);
-
-        var booking = new HotelBooking
-        {
-            TripId        = dto.TripId,
-            RoomId        = dto.RoomId,
-            CheckInDate   = dto.CheckInDate,
-            CheckOutDate  = dto.CheckOutDate,
-            NumberOfRooms = dto.NumberOfRooms,
-            Status        = BookingStatus.Held,
-            CreatedAt     = DateTime.UtcNow,
-            UpdatedAt     = DateTime.UtcNow
+        var checkoutDto = new TourManagement.Api.Dtos.Checkout.CreateCheckoutDto 
+        { 
+            TripId = dto.TripId, 
+            Hotel  = new TourManagement.Api.Dtos.Checkout.HotelCheckoutItemDto 
+            {
+                RoomId        = dto.RoomId,
+                CheckInDate   = dto.CheckInDate,
+                CheckOutDate  = dto.CheckOutDate,
+                NumberOfRooms = dto.NumberOfRooms
+            }
         };
 
-        _db.HotelBookings.Add(booking);
-        await _db.SaveChangesAsync();
+        // This handles validation, locks, snapshotting price, idempotency, and 12-hour expiry.
+        var checkoutResponse = await _checkoutService.PlaceHoldAsync(checkoutDto, travelerId);
 
-        // Reload with Room.Hotel so ToSummaryDto can compute TotalPrice.
         var saved = await _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
-            .FirstAsync(b => b.Id == booking.Id);
+            .Include(b => b.Checkout)
+            .FirstAsync(b => b.Id == checkoutResponse.HotelItem!.HotelBookingId);
 
         return saved.ToSummaryDto();
     }
@@ -83,19 +69,46 @@ public class HotelBookingService : IHotelBookingService
         if (booking.Status != BookingStatus.Held)
             throw new ValidationException($"Cannot modify a booking that is already {booking.Status}.");
 
-        await ValidateAndCheckAvailabilityAsync(
-            dto.RoomId, dto.CheckInDate, dto.CheckOutDate, dto.NumberOfRooms, booking.Trip, booking.Id);
+        // Guard: do not allow editing an expired hold
+        if (booking.HoldExpiresAt.HasValue && booking.HoldExpiresAt < DateTime.UtcNow)
+            throw new ValidationException(
+                "This hold has expired. Please place a new checkout hold to rebook.");
 
-        booking.RoomId = dto.RoomId;
-        booking.CheckInDate = dto.CheckInDate;
-        booking.CheckOutDate = dto.CheckOutDate;
-        booking.NumberOfRooms = dto.NumberOfRooms;
-        booking.UpdatedAt = DateTime.UtcNow;
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            if (_db.Database.IsRelational())
+            {
+                // We use a small hash prefix (1_000_000) for room locks to match CheckoutService
+                long roomLockKey = 1_000_000L + dto.RoomId;
+                await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({roomLockKey})");
+            }
 
-        await _db.SaveChangesAsync();
+            await ValidateAndCheckAvailabilityAsync(
+                dto.RoomId, dto.CheckInDate, dto.CheckOutDate, dto.NumberOfRooms, booking.Trip, booking.Id);
+
+            booking.RoomId = dto.RoomId;
+            booking.CheckInDate = dto.CheckInDate;
+            booking.CheckOutDate = dto.CheckOutDate;
+            booking.NumberOfRooms = dto.NumberOfRooms;
+            booking.UpdatedAt = DateTime.UtcNow;
+
+            // If it was linked to a checkout, the checkout snapshot price is now invalidated,
+            // but we don't recalculate the snapshot here because this is a legacy edit.
+            // We just update the DB. TotalPrice will fallback to dynamic calculation.
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         var saved = await _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
+            .Include(b => b.Checkout)
             .FirstAsync(b => b.Id == booking.Id);
 
         return saved.ToSummaryDto();
@@ -131,6 +144,7 @@ public class HotelBookingService : IHotelBookingService
         var query = _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .Include(b => b.Trip)
+            .Include(b => b.Checkout)
             .Where(b => b.Trip.TravelerId == travelerId);
 
         if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))

@@ -16,7 +16,8 @@ public static class HotelMappings
             DestinationName = hotel.Destination?.Name ?? string.Empty,
             StarRating      = hotel.StarRating,
             Status          = hotel.Status,
-            OwnerName       = hotel.Owner?.FullName ?? string.Empty
+            OwnerName       = hotel.Owner?.FullName ?? string.Empty,
+            ImageUrl        = hotel.ImageUrl
         };
     }
 
