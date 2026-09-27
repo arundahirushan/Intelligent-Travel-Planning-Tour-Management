@@ -127,14 +127,22 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Input
-              label="Vehicle Type"
+            <label className="block font-heading font-semibold text-body-sm text-text mb-1">
+              Vehicle Type <span className="text-status-danger">*</span>
+            </label>
+            <select
               name="VehicleType"
               value={formData.VehicleType}
               onChange={handleChange}
-              placeholder="e.g. Van, Car, Bus"
+              className="w-full bg-white border border-border-neutral rounded-md px-3 py-2 font-body text-body-md text-text outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               required
-            />
+            >
+              <option value="">-- Select Vehicle Type --</option>
+              <option value="Car">Car</option>
+              <option value="Van">Van</option>
+              <option value="Bus">Bus</option>
+              <option value="Three Wheeler">Three Wheeler</option>
+            </select>
             {fieldErrors.VehicleType && (
               <p className="text-status-danger text-body-sm mt-1">{fieldErrors.VehicleType}</p>
             )}
