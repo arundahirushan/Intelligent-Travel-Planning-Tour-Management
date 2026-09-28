@@ -74,7 +74,8 @@ void main() {
     final result = await authService.login('admin@test.com', 'wrong_password');
     expect(result, isFalse);
     expect(authService.isAuthenticated, isFalse);
-    expect(authService.errorMessage, contains('Invalid credentials provided by backend.'));
+    expect(authService.errorMessage,
+        contains('Invalid credentials provided by backend.'));
   });
 
   test('Logout clears session', () async {

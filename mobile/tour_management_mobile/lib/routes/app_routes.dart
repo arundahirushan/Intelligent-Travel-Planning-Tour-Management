@@ -1,4 +1,4 @@
-﻿// routes/app_routes.dart -- placeholder route name constants
+// routes/app_routes.dart -- placeholder route name constants
 // Real navigation setup (GoRouter or Navigator 2.0) will be added later.
 
 class AppRoutes {
