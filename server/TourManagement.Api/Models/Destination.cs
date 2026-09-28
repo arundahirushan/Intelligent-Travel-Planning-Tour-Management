@@ -13,6 +13,9 @@ public class Destination
     // Optional URL to an image of this destination. Nullable — not required.
     public string? ImageUrl { get; set; }
 
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

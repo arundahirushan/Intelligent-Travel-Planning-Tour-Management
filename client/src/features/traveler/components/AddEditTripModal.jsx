@@ -4,6 +4,7 @@ import Input from '../../../components/Input';
 import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
+import PickupLocationPickerModal from '../../../components/PickupLocationPickerModal';
 import { createTrip, updateTrip } from '../../../services/travelerApi';
 
 // Format a Date to "YYYY-MM-DD" for <input type="date"> value.
@@ -29,10 +30,14 @@ export default function AddEditTripModal({ isOpen, onClose, onSuccess, trip }) {
     Budget: '',
     GroupSize: '',
     Interests: '',
+    PickupLatitude: null,
+    PickupLongitude: null,
+    PickupNote: '',
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [pickupModalOpen, setPickupModalOpen] = useState(false);
 
   // Reset form each time the modal opens.
   useEffect(() => {
@@ -47,9 +52,12 @@ export default function AddEditTripModal({ isOpen, onClose, onSuccess, trip }) {
           Budget: trip.budget?.toString() || '',
           GroupSize: trip.groupSize?.toString() || '',
           Interests: trip.interests || '',
+          PickupLatitude: trip.pickupLatitude || null,
+          PickupLongitude: trip.pickupLongitude || null,
+          PickupNote: trip.pickupNote || '',
         });
       } else {
-        setFormData({ Title: '', StartDate: '', EndDate: '', Budget: '', GroupSize: '', Interests: '' });
+        setFormData({ Title: '', StartDate: '', EndDate: '', Budget: '', GroupSize: '', Interests: '', PickupLatitude: null, PickupLongitude: null, PickupNote: '' });
       }
     }
   }, [isOpen, isEdit, trip]);
@@ -84,6 +92,10 @@ export default function AddEditTripModal({ isOpen, onClose, onSuccess, trip }) {
       errs.GroupSize = 'Group size must be at least 1.';
     }
 
+    if (formData.PickupLatitude === null || formData.PickupLongitude === null) {
+      errs.PickupLocation = 'Pickup location is required for trip planning.';
+    }
+
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -102,6 +114,9 @@ export default function AddEditTripModal({ isOpen, onClose, onSuccess, trip }) {
       Budget: parseFloat(formData.Budget),
       GroupSize: parseInt(formData.GroupSize, 10),
       Interests: formData.Interests.trim() || null,
+      PickupLatitude: formData.PickupLatitude,
+      PickupLongitude: formData.PickupLongitude,
+      PickupNote: formData.PickupNote || null,
     };
 
     try {
@@ -233,6 +248,28 @@ export default function AddEditTripModal({ isOpen, onClose, onSuccess, trip }) {
           />
         </div>
 
+        <div className="flex flex-col">
+          <label className="mb-1.5 font-heading text-sm font-semibold text-text-secondary">
+            Pickup Location <span className="text-status-danger">*</span>
+          </label>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="secondary" onClick={() => setPickupModalOpen(true)}>
+              <span className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">location_on</span>
+                {formData.PickupLatitude ? 'Edit Pickup Location' : 'Set Pickup Location'}
+              </span>
+            </Button>
+            {formData.PickupLatitude && (
+              <span className="text-body-sm text-text-secondary">
+                {formData.PickupLatitude.toFixed(4)}, {formData.PickupLongitude.toFixed(4)}
+              </span>
+            )}
+          </div>
+          {fieldErrors.PickupLocation && (
+            <span className="mt-1.5 text-xs text-status-danger font-body">{fieldErrors.PickupLocation}</span>
+          )}
+        </div>
+
         <div className="flex justify-end gap-3 mt-2 border-t border-border-neutral pt-4">
           <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
@@ -242,6 +279,23 @@ export default function AddEditTripModal({ isOpen, onClose, onSuccess, trip }) {
           </Button>
         </div>
       </form>
+
+      <PickupLocationPickerModal
+        isOpen={pickupModalOpen}
+        onClose={() => setPickupModalOpen(false)}
+        initialLat={formData.PickupLatitude}
+        initialLng={formData.PickupLongitude}
+        initialNote={formData.PickupNote}
+        onConfirm={({ lat, lng, note }) => {
+          setFormData((prev) => ({
+            ...prev,
+            PickupLatitude: lat,
+            PickupLongitude: lng,
+            PickupNote: note,
+          }));
+          setFieldErrors((prev) => ({ ...prev, PickupLocation: null }));
+        }}
+      />
     </Modal>
   );
 }

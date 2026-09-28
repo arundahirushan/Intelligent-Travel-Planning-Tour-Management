@@ -216,11 +216,44 @@ export default function VehiclesPage() {
                 {paginatedVehicles.map((vehicle) => (
                   <div
                     key={vehicle.id}
-                    className="bg-white border border-border-neutral rounded-xl shadow-soft p-[var(--space-lg)] flex flex-col gap-3 hover:border-primary/30 transition-colors"
+                    className="bg-white border border-border-neutral rounded-xl shadow-soft overflow-hidden flex flex-col hover:border-primary/30 transition-colors"
                   >
-                    {/* Card Header: type + model + status badges */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                    {/* Vehicle Image or Fallback Banner */}
+                    <div className="w-full h-44 bg-surface-neutral overflow-hidden relative">
+                      {vehicle.imageUrl ? (
+                        <img
+                          src={vehicle.imageUrl}
+                          alt={`${vehicle.vehicleType} ${vehicle.model}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null; // prevent infinite loop
+                            e.target.style.display = 'none'; // hide broken image
+                            e.target.nextSibling.style.display = 'flex'; // show fallback
+                          }}
+                        />
+                      ) : null}
+                      
+                      {/* Fallback container (shown if no URL, or if image fails to load) */}
+                      <div 
+                        className="w-full h-full flex-col items-center justify-center text-text-secondary/40 bg-surface-neutral/60"
+                        style={{ display: vehicle.imageUrl ? 'none' : 'flex' }}
+                      >
+                        <span className="material-symbols-outlined text-5xl">directions_car</span>
+                        <span className="text-xs font-heading font-medium mt-1 text-text-secondary/60">
+                          {vehicle.imageUrl ? 'Failed to load image' : 'No image uploaded'}
+                        </span>
+                      </div>
+                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1 shrink-0">
+                        <StatusBadge status={vehicle.status} />
+                        {vehicle.status === 'Active' && (
+                          <StatusBadge status={vehicle.isBookedToday ? 'Booked Today' : 'Available Today'} />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-[var(--space-lg)] flex flex-col gap-3 flex-1">
+                      {/* Card Header: type + model */}
+                      <div>
                         <p className="font-heading font-bold text-headline-sm text-text truncate">
                           {vehicle.vehicleType} — {vehicle.model}
                         </p>
@@ -228,14 +261,6 @@ export default function VehiclesPage() {
                           {vehicle.registrationNumber}
                         </p>
                       </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <StatusBadge status={vehicle.status} />
-                        {/* Availability indicator — only meaningful for Active vehicles */}
-                        {vehicle.status === 'Active' && (
-                          <StatusBadge status={vehicle.isBookedToday ? 'Booked Today' : 'Available Today'} />
-                        )}
-                      </div>
-                    </div>
 
                     {/* Key facts */}
                     <div className="flex items-center gap-4 text-body-sm text-text-secondary border-t border-border-neutral pt-3">
@@ -249,22 +274,23 @@ export default function VehiclesPage() {
                       </span>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center justify-end gap-2 mt-auto pt-1">
-                      <button
-                        onClick={(e) => handleEditClick(e, vehicle)}
-                        className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary hover:text-primary hover:bg-surface-blue transition-colors"
-                        title="Edit vehicle"
-                      >
-                        <span className="material-symbols-outlined text-lg">edit</span>
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteClick(e, vehicle)}
-                        className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary hover:text-status-danger hover:bg-status-danger/10 transition-colors"
-                        title="Deactivate vehicle"
-                      >
-                        <span className="material-symbols-outlined text-lg">delete</span>
-                      </button>
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-end gap-2 mt-auto pt-1">
+                        <button
+                          onClick={(e) => handleEditClick(e, vehicle)}
+                          className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary hover:text-primary hover:bg-surface-blue transition-colors"
+                          title="Edit vehicle"
+                        >
+                          <span className="material-symbols-outlined text-lg">edit</span>
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteClick(e, vehicle)}
+                          className="w-8 h-8 flex items-center justify-center rounded-full text-text-secondary hover:text-status-danger hover:bg-status-danger/10 transition-colors"
+                          title="Delete vehicle"
+                        >
+                          <span className="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -308,9 +334,9 @@ export default function VehiclesPage() {
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="Deactivate Vehicle"
-        message="This will mark the vehicle as Inactive and remove it from search results. Existing bookings are not affected."
-        confirmLabel="Deactivate"
+        title="Delete Vehicle"
+        message="Are you sure you want to delete this vehicle? If this vehicle has past bookings, it will be marked as 'Inactive' instead to preserve your booking history."
+        confirmLabel="Delete"
         isDanger
       />
     </DashboardLayout>

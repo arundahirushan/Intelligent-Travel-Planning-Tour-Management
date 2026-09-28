@@ -491,13 +491,16 @@ public class CheckoutService : ICheckoutService
     private async Task<(VehicleBooking booking, decimal snapshot)> ValidateAndCreateVehicleBookingAsync(
         VehicleCheckoutItemDto item, Trip trip, int travelerId)
     {
-        if (item.EndDate <= item.StartDate)
-            throw new ValidationException("Vehicle EndDate must be after StartDate.");
+        if (item.EndDate < item.StartDate)
+            throw new ValidationException("Vehicle EndDate must not be before StartDate.");
 
         if (item.StartDate.Date < trip.StartDate.Date || item.EndDate.Date > trip.EndDate.Date)
             throw new ValidationException(
                 $"Vehicle booking dates must fall within the trip's date range " +
                 $"({trip.StartDate:yyyy-MM-dd} – {trip.EndDate:yyyy-MM-dd}).");
+
+        if (item.EndDate == item.StartDate)
+            item.EndDate = item.StartDate.AddDays(1);
 
         var vehicle = await _db.Vehicles.FindAsync(item.VehicleId);
         if (vehicle == null)
@@ -512,8 +515,8 @@ public class CheckoutService : ICheckoutService
             throw new ValidationException(
                 "This vehicle is already booked for an overlapping date range. Please choose different dates.");
 
-        // Compute price snapshot: price per day × days.
-        int days = (int)(item.EndDate.Date - item.StartDate.Date).TotalDays;
+        // Compute price snapshot: price per day × days (minimum 1 day for same-day trips).
+        int days = Math.Max(1, (int)(item.EndDate.Date - item.StartDate.Date).TotalDays);
         decimal snapshot = vehicle.PricePerDay * days;
 
         var now = DateTime.UtcNow;

@@ -131,6 +131,12 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -514,6 +520,15 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<string>("Interests")
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("PickupLatitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PickupLongitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PickupNote")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -736,6 +751,9 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("Model")
                         .IsRequired()
