@@ -62,7 +62,7 @@ namespace TourManagement.Api.Data.Migrations
                         .HasDatabaseName("IX_Contracts_SupplierId_Active_Unique")
                         .HasFilter("\"Status\" = 'Active'");
 
-                    b.ToTable("Contracts");
+                    b.ToTable("Contracts", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.ContractRequest", b =>
@@ -116,7 +116,7 @@ namespace TourManagement.Api.Data.Migrations
                         .HasDatabaseName("IX_ContractRequests_SupplierId_Pending_Unique")
                         .HasFilter("\"Status\" = 'Pending'");
 
-                    b.ToTable("ContractRequests");
+                    b.ToTable("ContractRequests", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Destination", b =>
@@ -137,6 +137,12 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -152,7 +158,58 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Destinations");
+                    b.ToTable("Destinations", (string)null);
+                });
+
+            modelBuilder.Entity("TourManagement.Api.Models.ExecutionSummary", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AgentIdentity")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Errors")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("FinalOutcome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResultSummary")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ToolName")
+                        .HasColumnType("text");
+
+                    b.Property<int>("TripProposalId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ValidationResults")
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TripProposalId");
+
+                    b.ToTable("ExecutionSummaries", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Hotel", b =>
@@ -209,7 +266,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Hotels");
+                    b.ToTable("Hotels", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.HotelBooking", b =>
@@ -304,7 +361,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TripId");
 
-                    b.ToTable("ItineraryItems");
+                    b.ToTable("ItineraryItems", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Room", b =>
@@ -348,7 +405,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("Rooms");
+                    b.ToTable("Rooms", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Supply", b =>
@@ -402,7 +459,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("Supplies");
+                    b.ToTable("Supplies", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.SupplyOrder", b =>
@@ -443,7 +500,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TripId");
 
-                    b.ToTable("SupplyOrders");
+                    b.ToTable("SupplyOrders", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Trip", b =>
@@ -469,6 +526,15 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<string>("Interests")
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("PickupLatitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PickupLongitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PickupNote")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -492,7 +558,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TravelerId");
 
-                    b.ToTable("Trips");
+                    b.ToTable("Trips", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.TripCheckout", b =>
@@ -553,7 +619,87 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TripId");
 
-                    b.ToTable("TripCheckouts");
+                    b.ToTable("TripCheckouts", (string)null);
+                });
+
+            modelBuilder.Entity("TourManagement.Api.Models.TripProposal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdminDecision")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("AdminDecisionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("AdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CheckoutId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InputSnapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ProposalId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TravelerDecision")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("TravelerDecisionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TripId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminId");
+
+                    b.HasIndex("CheckoutId");
+
+                    b.HasIndex("ProposalId")
+                        .IsUnique();
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TripId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("TripProposals", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.User", b =>
@@ -595,7 +741,7 @@ namespace TourManagement.Api.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Vehicle", b =>
@@ -611,6 +757,9 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("Model")
                         .IsRequired()
@@ -646,7 +795,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Vehicles");
+                    b.ToTable("Vehicles", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.VehicleBooking", b =>
@@ -707,7 +856,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("VehicleBookings");
+                    b.ToTable("VehicleBookings", (string)null);
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Contract", b =>
@@ -737,6 +886,17 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("ExistingContract");
 
                     b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("TourManagement.Api.Models.ExecutionSummary", b =>
+                {
+                    b.HasOne("TourManagement.Api.Models.TripProposal", "TripProposal")
+                        .WithMany("ExecutionSummaries")
+                        .HasForeignKey("TripProposalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TripProposal");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Hotel", b =>
@@ -874,6 +1034,31 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("Trip");
                 });
 
+            modelBuilder.Entity("TourManagement.Api.Models.TripProposal", b =>
+                {
+                    b.HasOne("TourManagement.Api.Models.User", "Admin")
+                        .WithMany()
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TourManagement.Api.Models.TripCheckout", "Checkout")
+                        .WithMany()
+                        .HasForeignKey("CheckoutId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TourManagement.Api.Models.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
+
+                    b.Navigation("Checkout");
+
+                    b.Navigation("Trip");
+                });
+
             modelBuilder.Entity("TourManagement.Api.Models.Vehicle", b =>
                 {
                     b.HasOne("TourManagement.Api.Models.User", "Provider")
@@ -956,6 +1141,11 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("HotelBookings");
 
                     b.Navigation("VehicleBooking");
+                });
+
+            modelBuilder.Entity("TourManagement.Api.Models.TripProposal", b =>
+                {
+                    b.Navigation("ExecutionSummaries");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.User", b =>

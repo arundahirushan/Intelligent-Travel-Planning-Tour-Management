@@ -1,5 +1,6 @@
 using TourManagement.Api.Common;
 using TourManagement.Api.Dtos.Checkout;
+using TourManagement.Api.Models;
 
 namespace TourManagement.Api.Services.Interfaces;
 
@@ -14,6 +15,8 @@ public interface ICheckoutService
     // Called by the future Admin approval workflow to place holds for an AI proposal.
     // Validates that the proposed hotels match the trip's destinations, do not overlap, etc.
     Task<CheckoutResponseDto> PlaceApprovedProposalHoldAsync(CreateCheckoutDto dto, int travelerId);
+
+    Task ValidateAgenticProposalAsync(CreateCheckoutDto dto, Trip trip);
 
     // Get a single checkout by ID. Throws ForbiddenException if not the owner.
     Task<CheckoutResponseDto> GetByIdAsync(int checkoutId, int travelerId);

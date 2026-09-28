@@ -11,7 +11,7 @@ public interface IVehicleService
     Task<PagedResult<VehicleSummaryDto>> GetMyVehiclesAsync(int providerId, string? search, string? status, string? sort, int page, int pageSize);
     Task<VehicleDetailDto> GetMyVehicleByIdAsync(int vehicleId, int providerId);
     Task<VehicleDetailDto> UpdateVehicleAsync(int vehicleId, UpdateVehicleDto dto, int requestingUserId);
-    Task DeactivateVehicleAsync(int vehicleId, int requestingUserId);  // sets Status = Inactive
+    Task DeleteVehicleAsync(int vehicleId, int requestingUserId);
 
     Task<PagedResult<VehicleBookingSummaryDto>> GetVehicleBookingsAsync(int vehicleId, int requestingUserId, int page, int pageSize);
 
