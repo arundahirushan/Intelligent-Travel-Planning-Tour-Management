@@ -19,7 +19,5 @@ public class VehicleSummaryDto
 
     // True if there is a Held or Confirmed booking for today.
     public bool IsBookedToday { get; set; }
-
-    public string? ImageUrl { get; set; }
 }
 
