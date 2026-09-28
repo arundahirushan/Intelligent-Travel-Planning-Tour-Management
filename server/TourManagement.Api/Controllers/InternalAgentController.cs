@@ -84,11 +84,12 @@ public class InternalAgentController : ControllerBase
     }
     
     [HttpGet("weather")]
-    public async Task<ActionResult<ApiResponse<object>>> GetWeather([FromQuery] string destination, [FromQuery] DateTime date)
+    public async Task<ActionResult<ApiResponse<object>>> GetWeather([FromQuery] string destination, [FromQuery] DateTime date, [FromServices] IWeatherService weatherService)
     {
         var proposal = await GetAuthorizedProposalAsync();
         if (proposal == null) return Unauthorized();
 
-        return StatusCode(501, ApiResponse<object>.Fail("Weather service is not implemented yet."));
+        var result = await weatherService.GetWeatherAsync(destination, date);
+        return Ok(ApiResponse<object>.Ok(result));
     }
 }

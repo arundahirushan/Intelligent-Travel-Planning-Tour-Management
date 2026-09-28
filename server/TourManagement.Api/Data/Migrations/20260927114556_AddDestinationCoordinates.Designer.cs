@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TourManagement.Api.Data;
@@ -11,9 +12,11 @@ using TourManagement.Api.Data;
 namespace TourManagement.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260927114556_AddDestinationCoordinates")]
+    partial class AddDestinationCoordinates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,7 +62,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("Contracts", (string)null);
+                    b.ToTable("Contracts");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.ContractRequest", b =>
@@ -110,7 +113,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("ContractRequests", (string)null);
+                    b.ToTable("ContractRequests");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Destination", b =>
@@ -152,7 +155,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Destinations", (string)null);
+                    b.ToTable("Destinations");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.ExecutionSummary", b =>
@@ -203,7 +206,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TripProposalId");
 
-                    b.ToTable("ExecutionSummaries", (string)null);
+                    b.ToTable("ExecutionSummaries");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Hotel", b =>
@@ -260,7 +263,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Hotels", (string)null);
+                    b.ToTable("Hotels");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.HotelBooking", b =>
@@ -355,7 +358,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TripId");
 
-                    b.ToTable("ItineraryItems", (string)null);
+                    b.ToTable("ItineraryItems");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Room", b =>
@@ -399,7 +402,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("Rooms", (string)null);
+                    b.ToTable("Rooms");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Supply", b =>
@@ -453,7 +456,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("Supplies", (string)null);
+                    b.ToTable("Supplies");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.SupplyOrder", b =>
@@ -494,7 +497,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TripId");
 
-                    b.ToTable("SupplyOrders", (string)null);
+                    b.ToTable("SupplyOrders");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Trip", b =>
@@ -552,7 +555,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TravelerId");
 
-                    b.ToTable("Trips", (string)null);
+                    b.ToTable("Trips");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.TripCheckout", b =>
@@ -613,7 +616,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("TripId");
 
-                    b.ToTable("TripCheckouts", (string)null);
+                    b.ToTable("TripCheckouts");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.TripProposal", b =>
@@ -693,7 +696,7 @@ namespace TourManagement.Api.Data.Migrations
                     b.HasIndex("TripId", "Version")
                         .IsUnique();
 
-                    b.ToTable("TripProposals", (string)null);
+                    b.ToTable("TripProposals");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.User", b =>
@@ -735,7 +738,7 @@ namespace TourManagement.Api.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Vehicle", b =>
@@ -789,7 +792,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Vehicles", (string)null);
+                    b.ToTable("Vehicles");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.VehicleBooking", b =>
@@ -850,7 +853,7 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("VehicleBookings", (string)null);
+                    b.ToTable("VehicleBookings");
                 });
 
             modelBuilder.Entity("TourManagement.Api.Models.Contract", b =>
