@@ -318,6 +318,15 @@ public class AppDbContext : DbContext
                   .WithOne(cr => cr.ExistingContract)
                   .HasForeignKey(cr => cr.ExistingContractId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            // ── HARD CONSTRAINT: only one Active contract per supplier ──────────
+            // A partial unique index on (SupplierId) WHERE Status = 'Active' means
+            // the database itself will reject a second Active row for the same supplier.
+            // Historical rows (Terminated / Expired-computed) are completely unaffected.
+            entity.HasIndex(c => c.SupplierId)
+                  .HasFilter("\"Status\" = 'Active'")
+                  .IsUnique()
+                  .HasDatabaseName("IX_Contracts_SupplierId_Active_Unique");
         });
 
         // ── ContractRequest ───────────────────────────────────────────────────
@@ -334,6 +343,13 @@ public class AppDbContext : DbContext
             // Frequent lookup and filtering columns.
             entity.HasIndex(cr => cr.SupplierId);
             entity.HasIndex(cr => cr.Status);
+
+            // ── HARD CONSTRAINT: only one Pending request per supplier ────────
+            // Prevents two simultaneous pending requests from slipping through.
+            entity.HasIndex(cr => cr.SupplierId)
+                  .HasFilter("\"Status\" = 'Pending'")
+                  .IsUnique()
+                  .HasDatabaseName("IX_ContractRequests_SupplierId_Pending_Unique");
         });
 
         // ── SupplyOrder ───────────────────────────────────────────────────────
