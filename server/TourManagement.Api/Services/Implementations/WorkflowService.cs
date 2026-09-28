@@ -66,6 +66,9 @@ public class WorkflowService : IWorkflowService
             Budget = trip.Budget,
             GroupSize = trip.GroupSize,
             Interests = trip.Interests,
+            PickupLatitude = trip.PickupLatitude,
+            PickupLongitude = trip.PickupLongitude,
+            PickupNote = trip.PickupNote,
             Destinations = trip.ItineraryItems.Select(i => new { i.DestinationId, i.DayNumber }).ToList()
         };
 

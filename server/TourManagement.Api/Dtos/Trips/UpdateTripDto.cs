@@ -24,4 +24,8 @@ public class UpdateTripDto
     public int GroupSize { get; set; }
 
     public string? Interests { get; set; }
+
+    public decimal? PickupLatitude { get; set; }
+    public decimal? PickupLongitude { get; set; }
+    public string? PickupNote { get; set; }
 }
