@@ -3,11 +3,16 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from '../pages/HomePage';
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
-import DashboardPlaceholder from '../pages/DashboardPlaceholder';
 import ProtectedRoute from './ProtectedRoute';
 import DestinationPage from '../pages/DestinationPage';
 import HotelsPage from '../pages/HotelsPage';
 import VehiclesPublicPage from '../pages/VehiclesPublicPage';
+
+// Supplier Dashboard Pages
+import SuppliesPage from '../features/supplier/pages/SuppliesPage';
+import ContractsPage from '../features/supplier/pages/ContractsPage';
+import IncomingOrdersPage from '../features/supplier/pages/IncomingOrdersPage';
+import SupplierProfilePage from '../features/supplier/pages/ProfilePage';
 
 // Traveler Dashboard Pages
 import MyTripsPage from '../features/traveler/pages/MyTripsPage';
@@ -81,8 +86,13 @@ export default function AppRoutes() {
         />
       </Route>
 
+      {/* Supplier Dashboard */}
       <Route element={<ProtectedRoute allowedRoles={['Supplier']} />}>
-        <Route path="/supplier" element={<DashboardPlaceholder role="Supplier" />} />
+        <Route path="/supplier" element={<Navigate to="/supplier/supplies" replace />} />
+        <Route path="/supplier/supplies" element={<SuppliesPage />} />
+        <Route path="/supplier/contracts" element={<ContractsPage />} />
+        <Route path="/supplier/orders" element={<IncomingOrdersPage />} />
+        <Route path="/supplier/profile" element={<SupplierProfilePage />} />
       </Route>
 
       {/* Fallback */}

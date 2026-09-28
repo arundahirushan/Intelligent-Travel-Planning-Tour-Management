@@ -32,7 +32,7 @@ public class ContractService : IContractService
         if (dto.EndDate <= dto.StartDate)
             throw new ValidationException("EndDate must be after StartDate.");
 
-        // Reject if supplier already has a currently-valid contract
+        // Reject if supplier already has an active, valid contract
         var today = DateTime.UtcNow.Date;
         var hasValidContract = await _db.Contracts.AnyAsync(c =>
             c.SupplierId == dto.SupplierId &&
@@ -40,7 +40,7 @@ public class ContractService : IContractService
             c.EndDate.Date >= today);
 
         if (hasValidContract)
-            throw new ValidationException("This supplier already has an active, valid contract. A renewal request or termination is required before creating another contract.");
+            throw new ValidationException("This supplier already has an active, valid contract.");
 
         var contract = dto.ToEntity();
         _db.Contracts.Add(contract);
