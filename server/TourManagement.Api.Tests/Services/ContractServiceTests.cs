@@ -158,4 +158,106 @@ public class ContractServiceTests
         var isValidNow = await service.IsContractCurrentlyValidAsync(1);
         Assert.True(isValidNow);
     }
+
+    // 1. A Supplier with a valid contract cannot request another.
+    [Fact]
+    public async Task CreateRequestAsync_WhenValidContractAlreadyExists_ThrowsValidationException()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var requestService = new ContractRequestService(db);
+        var today = DateTime.UtcNow.Date;
+
+        db.Contracts.Add(new Contract { Id = 20, SupplierId = 1, StartDate = today.AddDays(-1), EndDate = today.AddDays(10), Status = ContractStatus.Active });
+        await db.SaveChangesAsync();
+
+        var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 1 };
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => requestService.CreateRequestAsync(dto, 1));
+        Assert.Contains("You already have an active contract. You may only submit a new request after it expires or is terminated.", exception.Message);
+    }
+
+    // 2. A Supplier cannot have two pending requests.
+    [Fact]
+    public async Task CreateRequestAsync_WhenPendingRequestExists_ThrowsValidationException()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var requestService = new ContractRequestService(db);
+        db.ContractRequests.Add(new ContractRequest { Id = 30, SupplierId = 1, Status = ContractRequestStatus.Pending });
+        await db.SaveChangesAsync();
+
+        var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 1 };
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => requestService.CreateRequestAsync(dto, 1));
+        Assert.Contains("You already have a contract request pending admin review.", exception.Message);
+    }
+
+    // 3 & 4. A Supplier can request a new contract after expiry or termination.
+    [Fact]
+    public async Task CreateRequestAsync_WhenPreviousContractExpiredOrTerminated_Succeeds()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var requestService = new ContractRequestService(db);
+        var today = DateTime.UtcNow.Date;
+
+        db.Contracts.Add(new Contract { Id = 40, SupplierId = 1, StartDate = today.AddDays(-10), EndDate = today.AddDays(-1), Status = ContractStatus.Active }); // Expired
+        db.Contracts.Add(new Contract { Id = 41, SupplierId = 1, StartDate = today.AddDays(-5), EndDate = today.AddDays(5), Status = ContractStatus.Terminated }); // Terminated
+        await db.SaveChangesAsync();
+
+        var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 2 };
+        var result = await requestService.CreateRequestAsync(dto, 1);
+        Assert.NotNull(result);
+    }
+
+    // 4.5. A Supplier can request a new contract after a previous request was Rejected.
+    [Fact]
+    public async Task CreateRequestAsync_WhenPreviousRequestRejected_Succeeds()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var requestService = new ContractRequestService(db);
+        
+        db.ContractRequests.Add(new ContractRequest { Id = 45, SupplierId = 1, Status = ContractRequestStatus.Rejected });
+        await db.SaveChangesAsync();
+
+        var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 1 };
+        var result = await requestService.CreateRequestAsync(dto, 1);
+        Assert.NotNull(result);
+    }
+
+    // 5. Only durations of 1, 2, or 3 years are accepted. (Model validation via Validator)
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(3, true)]
+    [InlineData(4, false)]
+    public void CreateContractRequestDto_DurationInYears_Validation(int duration, bool isValid)
+    {
+        var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = duration };
+        var context = new System.ComponentModel.DataAnnotations.ValidationContext(dto);
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        bool actual = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(dto, context, results, true);
+        Assert.Equal(isValid, actual);
+    }
+
+    // 6. The backend calculates the correct End Date.
+    [Fact]
+    public void ToEntity_CalculatesCorrectEndDate()
+    {
+        var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, RequestedStartDate = new DateTime(2025, 1, 1), DurationInYears = 2 };
+        var entity = TourManagement.Api.Mappings.ContractRequestMappings.ToEntity(dto, 1);
+        Assert.Equal(new DateTime(2027, 1, 1), entity.RequestedEndDate);
+    }
+
+    // 7. Admin approval cannot create overlapping valid contracts.
+    [Fact]
+    public async Task ApproveAsync_WhenSupplierAlreadyHasValidContract_ThrowsValidationException()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var requestService = new ContractRequestService(db);
+        var today = DateTime.UtcNow.Date;
+
+        db.Contracts.Add(new Contract { Id = 50, SupplierId = 1, StartDate = today.AddDays(-1), EndDate = today.AddDays(10), Status = ContractStatus.Active });
+        db.ContractRequests.Add(new ContractRequest { Id = 51, SupplierId = 1, Status = ContractRequestStatus.Pending, RequestType = ContractRequestType.New });
+        await db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => requestService.ApproveAsync(51));
+        Assert.Contains("already has a valid active contract", exception.Message);
+    }
 }
