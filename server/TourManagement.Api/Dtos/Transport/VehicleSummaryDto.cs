@@ -12,6 +12,7 @@ public class VehicleSummaryDto
     public int Capacity { get; set; }
     public decimal PricePerDay { get; set; }
     public VehicleStatus Status { get; set; }
+    public string? ImageUrl { get; set; }
 
     // ProviderName is mainly useful in the Admin's view.
     public string ProviderName { get; set; } = string.Empty;

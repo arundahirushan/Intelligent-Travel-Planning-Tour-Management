@@ -7,6 +7,7 @@ public interface IProfileService
 {
     Task<UserSummaryDto> GetMyProfileAsync(int userId);
     Task<UserSummaryDto> UpdateMyProfileAsync(int userId, UpdateProfileDto dto);
+    Task ChangePasswordAsync(int userId, ChangePasswordDto dto);
     Task<DeletionEligibilityDto> CheckDeletionEligibilityAsync(int userId, string role);
     Task DeleteMyAccountAsync(int userId, string role);
 }

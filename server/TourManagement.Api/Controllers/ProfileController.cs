@@ -36,6 +36,14 @@ public class ProfileController : ControllerBase
         return Ok(ApiResponse<UserSummaryDto>.Ok(profile, "Profile updated successfully."));
     }
 
+    [HttpPut("me/password")]
+    public async Task<ActionResult<ApiResponse>> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        var userId = GetCurrentUserId();
+        await _profileService.ChangePasswordAsync(userId, dto);
+        return Ok(ApiResponse.Ok("Password updated successfully."));
+    }
+
     [HttpGet("me/deletion-eligibility")]
     public async Task<ActionResult<ApiResponse<DeletionEligibilityDto>>> CheckDeletionEligibility()
     {
