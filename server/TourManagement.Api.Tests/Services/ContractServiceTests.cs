@@ -172,7 +172,7 @@ public class ContractServiceTests
 
         var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 1 };
         var exception = await Assert.ThrowsAsync<ValidationException>(() => requestService.CreateRequestAsync(dto, 1));
-        Assert.Contains("already hold an active, valid contract", exception.Message);
+        Assert.Contains("You already have an active contract. You may only submit a new request after it expires or is terminated.", exception.Message);
     }
 
     // 2. A Supplier cannot have two pending requests.
@@ -186,7 +186,7 @@ public class ContractServiceTests
 
         var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 1 };
         var exception = await Assert.ThrowsAsync<ValidationException>(() => requestService.CreateRequestAsync(dto, 1));
-        Assert.Contains("outstanding contract request pending review", exception.Message);
+        Assert.Contains("You already have a contract request pending admin review.", exception.Message);
     }
 
     // 3 & 4. A Supplier can request a new contract after expiry or termination.
@@ -202,6 +202,21 @@ public class ContractServiceTests
         await db.SaveChangesAsync();
 
         var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 2 };
+        var result = await requestService.CreateRequestAsync(dto, 1);
+        Assert.NotNull(result);
+    }
+
+    // 4.5. A Supplier can request a new contract after a previous request was Rejected.
+    [Fact]
+    public async Task CreateRequestAsync_WhenPreviousRequestRejected_Succeeds()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var requestService = new ContractRequestService(db);
+        
+        db.ContractRequests.Add(new ContractRequest { Id = 45, SupplierId = 1, Status = ContractRequestStatus.Rejected });
+        await db.SaveChangesAsync();
+
+        var dto = new CreateContractRequestDto { RequestType = ContractRequestType.New, DurationInYears = 1 };
         var result = await requestService.CreateRequestAsync(dto, 1);
         Assert.NotNull(result);
     }

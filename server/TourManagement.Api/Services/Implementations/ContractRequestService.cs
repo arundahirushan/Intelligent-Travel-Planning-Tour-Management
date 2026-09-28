@@ -23,22 +23,22 @@ public class ContractRequestService : IContractRequestService
     {
         var today = DateTime.UtcNow.Date;
 
-        // 1. Check if they have an active valid contract
+        // 1. Reject if supplier already has a pending request
+        var hasPending = await _db.ContractRequests.AnyAsync(r =>
+            r.SupplierId == supplierId &&
+            r.Status == ContractRequestStatus.Pending);
+
+        if (hasPending)
+            throw new ValidationException("You already have a contract request pending admin review.");
+
+        // 2. Check if they have an active valid contract
         var hasValidContract = await _db.Contracts.AnyAsync(c =>
             c.SupplierId == supplierId &&
             c.Status == ContractStatus.Active &&
             c.EndDate.Date >= today);
 
         if (hasValidContract)
-            throw new ValidationException("Cannot submit a contract request while you already hold an active, valid contract.");
-
-        // 2. Reject if supplier already has a pending request
-        var hasPending = await _db.ContractRequests.AnyAsync(r =>
-            r.SupplierId == supplierId &&
-            r.Status == ContractRequestStatus.Pending);
-
-        if (hasPending)
-            throw new ValidationException("You already have an outstanding contract request pending review.");
+            throw new ValidationException("You already have an active contract. You may only submit a new request after it expires or is terminated.");
 
         // 3. Validate request-type specific rules
         if (dto.RequestType == ContractRequestType.Renewal)
@@ -196,6 +196,19 @@ public class ContractRequestService : IContractRequestService
         }
         else // New contract request
         {
+            // If the supplier has any old contracts that are still marked as 'Active' in the DB 
+            // (e.g. they expired but were never manually terminated), we must terminate them now.
+            // Otherwise, inserting a new Active contract will violate the IX_Contracts_SupplierId_Active_Unique constraint.
+            var oldActiveContracts = await _db.Contracts
+                .Where(c => c.SupplierId == request.SupplierId && c.Status == ContractStatus.Active)
+                .ToListAsync();
+
+            foreach (var oldContract in oldActiveContracts)
+            {
+                oldContract.Status = ContractStatus.Terminated;
+                oldContract.UpdatedAt = DateTime.UtcNow;
+            }
+
             var newContract = new Contract
             {
                 SupplierId = request.SupplierId,
