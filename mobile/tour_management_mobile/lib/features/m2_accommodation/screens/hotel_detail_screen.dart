@@ -47,17 +47,23 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
     }
   }
 
-  Future<void> _performAction(String actionName, Future<void> Function() actionMethod) async {
+  Future<void> _performAction(
+      String actionName, Future<void> Function() actionMethod) async {
     if (_isActionRunning) return;
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirm $actionName'),
-        content: Text('Are you sure you want to $actionName "${_hotel?.name}"?'),
+        content:
+            Text('Are you sure you want to $actionName "${_hotel?.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(actionName)),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(actionName)),
         ],
       ),
     );
@@ -70,7 +76,8 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       await actionMethod();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hotel successfully ${actionName.toLowerCase()}ed.')),
+        SnackBar(
+            content: Text('Hotel successfully ${actionName.toLowerCase()}ed.')),
       );
       // Reload to get updated status
       await _loadData();
@@ -80,7 +87,9 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       await _loadData();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceAll('Exception: ', '')}')),
+        SnackBar(
+            content:
+                Text('Failed: ${e.toString().replaceAll('Exception: ', '')}')),
       );
     } finally {
       if (mounted) {
@@ -149,35 +158,46 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
               errorBuilder: (_, __, ___) => Container(
                 height: 200,
                 color: Colors.grey[200],
-                child: const Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                child: const Icon(Icons.broken_image,
+                    size: 64, color: Colors.grey),
               ),
             ),
           const SizedBox(height: 16),
-          Text(h.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(h.name,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(
             children: [
               Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
               const SizedBox(width: 4),
-              Expanded(child: Text('${h.address} (${h.destinationName})', style: TextStyle(color: Colors.grey[800]))),
+              Expanded(
+                  child: Text('${h.address} (${h.destinationName})',
+                      style: TextStyle(color: Colors.grey[800]))),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Chip(label: Text(h.status), backgroundColor: _getStatusColor(h.status)),
+              Chip(
+                  label: Text(h.status),
+                  backgroundColor: _getStatusColor(h.status)),
               const SizedBox(width: 8),
               if (h.starRating != null)
                 Row(
                   children: List.generate(
                     h.starRating!,
-                    (index) => const Icon(Icons.star, size: 16, color: Colors.amber),
+                    (index) =>
+                        const Icon(Icons.star, size: 16, color: Colors.amber),
                   ),
                 ),
             ],
           ),
           const Divider(height: 32),
-          Text('Property Details', style: Theme.of(context).textTheme.titleLarge),
+          Text('Property Details',
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           _buildDetailRow('Owner', h.ownerName),
           _buildDetailRow('Contact Phone', h.contactPhone),
@@ -187,7 +207,8 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
           const SizedBox(height: 8),
           Text(h.description),
           const Divider(height: 32),
-          Text('Rooms (${h.rooms.length})', style: Theme.of(context).textTheme.titleLarge),
+          Text('Rooms (${h.rooms.length})',
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           ...h.rooms.map((r) => Card(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -199,16 +220,24 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(r.roomType, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text('\$${r.pricePerNight.toStringAsFixed(2)}/night', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          Text(r.roomType,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('\$${r.pricePerNight.toStringAsFixed(2)}/night',
+                              style: const TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text('Capacity: ${r.capacity} | Total Rooms: ${r.totalRooms} | Status: ${r.status}'),
+                      Text(
+                          'Capacity: ${r.capacity} | Total Rooms: ${r.totalRooms} | Status: ${r.status}'),
                       if (r.amenities != null && r.amenities!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Text('Amenities: ${r.amenities}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          child: Text('Amenities: ${r.amenities}',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.grey)),
                         ),
                     ],
                   ),
@@ -240,7 +269,11 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
+          SizedBox(
+              width: 120,
+              child: Text(label,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.grey))),
           Expanded(child: Text(value)),
         ],
       ),
@@ -256,7 +289,10 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       actions.add(Expanded(
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-          onPressed: _isActionRunning ? null : () => _performAction('Approve', () => _service.approveHotel(_hotel!.id)),
+          onPressed: _isActionRunning
+              ? null
+              : () => _performAction(
+                  'Approve', () => _service.approveHotel(_hotel!.id)),
           child: const Text('Approve'),
         ),
       ));
@@ -264,7 +300,10 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       actions.add(Expanded(
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: _isActionRunning ? null : () => _performAction('Reject', () => _service.rejectHotel(_hotel!.id)),
+          onPressed: _isActionRunning
+              ? null
+              : () => _performAction(
+                  'Reject', () => _service.rejectHotel(_hotel!.id)),
           child: const Text('Reject'),
         ),
       ));
@@ -272,7 +311,10 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       actions.add(Expanded(
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-          onPressed: _isActionRunning ? null : () => _performAction('Suspend', () => _service.suspendHotel(_hotel!.id)),
+          onPressed: _isActionRunning
+              ? null
+              : () => _performAction(
+                  'Suspend', () => _service.suspendHotel(_hotel!.id)),
           child: const Text('Suspend'),
         ),
       ));

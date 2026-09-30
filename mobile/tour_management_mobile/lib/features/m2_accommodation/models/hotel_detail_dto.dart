@@ -51,8 +51,12 @@ class HotelDetailDto {
       starRating: json['starRating'],
       imageUrl: json['imageUrl'],
       status: json['status'] ?? 'Unknown',
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : DateTime.now(),
       occupancyPercentage: json['occupancyPercentage'] ?? 0,
       rooms: (json['rooms'] as List<dynamic>?)
               ?.map((e) => RoomDto.fromJson(e as Map<String, dynamic>))

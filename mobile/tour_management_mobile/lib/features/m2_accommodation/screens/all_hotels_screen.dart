@@ -13,7 +13,7 @@ class AllHotelsScreen extends StatefulWidget {
 class _AllHotelsScreenState extends State<AllHotelsScreen> {
   final AccommodationService _service = AccommodationService();
   final List<HotelSummaryDto> _hotels = [];
-  
+
   bool _isLoading = false;
   String? _error;
   int _currentPage = 1;
@@ -138,7 +138,8 @@ class _AllHotelsScreenState extends State<AllHotelsScreen> {
               value: _selectedStatus,
               items: [
                 const DropdownMenuItem(value: null, child: Text('All')),
-                ..._statuses.map((s) => DropdownMenuItem(value: s, child: Text(s))),
+                ..._statuses
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s))),
               ],
               onChanged: (val) {
                 setState(() => _selectedStatus = val);
@@ -203,17 +204,21 @@ class _AllHotelsScreenState extends State<AllHotelsScreen> {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image),
                     )
                   : const Icon(Icons.hotel, size: 40),
-              title: Text(hotel.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('${hotel.destinationName}\nStatus: ${hotel.status}'),
+              title: Text(hotel.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle:
+                  Text('${hotel.destinationName}\nStatus: ${hotel.status}'),
               isThreeLine: true,
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => HotelDetailScreen(hotelId: hotel.id)),
+                  MaterialPageRoute(
+                      builder: (_) => HotelDetailScreen(hotelId: hotel.id)),
                 );
                 if (result == true) {
                   _loadData(refresh: true);

@@ -123,17 +123,21 @@ class _PendingHotelsScreenState extends State<PendingHotelsScreen> {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image),
                     )
                   : const Icon(Icons.hotel, size: 40),
-              title: Text(hotel.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('${hotel.destinationName}\nOwner: ${hotel.ownerName}'),
+              title: Text(hotel.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle:
+                  Text('${hotel.destinationName}\nOwner: ${hotel.ownerName}'),
               isThreeLine: true,
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => HotelDetailScreen(hotelId: hotel.id)),
+                  MaterialPageRoute(
+                      builder: (_) => HotelDetailScreen(hotelId: hotel.id)),
                 );
                 if (result == true) {
                   _loadData(refresh: true);

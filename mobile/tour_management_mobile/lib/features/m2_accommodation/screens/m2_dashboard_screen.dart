@@ -55,13 +55,14 @@ class M2DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard(BuildContext context, String title,
-      String subtitle, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionCard(BuildContext context, String title, String subtitle,
+      IconData icon, Color color, VoidCallback onTap) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.1),
           child: Icon(icon, color: color),

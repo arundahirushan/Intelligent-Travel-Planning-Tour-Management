@@ -26,11 +26,17 @@ class HotelBookingSummaryDto {
       id: json['id'] ?? 0,
       hotelName: json['hotelName'] ?? '',
       roomType: json['roomType'] ?? '',
-      checkInDate: json['checkInDate'] != null ? DateTime.parse(json['checkInDate']) : DateTime.now(),
-      checkOutDate: json['checkOutDate'] != null ? DateTime.parse(json['checkOutDate']) : DateTime.now(),
+      checkInDate: json['checkInDate'] != null
+          ? DateTime.parse(json['checkInDate'])
+          : DateTime.now(),
+      checkOutDate: json['checkOutDate'] != null
+          ? DateTime.parse(json['checkOutDate'])
+          : DateTime.now(),
       numberOfRooms: json['numberOfRooms'] ?? 0,
       status: json['status'] ?? 'Unknown',
-      holdExpiresAt: json['holdExpiresAt'] != null ? DateTime.parse(json['holdExpiresAt']) : null,
+      holdExpiresAt: json['holdExpiresAt'] != null
+          ? DateTime.parse(json['holdExpiresAt'])
+          : null,
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
     );
   }

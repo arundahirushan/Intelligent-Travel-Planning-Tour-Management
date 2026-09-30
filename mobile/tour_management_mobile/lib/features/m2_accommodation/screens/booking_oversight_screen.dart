@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/hotel_booking_summary_dto.dart';
 import '../models/hotel_status.dart'; // Contains BookingStatus as well
 import '../services/accommodation_service.dart';
-import 'package:intl/intl.dart';
 
 class BookingOversightScreen extends StatefulWidget {
   const BookingOversightScreen({super.key});
@@ -152,9 +151,15 @@ class _BookingOversightScreenState extends State<BookingOversightScreen> {
           }
 
           final booking = _bookings[index];
-          final dateFormat = DateFormat('MMM dd, yyyy');
-          final holdFormat = DateFormat('MMM dd, yyyy HH:mm');
-          
+          final ci = booking.checkInDate;
+          final co = booking.checkOutDate;
+          final exp = booking.holdExpiresAt?.toLocal();
+
+          String formatDate(DateTime d) =>
+              '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+          String formatTime(DateTime d) =>
+              '${formatDate(d)} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Padding(
@@ -180,7 +185,7 @@ class _BookingOversightScreenState extends State<BookingOversightScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text('Room Type: ${booking.roomType}'),
-                  Text('Dates: ${dateFormat.format(booking.checkInDate)} - ${dateFormat.format(booking.checkOutDate)}'),
+                  Text('Dates: ${formatDate(ci)} - ${formatDate(co)}'),
                   Text('Rooms Booked: ${booking.numberOfRooms}'),
                   const SizedBox(height: 4),
                   Row(
@@ -190,9 +195,9 @@ class _BookingOversightScreenState extends State<BookingOversightScreen> {
                         'Total Price: \$${booking.totalPrice.toStringAsFixed(2)}',
                         style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
                       ),
-                      if (booking.status == BookingStatus.held && booking.holdExpiresAt != null)
+                      if (booking.status == BookingStatus.held && exp != null)
                         Text(
-                          'Expires: ${holdFormat.format(booking.holdExpiresAt!.toLocal())}',
+                          'Expires: ${formatTime(exp)}',
                           style: const TextStyle(fontSize: 12, color: Colors.red),
                         ),
                     ],
