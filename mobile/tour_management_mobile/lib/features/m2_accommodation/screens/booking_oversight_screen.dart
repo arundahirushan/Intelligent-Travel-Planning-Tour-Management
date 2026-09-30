@@ -173,11 +173,13 @@ class _BookingOversightScreenState extends State<BookingOversightScreen> {
                       Expanded(
                         child: Text(
                           booking.hotelName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                       ),
                       Chip(
-                        label: Text(booking.status, style: const TextStyle(fontSize: 12)),
+                        label: Text(booking.status,
+                            style: const TextStyle(fontSize: 12)),
                         backgroundColor: _getStatusColor(booking.status),
                         padding: EdgeInsets.zero,
                       ),
@@ -193,12 +195,14 @@ class _BookingOversightScreenState extends State<BookingOversightScreen> {
                     children: [
                       Text(
                         'Total Price: \$${booking.totalPrice.toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.green),
                       ),
                       if (booking.status == BookingStatus.held && exp != null)
                         Text(
                           'Expires: ${formatTime(exp)}',
-                          style: const TextStyle(fontSize: 12, color: Colors.red),
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.red),
                         ),
                     ],
                   ),

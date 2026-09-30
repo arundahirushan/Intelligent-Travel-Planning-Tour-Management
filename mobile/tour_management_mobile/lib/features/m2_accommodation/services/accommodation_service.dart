@@ -8,7 +8,8 @@ class AccommodationService {
   final ApiClient _apiClient = ApiClient();
 
   Future<Map<String, dynamic>> getPendingHotels(int page, int pageSize) async {
-    final response = await _apiClient.get('/hotels/pending?page=$page&pageSize=$pageSize');
+    final response =
+        await _apiClient.get('/hotels/pending?page=$page&pageSize=$pageSize');
     final jsonResponse = jsonDecode(response.body);
     if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
       final data = jsonResponse['data'];
@@ -34,7 +35,8 @@ class AccommodationService {
   }) async {
     String query = '/hotels?page=$page&pageSize=$pageSize';
     if (status != null && status.isNotEmpty) query += '&status=$status';
-    if (search != null && search.isNotEmpty) query += '&search=${Uri.encodeComponent(search)}';
+    if (search != null && search.isNotEmpty)
+      query += '&search=${Uri.encodeComponent(search)}';
 
     final response = await _apiClient.get(query);
     final jsonResponse = jsonDecode(response.body);
@@ -100,7 +102,8 @@ class AccommodationService {
     if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
       final data = jsonResponse['data'];
       final items = (data['items'] as List<dynamic>?)
-              ?.map((e) => HotelBookingSummaryDto.fromJson(e as Map<String, dynamic>))
+              ?.map((e) =>
+                  HotelBookingSummaryDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [];
       return {
