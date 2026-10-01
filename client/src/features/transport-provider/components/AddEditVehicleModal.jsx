@@ -13,6 +13,7 @@ const EMPTY_FORM = {
   RegistrationNumber: '',
   Capacity: '',
   PricePerDay: '',
+  ImageUrl: '',
 };
 
 export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicle }) {
@@ -33,6 +34,7 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
           RegistrationNumber: vehicle.registrationNumber || '',
           Capacity: vehicle.capacity?.toString() || '',
           PricePerDay: vehicle.pricePerDay?.toString() || '',
+          ImageUrl: vehicle.imageUrl || '',
         });
       } else {
         setFormData(EMPTY_FORM);
@@ -55,6 +57,8 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
       setFieldErrors(prev => ({ ...prev, [name]: null }));
     }
   };
+
+
 
   // Client-side validation before sending to the API
   const validate = () => {
@@ -96,6 +100,7 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
       RegistrationNumber: formData.RegistrationNumber.trim(),
       Capacity: parseInt(formData.Capacity, 10),
       PricePerDay: parseFloat(formData.PricePerDay),
+      ImageUrl: formData.ImageUrl?.trim() || null,
     };
 
     try {
@@ -210,6 +215,15 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
             )}
           </div>
         </div>
+
+        <Input 
+          label="Cover Image URL" 
+          name="ImageUrl" 
+          value={formData.ImageUrl} 
+          onChange={handleChange} 
+          error={fieldErrors.ImageUrl}
+          placeholder="https://example.com/image.jpg (optional)"
+        />
 
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>

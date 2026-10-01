@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import '../features/m1_users_proposals_trips/m1_dashboard_screen.dart';
+import '../features/m2_accommodation/screens/m2_dashboard_screen.dart';
+import '../features/m3_vehicles_destinations/m3_dashboard_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final AuthService authService;
@@ -38,9 +41,11 @@ class HomeScreen extends StatelessWidget {
             _buildFeatureCard(
               context,
               'M1',
-              'AI Proposals & Trips',
+              'Users, AI Proposals & Trips',
               Icons.auto_awesome,
               Colors.purple,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const M1DashboardScreen())),
             ),
             _buildFeatureCard(
               context,
@@ -48,6 +53,8 @@ class HomeScreen extends StatelessWidget {
               'Hotels & Accommodation',
               Icons.hotel,
               Colors.orange,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const M2DashboardScreen())),
             ),
             _buildFeatureCard(
               context,
@@ -55,6 +62,8 @@ class HomeScreen extends StatelessWidget {
               'Vehicles & Destinations',
               Icons.directions_car,
               Colors.teal,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const M3DashboardScreen())),
             ),
             _buildFeatureCard(
               context,
@@ -70,17 +79,19 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildFeatureCard(BuildContext context, String module, String title,
-      IconData icon, Color color) {
+      IconData icon, Color color,
+      {VoidCallback? onTap}) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('$module placeholder: Not implemented yet.')),
-          );
-        },
+        onTap: onTap ??
+            () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text('$module placeholder: Not implemented yet.')),
+              );
+            },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),

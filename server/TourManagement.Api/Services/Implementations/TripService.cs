@@ -38,6 +38,9 @@ public class TripService : ITripService
             Budget     = dto.Budget,
             GroupSize  = dto.GroupSize,
             Interests  = dto.Interests,
+            PickupLatitude = dto.PickupLatitude,
+            PickupLongitude = dto.PickupLongitude,
+            PickupNote = dto.PickupNote,
             Status     = TripStatus.Draft,
             CreatedAt  = DateTime.UtcNow,
             UpdatedAt  = DateTime.UtcNow
@@ -114,6 +117,9 @@ public class TripService : ITripService
         trip.Budget    = dto.Budget;
         trip.GroupSize = dto.GroupSize;
         trip.Interests = dto.Interests;
+        trip.PickupLatitude = dto.PickupLatitude;
+        trip.PickupLongitude = dto.PickupLongitude;
+        trip.PickupNote = dto.PickupNote;
         trip.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();

@@ -34,7 +34,7 @@ class InternalAgentClient:
         payload = {
             "startDate": start_date,
             "endDate": end_date,
-            "capacity": capacity
+            "minCapacity": capacity
         }
         response = requests.post(f"{self.base_url}/vehicles/search", json=payload, headers=self.headers, timeout=10)
         response.raise_for_status()
@@ -42,5 +42,42 @@ class InternalAgentClient:
 
     def get_weather(self, destination: str, date: str) -> Dict[str, Any]:
         response = requests.get(f"{self.base_url}/weather", params={"destination": destination, "date": date}, headers=self.headers, timeout=10)
+        response.raise_for_status()
+        return response.json().get("data", {})
+
+    def validate_proposal(
+        self,
+        hotels: List[Dict[str, Any]],
+        vehicle: Dict[str, Any] | None,
+        overnight_sections: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Call POST /api/internal/proposals/validate.
+        Returns the 'data' object from the ApiResponse, which is a
+        ValidateProposalResultDto:
+          {
+            isValid: bool,
+            issueCodes: list[str],
+            issues: list[str],
+            warnings: list[str],
+            accommodationCost: float,
+            transportCost: float,
+            totalCost: float,
+            budget: float,
+            currency: str,
+            staleInputDetected: bool,
+          }
+        """
+        payload = {
+            "hotels": hotels,
+            "vehicle": vehicle,
+            "overnightSections": overnight_sections,
+        }
+        response = requests.post(
+            f"{self.base_url}/proposals/validate",
+            json=payload,
+            headers=self.headers,
+            timeout=20,
+        )
         response.raise_for_status()
         return response.json().get("data", {})

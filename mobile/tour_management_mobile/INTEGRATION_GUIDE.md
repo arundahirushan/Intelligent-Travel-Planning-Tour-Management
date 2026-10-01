@@ -13,8 +13,16 @@ This branch provides the basic shell, theme, and authentication.
 ## Member Ownership Areas (M1-M4)
 
 We have created placeholders for each team member to work in independently:
-- **M1:** `lib/features/m1_proposals_trips` (AI Proposals and Trips)
+- **M1:** `lib/features/m1_users_proposals_trips` (Users, AI Proposals & Trips)
+  - **Entry:** `M1DashboardScreen`
+  - **Includes:** User Account Management (Approvals, Admins), Trip Oversight, and Pending AI Proposal Reviews.
+  - **Reuses:** Shared `ApiClient`, `AuthService`, and Theme.
+  - **Limitations:** Admin approval doesn't finalize bookings in Flutter; relies on backend endpoints. Dates are rendered as returned by the API without arbitrary local modifications.
 - **M2:** `lib/features/m2_accommodation` (Hotels and Accommodation)
+  - **Entry:** `M2DashboardScreen`
+  - **Includes:** Hotel Approval/Moderation, Hotel/Room Detail Inspection, Booking Oversight.
+  - **Reuses:** Shared `ApiClient`, `AuthService`, and Theme.
+  - **Limitations:** Booking oversight is explicitly read-only using summary data (`HotelBookingSummaryDto`). No detailed backend booking endpoint is used or added. Moderation actions depend on exact active/pending state.
 - **M3:** `lib/features/m3_vehicles_destinations` (Vehicles and Destinations)
 - **M4:** `lib/features/m4_users_contracts` (Users and Supplier Contracts)
 

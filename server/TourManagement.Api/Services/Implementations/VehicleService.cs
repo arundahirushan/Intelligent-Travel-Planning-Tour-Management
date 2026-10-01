@@ -102,13 +102,25 @@ public class VehicleService : IVehicleService
     }
 
     // Soft-delete: sets Status = Inactive so booking history is not lost.
-    public async Task DeactivateVehicleAsync(int vehicleId, int requestingUserId)
+    public async Task DeleteVehicleAsync(int vehicleId, int requestingUserId)
     {
         var vehicle = await GetVehicleOrThrowAsync(vehicleId);
         CheckOwner(vehicle, requestingUserId);
 
-        vehicle.Status    = VehicleStatus.Inactive;
-        vehicle.UpdatedAt = DateTime.UtcNow;
+        bool hasBookings = await _db.VehicleBookings.AnyAsync(b => b.VehicleId == vehicleId);
+        
+        if (hasBookings)
+        {
+            // Soft delete to preserve booking history
+            vehicle.Status    = VehicleStatus.Inactive;
+            vehicle.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            // Hard delete if it's just a test vehicle with no history
+            _db.Vehicles.Remove(vehicle);
+        }
+        
         await _db.SaveChangesAsync();
     }
 
@@ -249,8 +261,11 @@ public class VehicleService : IVehicleService
     // available for the whole window or it isn't (simpler than room-type math).
     public async Task<List<VehicleSearchResultDto>> SearchAsync(VehicleSearchRequestDto request)
     {
-        if (request.EndDate <= request.StartDate)
-            throw new ValidationException("EndDate must be after StartDate.");
+        if (request.EndDate < request.StartDate)
+            throw new ValidationException("EndDate must not be before StartDate.");
+
+        if (request.EndDate == request.StartDate)
+            request.EndDate = request.StartDate.AddDays(1);
 
         // PostgreSQL (Npgsql) requires DateTime to be UTC when querying timestamp with time zone columns.
         // Query string dates bind as Unspecified, so we force them to UTC here.

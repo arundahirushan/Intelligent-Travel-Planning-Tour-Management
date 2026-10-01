@@ -27,13 +27,16 @@ public static class ContractRequestMappings
 
     public static ContractRequest ToEntity(this CreateContractRequestDto dto, int supplierId)
     {
+        var startDate = dto.RequestedStartDate ?? DateTime.UtcNow.Date;
+        var requestedEndDate = startDate.AddYears(dto.DurationInYears);
+
         return new ContractRequest
         {
             SupplierId         = supplierId,
             RequestType        = dto.RequestType,
             ExistingContractId = dto.ExistingContractId,
             RequestedStartDate = dto.RequestedStartDate,
-            RequestedEndDate   = dto.RequestedEndDate,
+            RequestedEndDate   = requestedEndDate,
             RequestedTerms     = dto.RequestedTerms,
             Status             = ContractRequestStatus.Pending,
             CreatedAt          = DateTime.UtcNow,

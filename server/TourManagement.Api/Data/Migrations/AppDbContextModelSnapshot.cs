@@ -57,7 +57,10 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("SupplierId");
+                    b.HasIndex("SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Contracts_SupplierId_Active_Unique")
+                        .HasFilter("\"Status\" = 'Active'");
 
                     b.ToTable("Contracts", (string)null);
                 });
@@ -108,7 +111,10 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("SupplierId");
+                    b.HasIndex("SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ContractRequests_SupplierId_Pending_Unique")
+                        .HasFilter("\"Status\" = 'Pending'");
 
                     b.ToTable("ContractRequests", (string)null);
                 });
@@ -130,6 +136,12 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -514,6 +526,15 @@ namespace TourManagement.Api.Data.Migrations
                     b.Property<string>("Interests")
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("PickupLatitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PickupLongitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PickupNote")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -736,6 +757,9 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("Model")
                         .IsRequired()
