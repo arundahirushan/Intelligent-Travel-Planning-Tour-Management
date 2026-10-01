@@ -2,9 +2,9 @@
 
 **Project:** Intelligent Travel Planning & Tour Management  
 
-**Version:** 1.4  
+**Version:** 1.5  
 
-**Last updated:** 2026-09-27  
+**Last updated:** 2026-10-01  
 
 **Recommended repository location:** `docs/AI_WORKFLOW_GUIDELINES.md`  
 
@@ -706,10 +706,9 @@ Do not describe real approvals or bookings as fully ready merely because agent g
 
 After each implementation task, report changed files, actual interfaces, migrations, exact checks/results, remaining placeholders and unverified behavior. Distinguish code-inspected behavior from tests and live verification. This document update did not run application builds or tests.
 
-| Version | Date | Change |
-| --- | --- | --- |
 | 1.0 | 2026-09-27 | Initial guideline based on the agreed foundation prompt. Records Option B day visits, four-agent boundaries, persisted review flow, Admin-only hold creation, payment deferral and verification limits. |
 | 1.1 | 2026-09-27 | Adds the flexible shared implementation plan, sequential member/merge handoffs, data connections, assembly ownership, incomplete-agent testing, shared-file coordination and open decisions. Updates reported foundation progress without claiming independent verification. Clarifies Option A hotel coverage alongside Option B day visits, manual-booking boundaries, post-hold checkout identity and deferred approval consistency work. Restores normal Markdown formatting. |
 | 1.2 | 2026-09-27 | Implements M1 Trip Planning & Coordination agent. Confirms Gemini 3.5 Flash-Lite and area-level planning. Types output plan. |
 | 1.3 | 2026-09-27 | Implements M2 Accommodation agent. Documents mixed room support per section, affordable-first budget policy, remaining budget pass-through to M3, and updated C# internal hotel search contract to support mixed-capacity filtering and comprehensive payload mappings. |
 | 1.4 | 2026-09-27 | Implements M3 Transport & Weather agent. Adds explicit pickup coordinates. Fixes same-day rental checkout bug. Implements cheapest-valid vehicle selection logic (within M2's remaining budget). Integrates Open-Meteo for advisory weather. Replaces direct edge flow with conditional skipping to M4 for validation/serialization on failure. |
+| 1.5 | 2026-10-01 | Implements M4 Trip Validation & Safety agent. Adds `POST /api/internal/proposals/validate` (read-only, no holds). Introduces `ValidateProposalRequestDto` / `ValidateProposalResultDto` DTOs. M4 sequential flow: Upstream Check → Assemble → Backend Validate → Gemini Review → Persist Result. Gemini produces explanation only; Pass/Fail is exclusively the backend's authoritative `isValid`. Added `validate_proposal` to Python `InternalAgentClient`. Added Python unit tests (test_m4_validation.py) and C# tests (InternalAgentControllerValidationTests.cs). Checks: stale-input detection, room capacity, room availability, hotel-in-trip-area, stay-boundary dates, contiguity, overnight-section coverage, vehicle existence/status/capacity/dates/pickup/availability, budget. Weather is advisory only — provider errors and bad forecasts never block a proposal. |
