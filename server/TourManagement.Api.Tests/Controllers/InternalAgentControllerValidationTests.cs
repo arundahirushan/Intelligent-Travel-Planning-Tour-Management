@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 using TourManagement.Api.Controllers;
@@ -33,8 +34,7 @@ public class InternalAgentControllerValidationTests : IDisposable
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .ConfigureWarnings(w => w.Ignore(
-                Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _db = new AppDbContext(options);
 
@@ -67,6 +67,18 @@ public class InternalAgentControllerValidationTests : IDisposable
         _db.Dispose();
     }
 
+    // ── Helper: unwrap ActionResult<ApiResponse<T>> → ApiResponse<T> ─────────
+
+    private static ApiResponse<ValidateProposalResultDto> Unwrap(
+        ActionResult<ApiResponse<ValidateProposalResultDto>> actionResult)
+    {
+        var ok = actionResult.Result as OkObjectResult;
+        Assert.NotNull(ok);
+        var response = ok!.Value as ApiResponse<ValidateProposalResultDto>;
+        Assert.NotNull(response);
+        return response!;
+    }
+
     // ── Seed helpers ─────────────────────────────────────────────────────────
 
     private async Task<Trip> SeedTripAsync(int groupSize = 2, decimal budget = 50000m, bool oneDayTrip = false)
@@ -90,8 +102,9 @@ public class InternalAgentControllerValidationTests : IDisposable
         _db.Trips.Add(trip);
         await _db.SaveChangesAsync();
 
-        var itinerary = new TripItineraryItem { TripId = trip.Id, DestinationId = dest.Id, DayNumber = 1 };
-        _db.TripItineraryItems.Add(itinerary);
+        // ItineraryItem (not TripItineraryItem) is the actual model name.
+        var itinerary = new ItineraryItem { TripId = trip.Id, DestinationId = dest.Id, DayNumber = 1 };
+        _db.ItineraryItems.Add(itinerary);
 
         var snapshot = JsonSerializer.Serialize(new
         {
@@ -122,11 +135,12 @@ public class InternalAgentControllerValidationTests : IDisposable
     private async Task<(Hotel hotel, Room room)> SeedHotelRoomAsync(
         int destinationId, int totalRooms = 5, int capacity = 2, decimal pricePerNight = 5000m)
     {
+        // User.Role is a plain string — use the Roles constants string values.
         var owner = new User
         {
-            Email = $"owner-{Guid.NewGuid()}@test.com",
+            Email        = $"owner-{Guid.NewGuid()}@test.com",
             PasswordHash = "hash",
-            Role = UserRole.HotelOwner,
+            Role         = "HotelOwner",
         };
         _db.Users.Add(owner);
         await _db.SaveChangesAsync();
@@ -143,12 +157,12 @@ public class InternalAgentControllerValidationTests : IDisposable
 
         var room = new Room
         {
-            HotelId      = hotel.Id,
-            RoomType     = "Double",
-            Capacity     = capacity,
-            TotalRooms   = totalRooms,
+            HotelId       = hotel.Id,
+            RoomType      = "Double",
+            Capacity      = capacity,
+            TotalRooms    = totalRooms,
             PricePerNight = pricePerNight,
-            Status       = RoomStatus.Active,
+            Status        = RoomStatus.Active,
         };
         _db.Rooms.Add(room);
         await _db.SaveChangesAsync();
@@ -160,9 +174,9 @@ public class InternalAgentControllerValidationTests : IDisposable
     {
         var provider = new User
         {
-            Email = $"provider-{Guid.NewGuid()}@test.com",
+            Email        = $"provider-{Guid.NewGuid()}@test.com",
             PasswordHash = "hash",
-            Role = UserRole.TransportProvider,
+            Role         = "TransportProvider",
         };
         _db.Users.Add(provider);
         await _db.SaveChangesAsync();
@@ -198,9 +212,9 @@ public class InternalAgentControllerValidationTests : IDisposable
             {
                 new()
                 {
-                    RoomId      = room.Id,
-                    CheckInDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                    CheckOutDate = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                    RoomId        = room.Id,
+                    CheckInDate   = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    CheckOutDate  = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
                     NumberOfRooms = 1,
                 }
             },
@@ -218,11 +232,8 @@ public class InternalAgentControllerValidationTests : IDisposable
             }
         };
 
-        var result = await _controller.ValidateProposal(request) as OkObjectResult;
-        Assert.NotNull(result);
-        var response = result!.Value as ApiResponse<ValidateProposalResultDto>;
-        Assert.NotNull(response);
-        Assert.True(response!.Success);
+        var response = Unwrap(await _controller.ValidateProposal(request));
+        Assert.True(response.Success);
         Assert.True(response.Data!.IsValid);
         Assert.Empty(response.Data.IssueCodes);
         Assert.Equal(10000m, response.Data.AccommodationCost);  // 5000 * 1 room * 2 nights
@@ -232,7 +243,7 @@ public class InternalAgentControllerValidationTests : IDisposable
     [Fact]
     public async Task Validate_CapacityInsufficient_ReturnsIssue()
     {
-        // Group of 4 but only 1 double room (capacity 2).
+        // Group of 4 but only 1 double room (capacity 2, 1 room booked).
         var trip = await SeedTripAsync(groupSize: 4, budget: 100000m);
         var dest = await _db.Destinations.FirstAsync();
         var (_, room) = await SeedHotelRoomAsync(dest.Id, totalRooms: 5, capacity: 2);
@@ -242,21 +253,25 @@ public class InternalAgentControllerValidationTests : IDisposable
         {
             Hotels = new List<ValidationHotelItemDto>
             {
-                new() { RoomId = room.Id, CheckInDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                         CheckOutDate = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc), NumberOfRooms = 1 }
+                new()
+                {
+                    RoomId        = room.Id,
+                    CheckInDate   = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    CheckOutDate  = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                    NumberOfRooms = 1,  // 1 room × 2 capacity = 2 guests < 4 required
+                }
             },
             Vehicle = new ValidationVehicleItemDto
             {
-                VehicleId = vehicle.Id,
-                StartDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                EndDate   = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
-                PickupLatitude = 6.9271m, PickupLongitude = 79.8612m,
+                VehicleId       = vehicle.Id,
+                StartDate       = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDate         = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                PickupLatitude  = 6.9271m,
+                PickupLongitude = 79.8612m,
             },
         };
 
-        var result = await _controller.ValidateProposal(request) as OkObjectResult;
-        var response = (result!.Value as ApiResponse<ValidateProposalResultDto>)!;
-
+        var response = Unwrap(await _controller.ValidateProposal(request));
         Assert.False(response.Data!.IsValid);
         Assert.Contains("CAPACITY_INSUFFICIENT", response.Data.IssueCodes);
     }
@@ -272,21 +287,25 @@ public class InternalAgentControllerValidationTests : IDisposable
         {
             Hotels = new List<ValidationHotelItemDto>
             {
-                new() { RoomId = room.Id, CheckInDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                         CheckOutDate = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc), NumberOfRooms = 1 }
+                new()
+                {
+                    RoomId        = room.Id,
+                    CheckInDate   = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    CheckOutDate  = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                    NumberOfRooms = 1,
+                }
             },
             Vehicle = new ValidationVehicleItemDto
             {
-                VehicleId = 99999,  // Does not exist
-                StartDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                EndDate   = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
-                PickupLatitude = 6.9271m, PickupLongitude = 79.8612m,
+                VehicleId       = 99999,  // Does not exist
+                StartDate       = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDate         = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                PickupLatitude  = 6.9271m,
+                PickupLongitude = 79.8612m,
             },
         };
 
-        var result = await _controller.ValidateProposal(request) as OkObjectResult;
-        var response = (result!.Value as ApiResponse<ValidateProposalResultDto>)!;
-
+        var response = Unwrap(await _controller.ValidateProposal(request));
         Assert.False(response.Data!.IsValid);
         Assert.Contains("INVALID_VEHICLE_ID", response.Data.IssueCodes);
     }
@@ -294,7 +313,7 @@ public class InternalAgentControllerValidationTests : IDisposable
     [Fact]
     public async Task Validate_OverBudget_ReturnsIssue()
     {
-        // Budget = 5000 LKR, but accommodation alone = 10000 LKR.
+        // Budget = 5000 LKR, but accommodation alone = 10000 LKR (5000/night × 2 nights).
         var trip = await SeedTripAsync(groupSize: 2, budget: 5000m);
         var dest = await _db.Destinations.FirstAsync();
         var (_, room) = await SeedHotelRoomAsync(dest.Id, capacity: 2, pricePerNight: 5000m);
@@ -304,21 +323,25 @@ public class InternalAgentControllerValidationTests : IDisposable
         {
             Hotels = new List<ValidationHotelItemDto>
             {
-                new() { RoomId = room.Id, CheckInDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                         CheckOutDate = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc), NumberOfRooms = 1 }
+                new()
+                {
+                    RoomId        = room.Id,
+                    CheckInDate   = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    CheckOutDate  = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                    NumberOfRooms = 1,
+                }
             },
             Vehicle = new ValidationVehicleItemDto
             {
-                VehicleId = vehicle.Id,
-                StartDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                EndDate   = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
-                PickupLatitude = 6.9271m, PickupLongitude = 79.8612m,
+                VehicleId       = vehicle.Id,
+                StartDate       = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDate         = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                PickupLatitude  = 6.9271m,
+                PickupLongitude = 79.8612m,
             },
         };
 
-        var result = await _controller.ValidateProposal(request) as OkObjectResult;
-        var response = (result!.Value as ApiResponse<ValidateProposalResultDto>)!;
-
+        var response = Unwrap(await _controller.ValidateProposal(request));
         Assert.False(response.Data!.IsValid);
         Assert.Contains("OVER_BUDGET", response.Data.IssueCodes);
     }
@@ -334,15 +357,18 @@ public class InternalAgentControllerValidationTests : IDisposable
         {
             Hotels = new List<ValidationHotelItemDto>
             {
-                new() { RoomId = room.Id, CheckInDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                         CheckOutDate = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc), NumberOfRooms = 2 }
+                new()
+                {
+                    RoomId        = room.Id,
+                    CheckInDate   = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    CheckOutDate  = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                    NumberOfRooms = 2,
+                }
             },
             Vehicle = null,
         };
 
-        var result = await _controller.ValidateProposal(request) as OkObjectResult;
-        var response = (result!.Value as ApiResponse<ValidateProposalResultDto>)!;
-
+        var response = Unwrap(await _controller.ValidateProposal(request));
         Assert.False(response.Data!.IsValid);
         Assert.Contains("MISSING_VEHICLE", response.Data.IssueCodes);
     }
@@ -353,11 +379,11 @@ public class InternalAgentControllerValidationTests : IDisposable
         // Seed trip with groupSize=2, but the snapshot stored groupSize=4.
         var trip = await SeedTripAsync(groupSize: 2, budget: 100000m);
 
-        // Overwrite the snapshot to simulate a changed groupSize.
+        // Overwrite the snapshot to simulate a changed groupSize after generation started.
         var proposal = await _db.TripProposals.FirstAsync(p => p.ProposalId == TestProposalId);
         var staleSnap = JsonSerializer.Serialize(new
         {
-            GroupSize = 4,  // Different from trip.GroupSize = 2
+            GroupSize = 4,   // Different from trip.GroupSize = 2
             Budget    = 100000m,
             StartDate = "2026-10-01T00:00:00Z",
             EndDate   = "2026-10-03T00:00:00Z",
@@ -375,21 +401,25 @@ public class InternalAgentControllerValidationTests : IDisposable
         {
             Hotels = new List<ValidationHotelItemDto>
             {
-                new() { RoomId = room.Id, CheckInDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                         CheckOutDate = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc), NumberOfRooms = 1 }
+                new()
+                {
+                    RoomId        = room.Id,
+                    CheckInDate   = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    CheckOutDate  = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                    NumberOfRooms = 1,
+                }
             },
             Vehicle = new ValidationVehicleItemDto
             {
-                VehicleId = vehicle.Id,
-                StartDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-                EndDate   = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
-                PickupLatitude = 6.9271m, PickupLongitude = 79.8612m,
+                VehicleId       = vehicle.Id,
+                StartDate       = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDate         = new DateTime(2026, 10, 3, 0, 0, 0, DateTimeKind.Utc),
+                PickupLatitude  = 6.9271m,
+                PickupLongitude = 79.8612m,
             },
         };
 
-        var result = await _controller.ValidateProposal(request) as OkObjectResult;
-        var response = (result!.Value as ApiResponse<ValidateProposalResultDto>)!;
-
+        var response = Unwrap(await _controller.ValidateProposal(request));
         Assert.True(response.Data!.StaleInputDetected);
         Assert.Contains("STALE_INPUTS", response.Data.IssueCodes);
     }
