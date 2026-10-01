@@ -74,7 +74,24 @@ public class WorkflowServiceTests : IDisposable
     {
         // Arrange
         var trip = await SetupTripAsync();
-        var payloadJson = "{\"PartialPlan\":{\"Days\":[]},\"PartialAccommodation\":{\"Hotels\":[]},\"PartialTransport\":null,\"PartialWeather\":null}";
+        var payloadJson = @"
+        {
+            ""Hotels"": [
+                { ""RoomId"": 101, ""CheckInDate"": ""2026-10-01T00:00:00Z"", ""CheckOutDate"": ""2026-10-05T00:00:00Z"", ""NumberOfRooms"": 2 }
+            ],
+            ""Vehicle"": null,
+            ""PartialPlan"": {
+                ""Days"": [
+                    { ""Date"": ""2026-10-01T00:00:00Z"", ""DestinationId"": 1, ""Activities"": [""Beach""] }
+                ]
+            },
+            ""PartialAccommodation"": {
+                ""Summary"": ""Stay at Sea View"",
+                ""Hotels"": [ { ""HotelId"": 1, ""Name"": ""Sea View"" } ]
+            },
+            ""PartialTransport"": null,
+            ""PartialWeather"": null
+        }";
         
         _agentClient.NextResult = new AgentProposalResult
         {
@@ -84,7 +101,7 @@ public class WorkflowServiceTests : IDisposable
             {
                 new() { AgentIdentity = "m1_planning", FinalOutcome = "Pass" },
                 new() { AgentIdentity = "m2_accommodation", FinalOutcome = "Pass" },
-                new() { AgentIdentity = "m3_transport_weather", FinalOutcome = "Failed", Errors = "[\"API timeout\"]" }
+                new() { AgentIdentity = "m3_transport_weather", FinalOutcome = "Failed", Errors = "[\"No drivers available\"]" }
             }
         };
 
@@ -99,9 +116,23 @@ public class WorkflowServiceTests : IDisposable
         Assert.Equal("GenerationFailed", retrieved.Status);
         
         var payloadDoc = JsonSerializer.Deserialize<JsonElement>(retrieved.Payload?.ToString() ?? "{}");
-        Assert.True(payloadDoc.TryGetProperty("PartialPlan", out _));
-        Assert.True(payloadDoc.TryGetProperty("PartialAccommodation", out _));
-        Assert.Contains(retrieved.ExecutionSummaries, s => s.AgentIdentity == "m3_transport_weather" && s.FinalOutcome == "Failed");
+        
+        // Assert M1 Plan dates and destination details
+        var planDay = payloadDoc.GetProperty("PartialPlan").GetProperty("Days")[0];
+        Assert.Equal("2026-10-01T00:00:00Z", planDay.GetProperty("Date").GetString());
+        Assert.Equal(1, planDay.GetProperty("DestinationId").GetInt32());
+        
+        // Assert M2 Room IDs, quantities and accommodation summary
+        var roomNode = payloadDoc.GetProperty("Hotels")[0];
+        Assert.Equal(101, roomNode.GetProperty("RoomId").GetInt32());
+        Assert.Equal(2, roomNode.GetProperty("NumberOfRooms").GetInt32());
+        Assert.Equal("Stay at Sea View", payloadDoc.GetProperty("PartialAccommodation").GetProperty("Summary").GetString());
+        
+        // Assert Failure status, failed step, and reason
+        Assert.Contains(retrieved.ExecutionSummaries, s => 
+            s.AgentIdentity == "m3_transport_weather" && 
+            s.FinalOutcome == "Failed" && 
+            (s.Errors?.ToString()?.Contains("No drivers available") == true));
     }
 
     [Fact]
@@ -109,7 +140,40 @@ public class WorkflowServiceTests : IDisposable
     {
         // Arrange
         var trip = await SetupTripAsync();
-        var payloadJson = "{\"Hotels\":[],\"Vehicle\":null,\"PartialPlan\":{\"Days\":[]},\"PartialAccommodation\":{\"Hotels\":[]},\"PartialTransport\":{\"Vehicles\":[]},\"PartialWeather\":{\"Condition\":\"Sunny\"}}";
+        var payloadJson = @"
+        {
+            ""Hotels"": [
+                { ""RoomId"": 101, ""CheckInDate"": ""2026-10-01T00:00:00Z"", ""CheckOutDate"": ""2026-10-05T00:00:00Z"", ""NumberOfRooms"": 2 }
+            ],
+            ""Vehicle"": {
+                ""VehicleId"": 201,
+                ""StartDate"": ""2026-10-01T00:00:00Z"",
+                ""EndDate"": ""2026-10-05T00:00:00Z"",
+                ""PickupLatitude"": 6.9,
+                ""PickupLongitude"": 79.8,
+                ""PickupNote"": ""Airport""
+            },
+            ""PartialPlan"": {
+                ""Days"": [
+                    { ""Date"": ""2026-10-01T00:00:00Z"", ""DestinationId"": 1, ""Activities"": [""Beach""] }
+                ]
+            },
+            ""PartialAccommodation"": {
+                ""Summary"": ""Stay at Sea View""
+            },
+            ""PartialTransport"": {
+                ""TransportCost"": 5000,
+                ""Currency"": ""LKR"",
+                ""RemainingBudget"": 30000,
+                ""CombinedTotal"": 20000
+            },
+            ""PartialWeather"": {
+                ""Condition"": ""Sunny"",
+                ""DestinationId"": 1,
+                ""Date"": ""2026-10-01T00:00:00Z"",
+                ""Advisory"": ""Wear sunscreen""
+            }
+        }";
         
         _agentClient.NextResult = new AgentProposalResult
         {
@@ -128,11 +192,35 @@ public class WorkflowServiceTests : IDisposable
         var proposal = await _workflowService.GenerateProposalAsync(trip.Id, travelerId: 1);
         Assert.Equal("Generated", proposal.Status);
         
-        // Verify payload persistence
+        // Verify payload persistence for M1/M2/M3 completion
         var retrieved = await _workflowService.GetLatestProposalAsync(trip.Id, travelerId: 1);
         var payloadDoc = JsonSerializer.Deserialize<JsonElement>(retrieved.Payload?.ToString() ?? "{}");
-        Assert.True(payloadDoc.TryGetProperty("PartialWeather", out var weather));
+        
+        // Assert M3 vehicle ID, rental dates and pickup coordinates
+        var vehicle = payloadDoc.GetProperty("Vehicle");
+        Assert.Equal(201, vehicle.GetProperty("VehicleId").GetInt32());
+        Assert.Equal("2026-10-01T00:00:00Z", vehicle.GetProperty("StartDate").GetString());
+        Assert.Equal(6.9m, vehicle.GetProperty("PickupLatitude").GetDecimal());
+        Assert.Equal(79.8m, vehicle.GetProperty("PickupLongitude").GetDecimal());
+        
+        // Assert Transport cost, combined total, remaining budget and currency
+        var transport = payloadDoc.GetProperty("PartialTransport");
+        Assert.Equal(5000, transport.GetProperty("TransportCost").GetDecimal());
+        Assert.Equal("LKR", transport.GetProperty("Currency").GetString());
+        Assert.Equal(30000, transport.GetProperty("RemainingBudget").GetDecimal());
+        Assert.Equal(20000, transport.GetProperty("CombinedTotal").GetDecimal());
+        
+        // Assert Weather destination/date, status and advisory data
+        var weather = payloadDoc.GetProperty("PartialWeather");
         Assert.Equal("Sunny", weather.GetProperty("Condition").GetString());
+        Assert.Equal(1, weather.GetProperty("DestinationId").GetInt32());
+        Assert.Equal("2026-10-01T00:00:00Z", weather.GetProperty("Date").GetString());
+        Assert.Equal("Wear sunscreen", weather.GetProperty("Advisory").GetString());
+        
+        // Assert Unfinished step
+        Assert.Contains(retrieved.ExecutionSummaries, s => 
+            s.AgentIdentity == "m4_validation" && 
+            s.FinalOutcome == "NotImplemented");
 
         // Act 2 & Assert: Attempt Accept -> Fails
         await Assert.ThrowsAsync<ValidationException>(() => 

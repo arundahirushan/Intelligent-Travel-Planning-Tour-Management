@@ -250,6 +250,10 @@ public class CheckoutService : ICheckoutService
 
             var roomIds = allHotels.Select(h => h.RoomId).ToList();
             var rooms = await _db.Rooms.Include(r => r.Hotel).Where(r => roomIds.Contains(r.Id)).ToListAsync();
+            
+            var missingRoomIds = roomIds.Except(rooms.Select(r => r.Id)).ToList();
+            if (missingRoomIds.Any())
+                throw new ValidationException("One or more proposed rooms were not found.");
                 
             var stays = allHotels
                 .GroupBy(h => {
@@ -268,6 +272,19 @@ public class CheckoutService : ICheckoutService
                 if (areaMap.Contains(destId))
                     throw new ValidationException($"Cannot propose multiple separate hotel stays for the same area.");
                 areaMap.Add(destId);
+
+                int totalStayCapacity = 0;
+                foreach (var h in stay)
+                {
+                    if (h.NumberOfRooms <= 0)
+                        throw new ValidationException("Room quantity must be positive.");
+                        
+                    var r = rooms.First(room => room.Id == h.RoomId);
+                    totalStayCapacity += r.Capacity * h.NumberOfRooms;
+                }
+
+                if (totalStayCapacity < trip.GroupSize)
+                    throw new ValidationException($"Hotel stay at '{stay.Key.HotelName}' has insufficient capacity. Required: {trip.GroupSize}, Available: {totalStayCapacity}.");
             }
 
             var sortedStays = stays.OrderBy(s => s.Key.CheckIn).ToList();
