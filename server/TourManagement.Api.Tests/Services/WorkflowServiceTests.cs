@@ -43,7 +43,7 @@ public class WorkflowServiceTests : IDisposable
         var checkoutService = new CheckoutService(_db, hotelService, vehicleService);
         
         _agentClient = new FakeAgentClient();
-        _workflowService = new WorkflowService(_db, _agentClient, checkoutService);
+        _workflowService = new WorkflowService(_db, _agentClient, checkoutService, Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowService>.Instance);
     }
 
     public void Dispose()

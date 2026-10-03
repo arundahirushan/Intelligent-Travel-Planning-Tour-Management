@@ -288,6 +288,47 @@ def m4_validation_node(state: WorkflowState) -> WorkflowState:
         )
 
     # ── 5. Persist Result ────────────────────────────────────────────────────
+    
+    # Construct final payload (CreateCheckoutDto)
+    hotels_checkout = []
+    hotels_state = state.get("hotels") or []
+    for acc in hotels_state:
+        for line in acc.get("RoomLines", []):
+            hotels_checkout.append({
+                "RoomId": line["RoomId"],
+                "CheckInDate": acc["CheckInDate"],
+                "CheckOutDate": acc["CheckOutDate"],
+                "NumberOfRooms": line["Quantity"]
+            })
+            
+    vehicle_checkout = None
+    vehicles_state = state.get("vehicles") or []
+    if vehicles_state:
+        v = vehicles_state[0]
+        vehicle_checkout = {
+            "VehicleId": v["VehicleId"],
+            "StartDate": v["StartDate"],
+            "EndDate": v["EndDate"],
+            "PickupLatitude": v["PickupLatitude"],
+            "PickupLongitude": v["PickupLongitude"],
+            "PickupNote": v.get("PickupNote")
+        }
+        
+    if not hotels_checkout and not vehicle_checkout:
+        is_valid = False
+        empty_msg = "Payload is empty. No accommodation or transport data available."
+        if empty_msg not in issues:
+            issues.append(empty_msg)
+        if "EMPTY_PAYLOAD" not in issue_codes:
+            issue_codes.append("EMPTY_PAYLOAD")
+            
+    checkout_dto = {
+        "TripId": state.get("trip_id"),
+        "ProposalId": state.get("proposal_id"),
+        "Hotels": hotels_checkout,
+        "Vehicle": vehicle_checkout
+    }
+    state["final_payload"] = json.dumps(checkout_dto)
     state["is_valid"] = is_valid
 
     validation_results = {

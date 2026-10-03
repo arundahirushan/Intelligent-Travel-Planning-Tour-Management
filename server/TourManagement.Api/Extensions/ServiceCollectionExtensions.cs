@@ -63,7 +63,7 @@ public static class ServiceCollectionExtensions
             var config = serviceProvider.GetRequiredService<IConfiguration>();
             var baseUrl = config.GetValue<string>("AiServiceSettings:BaseUrl") ?? "http://localhost:8000";
             client.BaseAddress = new Uri(baseUrl);
-            client.Timeout = TimeSpan.FromMinutes(5); // Generous timeout for generation
+            client.Timeout = TourManagement.Api.AgentIntegration.AgentTimeouts.AgentRequest; // Upper bound for a generation; see AgentTimeouts
         });
 
         return services;

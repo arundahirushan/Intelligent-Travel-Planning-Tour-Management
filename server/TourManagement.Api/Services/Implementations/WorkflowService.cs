@@ -17,12 +17,14 @@ public class WorkflowService : IWorkflowService
     private readonly AppDbContext _db;
     private readonly IAgentServiceClient _agentClient;
     private readonly ICheckoutService _checkoutService;
+    private readonly ILogger<WorkflowService> _logger;
 
-    public WorkflowService(AppDbContext db, IAgentServiceClient agentClient, ICheckoutService checkoutService)
+    public WorkflowService(AppDbContext db, IAgentServiceClient agentClient, ICheckoutService checkoutService, ILogger<WorkflowService> logger)
     {
         _db = db;
         _agentClient = agentClient;
         _checkoutService = checkoutService;
+        _logger = logger;
     }
 
     public async Task<TripProposalDto> GenerateProposalAsync(int tripId, int travelerId)
@@ -34,24 +36,15 @@ public class WorkflowService : IWorkflowService
         if (trip == null) throw new NotFoundException("Trip not found");
         if (trip.TravelerId != travelerId) throw new ForbiddenException("Not your trip");
 
-        // Simple idempotency check (don't generate if already generating)
+        // Simple idempotency check (don't generate if already generating).
+        // A Generating proposal that is past the stale limit was abandoned, so it no longer blocks a new attempt.
         var existingGenerating = await _db.TripProposals
             .Where(p => p.TripId == tripId && p.Status == ProposalStatus.Generating)
             .FirstOrDefaultAsync();
-            
-        if (existingGenerating != null)
+
+        if (existingGenerating != null && !await FailIfStaleAsync(existingGenerating))
         {
-            if (existingGenerating.CreatedAt < DateTime.UtcNow.AddMinutes(-5))
-            {
-                existingGenerating.Status = ProposalStatus.GenerationFailed;
-                existingGenerating.FailureReason = "Previous generation attempt timed out.";
-                existingGenerating.UpdatedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-            }
-            else
-            {
-                throw new ValidationException("A proposal is already being generated for this trip.");
-            }
+            throw new ValidationException("A proposal is already being generated for this trip.");
         }
 
         var nextVersion = await _db.TripProposals.Where(p => p.TripId == tripId).CountAsync() + 1;
@@ -112,22 +105,58 @@ public class WorkflowService : IWorkflowService
                         Errors = es.Errors,
                         RetryCount = es.RetryCount,
                         FinalOutcome = es.FinalOutcome,
-                        StartedAt = es.StartedAt,
-                        CompletedAt = es.CompletedAt
+                        StartedAt = DateTime.SpecifyKind(es.StartedAt, DateTimeKind.Utc),
+                        CompletedAt = es.CompletedAt.HasValue ? DateTime.SpecifyKind(es.CompletedAt.Value, DateTimeKind.Utc) : null
                     });
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Exception occurred during AI proposal generation for TripId {TripId}, ProposalId {ProposalId}: {ExceptionType} - {Message}", tripId, proposalId, ex.GetType().Name, ex.Message);
             proposal.Status = ProposalStatus.GenerationFailed;
             proposal.FailureReason = "AI Service unavailable or generation timed out.";
             proposal.UpdatedAt = DateTime.UtcNow;
         }
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            // The agents finished but the database rejected the result (e.g. a value that is not valid jsonb).
+            // Never leave the proposal on Generating: record a terminal failure instead.
+            _logger.LogError(ex, "Could not save AI result for TripId {TripId}, ProposalId {ProposalId}: {ExceptionType}", tripId, proposalId, ex.GetType().Name);
+            _db.ChangeTracker.Clear();
+            proposal = await _db.TripProposals.FirstAsync(p => p.ProposalId == proposalId);
+            proposal.Status = ProposalStatus.GenerationFailed;
+            proposal.FailureReason = "The AI result could not be saved. Please try again.";
+            proposal.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
 
         return proposal.ToResponseDto();
+    }
+
+    /// <summary>
+    /// Moves a proposal that has been Generating longer than <see cref="AgentTimeouts.GeneratingStaleAfter"/> to
+    /// GenerationFailed. That limit is above the agent request timeout, so a generation that is still
+    /// legitimately running is never touched. Returns true when the proposal was marked failed.
+    /// </summary>
+    private async Task<bool> FailIfStaleAsync(TripProposal proposal)
+    {
+        if (proposal.Status != ProposalStatus.Generating ||
+            proposal.CreatedAt >= DateTime.UtcNow - AgentTimeouts.GeneratingStaleAfter)
+        {
+            return false;
+        }
+
+        proposal.Status = ProposalStatus.GenerationFailed;
+        proposal.FailureReason = "Generation did not finish in time and was stopped. Please try again.";
+        proposal.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     public async Task<TripProposalDto> GetLatestProposalAsync(int tripId, int travelerId)
@@ -143,6 +172,9 @@ public class WorkflowService : IWorkflowService
             .FirstOrDefaultAsync();
 
         if (proposal == null) throw new NotFoundException("No proposal found");
+
+        await FailIfStaleAsync(proposal);
+
         return proposal.ToResponseDto();
     }
 
@@ -155,6 +187,8 @@ public class WorkflowService : IWorkflowService
 
         if (proposal == null) throw new NotFoundException("Proposal not found");
         if (proposal.Trip.TravelerId != travelerId) throw new ForbiddenException("Not your trip");
+
+        await FailIfStaleAsync(proposal);
 
         return proposal.ToResponseDto();
     }

@@ -49,8 +49,10 @@ def get_hotel_allocations(rooms: list[dict], group_size: int):
             return
             
         room = rooms[room_idx]
-        room_id = room["RoomId"]
-        max_qty = room.get("AvailableRoomCount", 0)
+        room_id = room.get("RoomId") or room.get("roomId")
+        max_qty = room.get("AvailableRoomCount") or room.get("availableRoomCount") or 0
+        capacity = room.get("Capacity") or room.get("capacity") or 0
+        price_per_night = room.get("PricePerNight") or room.get("pricePerNight") or 0.0
         
         for qty in range(max_qty + 1):
             if qty > 0:
@@ -59,8 +61,8 @@ def get_hotel_allocations(rooms: list[dict], group_size: int):
             backtrack(
                 room_idx + 1, 
                 current_qty_map, 
-                current_capacity + (qty * room.get("Capacity", 0)), 
-                current_cost + (qty * room.get("PricePerNight", 0.0))
+                current_capacity + (qty * capacity), 
+                current_cost + (qty * price_per_night)
             )
             
             if qty > 0:
@@ -136,21 +138,22 @@ def m2_accommodation_node(state: WorkflowState) -> WorkflowState:
             # Group by hotel
             hotel_map = defaultdict(list)
             for room in search_results:
-                hotel_map[room["HotelId"]].append(room)
+                hotel_id = room.get("HotelId") or room.get("hotelId")
+                hotel_map[hotel_id].append(room)
                 
             section_candidates = []
             
             for hotel_id, rooms in hotel_map.items():
                 allocations = get_hotel_allocations(rooms, group_size)
                 if allocations:
-                    hotel_name = rooms[0].get("HotelName")
-                    star_rating = rooms[0].get("StarRating")
+                    hotel_name = rooms[0].get("HotelName") or rooms[0].get("hotelName")
+                    star_rating = rooms[0].get("StarRating") or rooms[0].get("starRating")
                     section_candidates.append({
                         "hotel_id": hotel_id,
                         "hotel_name": hotel_name,
                         "star_rating": star_rating,
                         "allocations": allocations,
-                        "rooms_info": {r["RoomId"]: r for r in rooms}
+                        "rooms_info": {(r.get("RoomId") or r.get("roomId")): r for r in rooms}
                     })
                     
             if not section_candidates:
@@ -212,13 +215,16 @@ def m2_accommodation_node(state: WorkflowState) -> WorkflowState:
             room_lines = []
             for room_id, qty in alloc["allocation"].items():
                 room_info = chosen_candidate["rooms_info"][room_id]
+                room_type = room_info.get("RoomType") or room_info.get("roomType")
+                room_cap = room_info.get("Capacity") or room_info.get("capacity") or 0
+                room_price = room_info.get("PricePerNight") or room_info.get("pricePerNight") or 0.0
                 room_lines.append(SelectedRoomLine(
                     RoomId=room_id,
-                    RoomType=room_info["RoomType"],
+                    RoomType=room_type,
                     Quantity=qty,
-                    CapacityPerRoom=room_info["Capacity"],
-                    PricePerNight=room_info["PricePerNight"],
-                    LineCost=room_info["PricePerNight"] * qty * night_count
+                    CapacityPerRoom=room_cap,
+                    PricePerNight=room_price,
+                    LineCost=room_price * qty * night_count
                 ))
                 
             acc_sel = AccommodationSelection(
