@@ -28,12 +28,44 @@ public class TripProposalDto
     // Deserialized jsonb
     public object? InputSnapshot { get; set; }
     public object? Payload { get; set; }
+
+    // Descriptive hotel/room/vehicle data looked up from the IDs in Payload. Display only.
+    public ProposalDisplayDetailsDto? DisplayDetails { get; set; }
     
     public string? TravelerDecision { get; set; }
     public string? AdminDecision { get; set; }
     public string? FailureReason { get; set; }
     
     public List<ExecutionSummaryDto> ExecutionSummaries { get; set; } = new();
+}
+
+// Display-only lookups for the IDs saved in a proposal payload.
+// A room or vehicle that no longer exists is simply left out; the UI shows "Details unavailable".
+public class ProposalDisplayDetailsDto
+{
+    public List<ProposalRoomDetailDto> Rooms { get; set; } = new();
+    public ProposalVehicleDetailDto? Vehicle { get; set; }
+}
+
+public class ProposalRoomDetailDto
+{
+    public int RoomId { get; set; }
+    public int HotelId { get; set; }
+    public string HotelName { get; set; } = string.Empty;
+    public string DestinationName { get; set; } = string.Empty;
+    public string RoomType { get; set; } = string.Empty;
+    // Maximum guests per room (Room.Capacity).
+    public int Capacity { get; set; }
+}
+
+public class ProposalVehicleDetailDto
+{
+    public int VehicleId { get; set; }
+    public string VehicleType { get; set; } = string.Empty;
+    // Vehicle.Model holds "make and model" as one value; there is no separate make field.
+    public string Model { get; set; } = string.Empty;
+    // Maximum passengers (Vehicle.Capacity).
+    public int Capacity { get; set; }
 }
 
 public class ExecutionSummaryDto

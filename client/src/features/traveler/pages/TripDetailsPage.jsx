@@ -11,6 +11,7 @@ import ItineraryTab from '../components/ItineraryTab';
 import AccommodationTab from '../components/AccommodationTab';
 import TransportTab from '../components/TransportTab';
 import SuppliesTab from '../components/SuppliesTab';
+import AiProposalTab from '../components/AiProposalTab';
 import { getTripById, cancelTrip } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: 'info' },
+  { key: 'ai-proposal', label: 'AI Proposal', icon: 'smart_toy' },
   { key: 'itinerary', label: 'Itinerary', icon: 'map' },
   { key: 'accommodation', label: 'Accommodation', icon: 'hotel' },
   { key: 'transport', label: 'Transport', icon: 'directions_car' },
@@ -219,7 +221,15 @@ export default function TripDetailsPage() {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'overview' && <OverviewTab trip={trip} />}
+        {activeTab === 'overview' && (
+          <OverviewTab trip={trip} onNavigateToTab={setActiveTab} />
+        )}
+        {activeTab === 'ai-proposal' && (
+          <AiProposalTab
+            trip={trip}
+            onOpenEditTrip={() => setEditModalOpen(true)}
+          />
+        )}
         {activeTab === 'itinerary' && (
           <ItineraryTab trip={trip} onTripUpdate={handleTripUpdate} />
         )}
@@ -250,7 +260,7 @@ export default function TripDetailsPage() {
 
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
-function OverviewTab({ trip }) {
+function OverviewTab({ trip, onNavigateToTab }) {
   const items = trip.itineraryItems || [];
   const destinations = [...new Set(items.map((i) => i.destinationName))];
 
@@ -306,6 +316,7 @@ function OverviewTab({ trip }) {
         </p>
         <div className="flex flex-wrap gap-3">
           {[
+            { icon: 'smart_toy', label: 'AI Proposal', tab: 'ai-proposal' },
             { icon: 'map', label: 'Build Itinerary', tab: 'itinerary' },
             { icon: 'hotel', label: 'Book Hotel', tab: 'accommodation' },
             { icon: 'directions_car', label: 'Book Vehicle', tab: 'transport' },
@@ -313,15 +324,7 @@ function OverviewTab({ trip }) {
           ].map((a) => (
             <button
               key={a.tab}
-              onClick={() => {
-                // Scroll to tabs area
-                document.getElementById('trip-tabs-anchor')?.scrollIntoView({ behavior: 'smooth' });
-                // Navigate to the tab via a small delay so the scroll can start
-                setTimeout(() => {
-                  const event = new CustomEvent('set-trip-tab', { detail: a.tab });
-                  window.dispatchEvent(event);
-                }, 50);
-              }}
+              onClick={() => onNavigateToTab(a.tab)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-pill text-white font-heading font-bold text-sm transition-colors"
             >
               <span className="material-symbols-outlined text-sm">{a.icon}</span>

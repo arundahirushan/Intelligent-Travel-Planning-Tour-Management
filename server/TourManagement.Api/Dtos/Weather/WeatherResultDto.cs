@@ -13,6 +13,9 @@ public class WeatherResultDto
     // Advisory message for the agent/traveler
     public string Advisory { get; set; } = string.Empty;
 
+    // Optional district name for UI advisory
+    public string DistrictName { get; set; } = string.Empty;
+
     // Optional metrics
     public int? WeatherCode { get; set; }
     public double? MaxTemperatureC { get; set; }

@@ -56,7 +56,17 @@ public class DestinationService : IDestinationService
 
     public async Task<DestinationResponseDto> CreateAsync(CreateDestinationDto dto)
     {
+        if (!TourManagement.Api.Common.Constants.SriLankaDistricts.Map.TryGetValue(dto.Region, out var coords))
+            throw new ValidationException($"Invalid district: {dto.Region}. Please select a valid Sri Lankan district.");
+
         var dest = dto.ToEntity();
+        
+        // Use canonical casing from the dictionary and set coordinates
+        var canonicalDistrict = TourManagement.Api.Common.Constants.SriLankaDistricts.Map.Keys.First(k => k.Equals(dto.Region, StringComparison.OrdinalIgnoreCase));
+        dest.Region = canonicalDistrict;
+        dest.Latitude = coords.Latitude;
+        dest.Longitude = coords.Longitude;
+
         _db.Destinations.Add(dest);
         await _db.SaveChangesAsync();
         return dest.ToResponseDto();
@@ -64,11 +74,21 @@ public class DestinationService : IDestinationService
 
     public async Task<DestinationResponseDto> UpdateAsync(int id, UpdateDestinationDto dto)
     {
+        if (!TourManagement.Api.Common.Constants.SriLankaDistricts.Map.TryGetValue(dto.Region, out var coords))
+            throw new ValidationException($"Invalid district: {dto.Region}. Please select a valid Sri Lankan district.");
+
         var dest = await _db.Destinations.FindAsync(id);
         if (dest == null)
             throw new NotFoundException($"Destination with ID {id} was not found.");
 
         dest.UpdateFromDto(dto);
+        
+        // Use canonical casing from the dictionary and set coordinates
+        var canonicalDistrict = TourManagement.Api.Common.Constants.SriLankaDistricts.Map.Keys.First(k => k.Equals(dto.Region, StringComparison.OrdinalIgnoreCase));
+        dest.Region = canonicalDistrict;
+        dest.Latitude = coords.Latitude;
+        dest.Longitude = coords.Longitude;
+
         await _db.SaveChangesAsync();
         return dest.ToResponseDto();
     }

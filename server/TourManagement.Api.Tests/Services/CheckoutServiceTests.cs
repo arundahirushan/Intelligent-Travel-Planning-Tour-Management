@@ -39,7 +39,7 @@ public class CheckoutServiceTests
         // Seed a destination.
         db.Destinations.Add(new Destination
         {
-            Id = 1, Name = "Galle", Region = "Southern Province", Description = "Test."
+            Id = 1, Name = "Galle", Region = "Kandy", Description = "Test."
         });
 
         // Seed a hotel owner and an active hotel with one room type (TotalRooms=2).

@@ -11,6 +11,7 @@ load_dotenv()
 T = TypeVar('T', bound=BaseModel)
 
 class GeminiClient:
+    # Trigger uvicorn reload (updated)
     def __init__(self):
         self.api_key = os.environ.get("GEMINI_API_KEY")
         self.model_name = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
