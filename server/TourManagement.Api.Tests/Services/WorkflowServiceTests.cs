@@ -234,4 +234,118 @@ public class WorkflowServiceTests : IDisposable
         var checkouts = await _db.TripCheckouts.CountAsync();
         Assert.Equal(0, checkouts);
     }
+
+    // ── DisplayDetails (display-only lookups of saved RoomIds / VehicleId) ───────────────
+
+    private async Task SeedHotelsAndVehicleAsync()
+    {
+        _db.Destinations.AddRange(
+            new Destination { Id = 1, Name = "Galle" },
+            new Destination { Id = 2, Name = "Kandy" });
+        _db.Hotels.AddRange(
+            new Hotel { Id = 10, DestinationId = 1, Name = "Sea View" },
+            new Hotel { Id = 20, DestinationId = 2, Name = "Hill Inn" });
+        _db.Rooms.AddRange(
+            new Room { Id = 1, HotelId = 10, RoomType = "Double room", Capacity = 2 },
+            new Room { Id = 2, HotelId = 10, RoomType = "Triple room", Capacity = 3 },
+            new Room { Id = 3, HotelId = 20, RoomType = "Single room", Capacity = 1 });
+        _db.Vehicles.Add(new Vehicle { Id = 5, VehicleType = "Van", Model = "Toyota KDH", Capacity = 9 });
+        await _db.SaveChangesAsync();
+    }
+
+    private void SetGeneratedPayload(string payloadJson)
+    {
+        _agentClient.NextResult = new AgentProposalResult { Status = "Generated", Payload = payloadJson };
+    }
+
+    [Fact]
+    public async Task DisplayDetails_ResolvesRoomsInOneBatch_AndLeavesPayloadUnchanged()
+    {
+        var trip = await SetupTripAsync();
+        await SeedHotelsAndVehicleAsync();
+        var payloadJson = @"{
+            ""Hotels"": [
+                { ""RoomId"": 1, ""CheckInDate"": ""2026-10-01"", ""CheckOutDate"": ""2026-10-03"", ""NumberOfRooms"": 2 },
+                { ""RoomId"": 2, ""CheckInDate"": ""2026-10-01"", ""CheckOutDate"": ""2026-10-03"", ""NumberOfRooms"": 1 },
+                { ""RoomId"": 3, ""CheckInDate"": ""2026-10-03"", ""CheckOutDate"": ""2026-10-05"", ""NumberOfRooms"": 1 }
+            ],
+            ""Vehicle"": { ""VehicleId"": 5, ""StartDate"": ""2026-10-01"", ""EndDate"": ""2026-10-05"", ""PickupLatitude"": 6.9, ""PickupLongitude"": 79.8 }
+        }";
+        SetGeneratedPayload(payloadJson);
+
+        var generated = await _workflowService.GenerateProposalAsync(trip.Id, travelerId: 1);
+        var latest = await _workflowService.GetLatestProposalAsync(trip.Id, travelerId: 1);
+
+        foreach (var dto in new[] { generated, latest })
+        {
+            Assert.NotNull(dto.DisplayDetails);
+            Assert.Equal(3, dto.DisplayDetails!.Rooms.Count);
+
+            var double1 = dto.DisplayDetails.Rooms.Single(r => r.RoomId == 1);
+            Assert.Equal(10, double1.HotelId);
+            Assert.Equal("Sea View", double1.HotelName);
+            Assert.Equal("Galle", double1.DestinationName);
+            Assert.Equal("Double room", double1.RoomType);
+            Assert.Equal(2, double1.Capacity);
+
+            // Mixed room types of the same hotel resolve to the same HotelId.
+            Assert.Equal(10, dto.DisplayDetails.Rooms.Single(r => r.RoomId == 2).HotelId);
+            Assert.Equal("Kandy", dto.DisplayDetails.Rooms.Single(r => r.RoomId == 3).DestinationName);
+
+            Assert.NotNull(dto.DisplayDetails.Vehicle);
+            Assert.Equal("Van", dto.DisplayDetails.Vehicle!.VehicleType);
+            Assert.Equal("Toyota KDH", dto.DisplayDetails.Vehicle.Model);
+            Assert.Equal(9, dto.DisplayDetails.Vehicle.Capacity);
+        }
+
+        // The saved payload keeps its selection IDs, dates and quantities.
+        var stored = await _db.TripProposals.AsNoTracking().SingleAsync();
+        Assert.Equal(payloadJson, stored.Payload);
+    }
+
+    [Fact]
+    public async Task DisplayDetails_MissingRoomAndVehicle_AreLeftOut_WithoutThrowing()
+    {
+        var trip = await SetupTripAsync();
+        await SeedHotelsAndVehicleAsync();
+        SetGeneratedPayload(@"{
+            ""Hotels"": [
+                { ""RoomId"": 1, ""CheckInDate"": ""2026-10-01"", ""CheckOutDate"": ""2026-10-03"", ""NumberOfRooms"": 1 },
+                { ""RoomId"": 999, ""CheckInDate"": ""2026-10-01"", ""CheckOutDate"": ""2026-10-03"", ""NumberOfRooms"": 2 }
+            ],
+            ""Vehicle"": { ""VehicleId"": 888, ""StartDate"": ""2026-10-01"", ""EndDate"": ""2026-10-05"" }
+        }");
+
+        var dto = await _workflowService.GenerateProposalAsync(trip.Id, travelerId: 1);
+
+        Assert.NotNull(dto.DisplayDetails);
+        Assert.Single(dto.DisplayDetails!.Rooms);
+        Assert.Equal(1, dto.DisplayDetails.Rooms[0].RoomId);
+        Assert.Null(dto.DisplayDetails.Vehicle);
+    }
+
+    [Fact]
+    public async Task DisplayDetails_PayloadWithoutSelections_DoesNotThrow()
+    {
+        var trip = await SetupTripAsync();
+        SetGeneratedPayload(@"{ ""error"": ""Agent execution failed"" }");
+
+        var dto = await _workflowService.GenerateProposalAsync(trip.Id, travelerId: 1);
+
+        Assert.NotNull(dto.DisplayDetails);
+        Assert.Empty(dto.DisplayDetails!.Rooms);
+        Assert.Null(dto.DisplayDetails.Vehicle);
+    }
+
+    [Fact]
+    public async Task DisplayDetails_UnreadablePayload_StillReturnsProposal()
+    {
+        var trip = await SetupTripAsync();
+        SetGeneratedPayload(@"{ ""Hotels"": ""not-a-list"" }");
+
+        var dto = await _workflowService.GenerateProposalAsync(trip.Id, travelerId: 1);
+
+        Assert.Equal("Generated", dto.Status);
+        Assert.Null(dto.DisplayDetails);
+    }
 }

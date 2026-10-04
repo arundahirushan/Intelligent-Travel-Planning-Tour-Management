@@ -136,7 +136,73 @@ public class WorkflowService : IWorkflowService
             await _db.SaveChangesAsync();
         }
 
-        return proposal.ToResponseDto();
+        return await ToDtoWithDetailsAsync(proposal);
+    }
+
+    // Only the IDs we need from the saved payload. Extra fields are ignored.
+    private record PayloadRoomRef(int RoomId);
+    private record PayloadVehicleRef(int VehicleId);
+    private record PayloadRefs(List<PayloadRoomRef>? Hotels, PayloadVehicleRef? Vehicle);
+
+    /// <summary>
+    /// Builds the normal proposal DTO and adds display-only hotel/room/vehicle details looked up from the
+    /// IDs saved in the payload. The saved payload itself is never changed, and a missing or deleted
+    /// room/vehicle is simply left out (the UI shows "Details unavailable").
+    /// </summary>
+    private async Task<TripProposalDto> ToDtoWithDetailsAsync(TripProposal proposal)
+    {
+        var dto = proposal.ToResponseDto();
+
+        PayloadRefs? refs;
+        try
+        {
+            refs = JsonSerializer.Deserialize<PayloadRefs>(proposal.Payload,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            return dto; // Unreadable payload: show it as before, without extra details.
+        }
+        if (refs == null) return dto;
+
+        var details = new ProposalDisplayDetailsDto();
+
+        var roomIds = (refs.Hotels ?? new()).Select(h => h.RoomId).Distinct().ToList();
+        if (roomIds.Count > 0)
+        {
+            // One query for all rooms, with their hotel and destination names.
+            details.Rooms = await _db.Rooms
+                .AsNoTracking()
+                .Where(r => roomIds.Contains(r.Id))
+                .Select(r => new ProposalRoomDetailDto
+                {
+                    RoomId = r.Id,
+                    HotelId = r.HotelId,
+                    HotelName = r.Hotel.Name,
+                    DestinationName = r.Hotel.Destination.Name,
+                    RoomType = r.RoomType,
+                    Capacity = r.Capacity
+                })
+                .ToListAsync();
+        }
+
+        if (refs.Vehicle != null)
+        {
+            details.Vehicle = await _db.Vehicles
+                .AsNoTracking()
+                .Where(v => v.Id == refs.Vehicle.VehicleId)
+                .Select(v => new ProposalVehicleDetailDto
+                {
+                    VehicleId = v.Id,
+                    VehicleType = v.VehicleType,
+                    Model = v.Model,
+                    Capacity = v.Capacity
+                })
+                .FirstOrDefaultAsync();
+        }
+
+        dto.DisplayDetails = details;
+        return dto;
     }
 
     /// <summary>
@@ -175,7 +241,7 @@ public class WorkflowService : IWorkflowService
 
         await FailIfStaleAsync(proposal);
 
-        return proposal.ToResponseDto();
+        return await ToDtoWithDetailsAsync(proposal);
     }
 
     public async Task<TripProposalDto> GetProposalByIdAsync(int tripId, string proposalId, int travelerId)
@@ -190,7 +256,7 @@ public class WorkflowService : IWorkflowService
 
         await FailIfStaleAsync(proposal);
 
-        return proposal.ToResponseDto();
+        return await ToDtoWithDetailsAsync(proposal);
     }
 
     public async Task<TripProposalDto> AcceptProposalAsync(int tripId, string proposalId, int travelerId)
@@ -233,7 +299,7 @@ public class WorkflowService : IWorkflowService
         proposal.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
-        return proposal.ToResponseDto();
+        return await ToDtoWithDetailsAsync(proposal);
     }
 
     public async Task<TripProposalDto> RejectProposalAsync(int tripId, string proposalId, int travelerId, string? reason)
@@ -255,7 +321,7 @@ public class WorkflowService : IWorkflowService
         proposal.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
-        return proposal.ToResponseDto();
+        return await ToDtoWithDetailsAsync(proposal);
     }
 
     public async Task<PagedResult<TripProposalDto>> GetPendingProposalsAsync(int page, int pageSize)

@@ -54,4 +54,7 @@ public class CreateCheckoutDto
     
     // An identifier for the agentic proposal. 
     public string? ProposalId { get; set; }
+
+    // Advisory weather data collected during proposal generation.
+    public List<TourManagement.Api.Dtos.Weather.WeatherResultDto>? PartialWeather { get; set; }
 }

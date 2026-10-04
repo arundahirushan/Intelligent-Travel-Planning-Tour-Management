@@ -40,6 +40,13 @@ import {
   describeGenerating,
   LEAVE_PAGE_NOTE,
 } from './proposalPolling';
+import {
+  UNAVAILABLE,
+  parseCalendarDate,
+  calcNights,
+  groupStays,
+  roomLineText,
+} from './proposalStays';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -258,98 +265,20 @@ function ProposalOverview({ proposal, trip }) {
   );
 }
 
-// ── B. Daily Itinerary (from M1 plan) ────────────────────────────────────────
+// ── B. Accommodation helper (display only) ───────────────────────────────────
 
-function DailyItinerary({ proposal }) {
-  const payload = parsePayload(proposal);
-  const plan = safeGet(payload, 'plan') || safeGet(proposal, 'inputSnapshot', 'plan');
-  // M1 output is in execution summary resultSummary (agentIdentity: m1_planning)
-  const m1 = (proposal.executionSummaries || []).find(s => s.agentIdentity === 'm1_planning');
-  const m1Result = m1?.resultSummary;
-
-  const rawDailyVisits = safeGet(plan, 'daily_visits') || safeGet(m1Result, 'daily_visits') || [];
-  const dailyVisits = Array.isArray(rawDailyVisits) ? rawDailyVisits : [];
-  
-  const rawOvernightSections = safeGet(plan, 'overnight_sections') || safeGet(m1Result, 'overnight_sections') || [];
-  const overnightSections = Array.isArray(rawOvernightSections) ? rawOvernightSections : [];
-  const planningSummary = safeGet(plan, 'planning_summary') || safeGet(m1Result, 'planning_summary');
-
-  const isOneDayTrip = proposal.inputSnapshot?.startDate &&
-    String(proposal.inputSnapshot.startDate).slice(0, 10) === String(proposal.inputSnapshot.endDate).slice(0, 10);
-
-  if (dailyVisits.length === 0 && m1?.status !== 'Success') {
-    const outcome = m1?.finalOutcome || 'Unknown';
-    return (
-      <SectionCard title="Daily Itinerary" icon="map">
-        <p className="text-body-sm text-text-secondary">
-          {m1 ? `M1 Planning: ${outcome} — itinerary data unavailable.` : 'No itinerary data in this proposal.'}
-        </p>
-      </SectionCard>
-    );
-  }
-
-  return (
-    <SectionCard title="Daily Itinerary (M1)" icon="map">
-      {planningSummary?.explanation && (
-        <p className="text-body-sm text-text-secondary mb-4">{planningSummary.explanation}</p>
-      )}
-      {isOneDayTrip && overnightSections.length === 0 && (
-        <div className="mb-3 px-3 py-2 bg-surface-blue rounded-lg text-body-sm text-primary font-heading font-bold">
-          No overnight accommodation required for a same-day trip.
-        </div>
-      )}
-      <div className="space-y-3">
-        {dailyVisits.map((day, i) => (
-          <div key={i} className="border border-border-neutral rounded-lg overflow-hidden">
-            <div className="px-4 py-2 bg-surface-blue flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-heading font-bold shrink-0">
-                {day.day_number ?? i + 1}
-              </span>
-              <p className="font-heading font-bold text-sm text-text">
-                Day {day.day_number ?? i + 1}
-                {day.date ? ` — ${formatDateStr(day.date)}` : ''}
-              </p>
-            </div>
-            <div className="px-4 py-3">
-              {Array.isArray(day.visited_area_names) && day.visited_area_names.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {day.visited_area_names.map((name, j) => (
-                    <Pill key={j}>{name}</Pill>
-                  ))}
-                </div>
-              )}
-              {day.overnight_area_name && (
-                <p className="text-body-sm text-text-secondary">
-                  <span className="font-heading font-bold">Overnight:</span> {day.overnight_area_name}
-                </p>
-              )}
-              {day.explanation && (
-                <p className="text-body-sm text-text-secondary mt-1">{day.explanation}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-      {Array.isArray(planningSummary?.warnings_or_limitations) && planningSummary.warnings_or_limitations.length > 0 && (
-        <div className="mt-3 p-3 bg-status-warning/10 rounded-lg">
-          <p className="text-body-sm font-heading font-bold text-status-warning mb-1">Planning Notes</p>
-          <ul className="list-disc list-inside space-y-0.5">
-            {planningSummary.warnings_or_limitations.map((w, i) => (
-              <li key={i} className="text-body-sm text-text-secondary">{w}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </SectionCard>
-  );
+function stayDate(value) {
+  return parseCalendarDate(value) ? formatDateStr(value) : 'Date unavailable';
 }
 
 // ── C. Accommodation ─────────────────────────────────────────────────────────
 
 function AccommodationDisplay({ proposal }) {
   const payload = parsePayload(proposal);
-  // M2 stores selections in Hotels array inside the payload
-  const hotels = safeGet(payload, 'Hotels') || safeGet(payload, 'hotels') || [];
+  // The saved payload holds room selections (RoomId, dates, quantity); names come from displayDetails.
+  const rawHotels = safeGet(payload, 'Hotels') || safeGet(payload, 'hotels');
+  const hotels = Array.isArray(rawHotels) ? rawHotels : [];
+  const stays = groupStays(hotels, proposal.displayDetails?.rooms);
   const m2 = (proposal.executionSummaries || []).find(s => s.agentIdentity === 'm2_accommodation');
 
   const isOneDayTrip = proposal.inputSnapshot?.startDate &&
@@ -376,52 +305,32 @@ function AccommodationDisplay({ proposal }) {
   return (
     <SectionCard title="Accommodation (M2)" icon="hotel">
       <div className="space-y-4">
-        {hotels.map((acc, i) => {
-          const sectionCost = acc.SectionCost ?? acc.sectionCost;
-          const roomLines = acc.RoomLines ?? acc.roomLines ?? [];
+        {stays.map((stay) => {
+          const nights = calcNights(stay.checkIn, stay.checkOut);
           return (
-            <div key={i} className="border border-border-neutral rounded-lg overflow-hidden">
+            <div key={stay.key} className="border border-border-neutral rounded-lg overflow-hidden">
               <div className="px-4 py-3 bg-surface-blue border-b border-border-blue">
                 <p className="font-heading font-bold text-text">
-                  {acc.HotelName ?? acc.hotelName ?? 'Hotel (name unavailable)'}
+                  {stay.detail?.hotelName || UNAVAILABLE}
                 </p>
                 <p className="text-body-sm text-text-secondary">
-                  {acc.OvernightAreaName ?? acc.overnightAreaName ?? 'Area unavailable'}
+                  {stay.detail?.destinationName || UNAVAILABLE}
                 </p>
               </div>
               <div className="px-4 py-3 space-y-1">
-                <InfoRow label="Check-in" value={formatDateStr(acc.CheckInDate ?? acc.checkInDate)} />
-                <InfoRow label="Check-out" value={formatDateStr(acc.CheckOutDate ?? acc.checkOutDate)} />
-                <InfoRow label="Nights" value={acc.NightCount ?? acc.nightCount ?? 'N/A'} />
-                {sectionCost != null && (
-                  <InfoRow label="Section Cost" value={<span className="text-primary">{formatLKR(sectionCost)}</span>} />
-                )}
-                {roomLines.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-body-sm font-heading font-bold text-text-secondary mb-1">Room Breakdown</p>
-                    <div className="space-y-1">
-                      {roomLines.map((line, j) => {
-                        const type = line.RoomType ?? line.roomType ?? 'Room';
-                        const qty = line.Quantity ?? line.quantity ?? 'N/A';
-                        const cap = line.CapacityPerRoom ?? line.capacityPerRoom;
-                        const ppn = line.PricePerNight ?? line.pricePerNight;
-                        const lc = line.LineCost ?? line.lineCost;
-                        return (
-                          <div key={j} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 p-2 bg-surface-neutral rounded">
-                            <span className="text-body-sm font-heading font-bold text-text">{type}</span>
-                            <span className="text-body-sm text-text-secondary">× {qty}</span>
-                            {cap != null && <span className="text-body-sm text-text-secondary">{cap} guests/room</span>}
-                            {ppn != null && <span className="text-body-sm text-text-secondary">{formatLKR(ppn)}/night</span>}
-                            {lc != null && <span className="text-body-sm font-heading font-bold text-primary ml-auto">{formatLKR(lc)}</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
+                <InfoRow label="Check-in" value={stayDate(stay.checkIn)} />
+                <InfoRow label="Check-out" value={stayDate(stay.checkOut)} />
+                <InfoRow label="Nights" value={nights ?? 'Dates unavailable'} />
+                <div className="mt-2">
+                  <p className="text-body-sm font-heading font-bold text-text-secondary mb-1">Rooms</p>
+                  <div className="space-y-1">
+                    {stay.rooms.map((room, j) => (
+                      <p key={j} className="text-body-sm text-text p-2 bg-surface-neutral rounded">
+                        {roomLineText(room)}
+                      </p>
+                    ))}
                   </div>
-                )}
-                {acc.Explanation && (
-                  <p className="text-body-sm text-text-secondary mt-2 pt-2 border-t border-border-neutral">{acc.Explanation}</p>
-                )}
+                </div>
               </div>
             </div>
           );
@@ -450,8 +359,8 @@ function TransportDisplay({ proposal }) {
     );
   }
 
-  const vid = selectedVehicle.VehicleId ?? selectedVehicle.vehicleId;
-  const cap = selectedVehicle.PassengerCapacity ?? selectedVehicle.passengerCapacity ?? selectedVehicle.Capacity ?? selectedVehicle.capacity;
+  // Vehicle type, model and capacity come from displayDetails (looked up from the saved VehicleId).
+  const vehicleInfo = proposal.displayDetails?.vehicle;
   const ppd = selectedVehicle.PricePerDay ?? selectedVehicle.pricePerDay;
   const start = selectedVehicle.StartDate ?? selectedVehicle.startDate;
   const end = selectedVehicle.EndDate ?? selectedVehicle.endDate;
@@ -466,8 +375,9 @@ function TransportDisplay({ proposal }) {
   return (
     <SectionCard title="Transport (M3)" icon="directions_car">
       <div className="space-y-1">
-        {vid != null && <InfoRow label="Vehicle ID" value={vid} />}
-        {cap != null && <InfoRow label="Passenger Capacity" value={`${cap} passengers`} />}
+        <InfoRow label="Vehicle Type" value={vehicleInfo?.vehicleType || UNAVAILABLE} />
+        <InfoRow label="Make / Model" value={vehicleInfo?.model || UNAVAILABLE} />
+        <InfoRow label="Passenger Capacity" value={vehicleInfo ? `${vehicleInfo.capacity} passengers` : UNAVAILABLE} />
         {start && <InfoRow label="Rental Start" value={formatDateStr(start)} />}
         {end && <InfoRow label="Rental End" value={formatDateStr(end)} />}
         {days != null && <InfoRow label="Charged Days" value={`${days} day${days !== 1 ? 's' : ''}`} />}
@@ -553,9 +463,12 @@ function CostSummary({ proposal, trip }) {
 // ── F. Weather ────────────────────────────────────────────────────────────────
 
 function WeatherDisplay({ proposal }) {
+  const payload = parsePayload(proposal);
+  
+  // Try to read weather from the saved payload (new format) or fallback to M3 result (older format)
   const m3 = (proposal.executionSummaries || []).find(s => s.agentIdentity === 'm3_transport_weather');
   const m3Result = m3?.resultSummary;
-  const weatherData = safeGet(m3Result, 'weather') || safeGet(m3Result, 'weatherData');
+  const weatherData = safeGet(payload, 'PartialWeather') || safeGet(payload, 'partialWeather') || safeGet(m3Result, 'weather') || safeGet(m3Result, 'weatherData');
 
   if (!weatherData || (Array.isArray(weatherData) && weatherData.length === 0)) {
     return (
@@ -590,6 +503,9 @@ function WeatherDisplay({ proposal }) {
               {advisory && <p className="text-body-sm text-text mt-1">{advisory}</p>}
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
                 {w.temperature != null && <span className="text-body-sm text-text-secondary">{w.temperature}°{w.tempUnit || 'C'}</span>}
+                {w.minTemperatureC != null && <span className="text-body-sm text-text-secondary">Min: {w.minTemperatureC}°C</span>}
+                {w.maxTemperatureC != null && <span className="text-body-sm text-text-secondary">Max: {w.maxTemperatureC}°C</span>}
+                {w.precipitationSumMm != null && <span className="text-body-sm text-text-secondary">Precip: {w.precipitationSumMm} mm</span>}
                 {w.humidity != null && <span className="text-body-sm text-text-secondary">Humidity: {w.humidity}%</span>}
                 {w.windSpeed != null && <span className="text-body-sm text-text-secondary">Wind: {w.windSpeed} {w.windUnit || 'km/h'}</span>}
                 {w.precipitation != null && <span className="text-body-sm text-text-secondary">Precip: {w.precipitation} {w.precipUnit || 'mm'}</span>}
@@ -875,7 +791,6 @@ function ProposalDisplay({ proposal, trip, tripId, onProposalUpdated, onStartEdi
 
       {/* Proposal sections */}
       <ProposalOverview proposal={proposal} trip={trip} />
-      <DailyItinerary proposal={proposal} />
       <AccommodationDisplay proposal={proposal} />
       <TransportDisplay proposal={proposal} />
       <CostSummary proposal={proposal} trip={trip} />

@@ -326,7 +326,8 @@ def m4_validation_node(state: WorkflowState) -> WorkflowState:
         "TripId": state.get("trip_id"),
         "ProposalId": state.get("proposal_id"),
         "Hotels": hotels_checkout,
-        "Vehicle": vehicle_checkout
+        "Vehicle": vehicle_checkout,
+        "PartialWeather": state.get("weather") or []
     }
     state["final_payload"] = json.dumps(checkout_dto)
     state["is_valid"] = is_valid
