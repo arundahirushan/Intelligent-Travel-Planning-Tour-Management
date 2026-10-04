@@ -207,6 +207,9 @@ public class HotelBookingService : IHotelBookingService
         if (booking.Status == BookingStatus.Cancelled)
             throw new ValidationException("This booking is already cancelled.");
 
+        if (booking.Status == BookingStatus.Confirmed)
+            throw new ValidationException("Confirmed bookings cannot be cancelled online as there is no refund workflow.");
+
         booking.Status    = BookingStatus.Cancelled;
         booking.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();

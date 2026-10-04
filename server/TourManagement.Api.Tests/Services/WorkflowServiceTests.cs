@@ -40,7 +40,7 @@ public class WorkflowServiceTests : IDisposable
 
         var hotelService = new HotelService(_db);
         var vehicleService = new VehicleService(_db);
-        var checkoutService = new CheckoutService(_db, hotelService, vehicleService);
+        var checkoutService = new CheckoutService(_db, hotelService, vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings());
         
         _agentClient = new FakeAgentClient();
         _workflowService = new WorkflowService(_db, _agentClient, checkoutService, Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowService>.Instance);

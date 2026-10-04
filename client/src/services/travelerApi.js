@@ -246,3 +246,14 @@ export async function rejectProposal(tripId, proposalId, reason) {
     })
     .then(unwrap);
 }
+
+// ── Unified Checkout ──────────────────────────────────────────────────────────
+
+export async function placeHold(body) {
+  // body: { TripId, Hotels: [], Vehicle: {}, Supplies: [] }
+  return apiClient.post('/checkouts', body).then(unwrap);
+}
+
+export async function initiatePayment(checkoutId) {
+  return apiClient.post(`/checkouts/${checkoutId}/initiate-payment`).then(unwrap);
+}

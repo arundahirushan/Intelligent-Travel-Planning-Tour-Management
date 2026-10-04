@@ -83,7 +83,7 @@ public class CheckoutServiceTests
     {
         var hotelService   = new HotelService(db);
         var vehicleService = new VehicleService(db);
-        return new CheckoutService(db, hotelService, vehicleService);
+        return new CheckoutService(db, hotelService, vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings());
     }
 
     private static HotelCheckoutItemDto DefaultHotelItem() => new()

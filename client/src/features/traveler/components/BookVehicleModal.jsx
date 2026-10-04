@@ -4,7 +4,7 @@ import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import PickupLocationPickerModal from '../../../components/PickupLocationPickerModal';
-import { searchVehicles, createVehicleBooking } from '../../../services/travelerApi';
+import { searchVehicles } from '../../../services/travelerApi';
 
 function toDateInputValue(date) {
   if (!date) return '';
@@ -25,7 +25,7 @@ function formatLKR(amount) {
 //   onClose   — close handler
 //   onSuccess — called after successful booking
 //   trip      — TripDetailDto (provides TripId and default date range)
-export default function BookVehicleModal({ isOpen, onClose, onSuccess, trip }) {
+export default function BookVehicleModal({ isOpen, onClose, onAddVehicle, trip }) {
   const [step, setStep] = useState('search');
 
   // Search form
@@ -114,7 +114,7 @@ export default function BookVehicleModal({ isOpen, onClose, onSuccess, trip }) {
     setBookingLoading(true);
     setBookingError(null);
     try {
-      await createVehicleBooking({
+      const vehicleItem = {
         TripId: trip.id,
         VehicleId: selectedVehicle.vehicleId,
         StartDate: startDate,
@@ -122,11 +122,16 @@ export default function BookVehicleModal({ isOpen, onClose, onSuccess, trip }) {
         PickupLatitude: pickupLat,
         PickupLongitude: pickupLng,
         PickupNote: pickupNote || null,
-      });
-      onSuccess();
+        _model: selectedVehicle.model,
+        _price: selectedVehicle.pricePerDay * days
+      };
+      
+      if (onAddVehicle) {
+        onAddVehicle(vehicleItem);
+      }
       onClose();
     } catch (err) {
-      setBookingError(err.response?.data?.message || 'Booking failed. Please try again.');
+      setBookingError('Failed to add vehicle to cart. Please try again.');
     } finally {
       setBookingLoading(false);
     }
@@ -273,7 +278,7 @@ export default function BookVehicleModal({ isOpen, onClose, onSuccess, trip }) {
             <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
               <Button type="button" variant="secondary" onClick={onClose} disabled={bookingLoading}>Cancel</Button>
               <Button type="submit" disabled={bookingLoading || pickupLat === null}>
-                {bookingLoading ? <LoadingSpinner size="sm" /> : 'Confirm Booking'}
+                {bookingLoading ? <LoadingSpinner size="sm" /> : 'Add to Checkout'}
               </Button>
             </div>
           </form>
