@@ -257,3 +257,15 @@ export async function placeHold(body) {
 export async function initiatePayment(checkoutId) {
   return apiClient.post(`/checkouts/${checkoutId}/initiate-payment`).then(unwrap);
 }
+
+export async function getMyCheckouts({ tripId, page = 1, pageSize = 20 } = {}) {
+  const params = new URLSearchParams();
+  if (tripId) params.append('tripId', tripId);
+  params.append('page', page);
+  params.append('pageSize', pageSize);
+  return apiClient.get(`/checkouts/my?${params.toString()}`).then(unwrap);
+}
+
+export async function getCheckoutById(id) {
+  return apiClient.get(`/checkouts/${id}`).then(unwrap);
+}

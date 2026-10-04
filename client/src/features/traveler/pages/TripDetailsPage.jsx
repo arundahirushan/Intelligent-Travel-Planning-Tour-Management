@@ -13,7 +13,7 @@ import TransportTab from '../components/TransportTab';
 import SuppliesTab from '../components/SuppliesTab';
 import AiProposalTab from '../components/AiProposalTab';
 import CheckoutCartWidget from '../components/CheckoutCartWidget';
-import { getTripById, cancelTrip } from '../../../services/travelerApi';
+import { getTripById, cancelTrip, getMyCheckouts } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
   { icon: 'luggage', label: 'My Trips', path: '/traveler/trips' },
@@ -61,14 +61,29 @@ export default function TripDetailsPage() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelError, setCancelError] = useState(null);
   const [paymentMessage, setPaymentMessage] = useState(null);
+  const [activeCheckout, setActiveCheckout] = useState(null);
 
-  const fetchTrip = useCallback(async (isPolling = false) => {
+  const fetchTripData = useCallback(async (isPolling = false) => {
     try {
       if (!isPolling) setLoading(true);
       setError(null);
-      const data = await getTripById(tripId);
-      setTrip(data);
-      return data;
+      
+      const tripData = await getTripById(tripId);
+      setTrip(tripData);
+      
+      let currentCheckout = null;
+      try {
+        const checkoutRes = await getMyCheckouts({ tripId });
+        const checkouts = checkoutRes.items || [];
+        const active = checkouts.find(c => c.status === 'Active' || c.status === 'Paid');
+        currentCheckout = active || checkouts[0] || null;
+        setActiveCheckout(currentCheckout);
+      } catch (err) {
+        console.error("Failed to load checkouts", err);
+        setActiveCheckout({ _error: true, message: 'Failed to retrieve checkout status' });
+      }
+
+      return { trip: tripData, activeCheckout: currentCheckout };
     } catch (err) {
       if (!isPolling) setError(err.response?.data?.message || 'Failed to load trip details.');
       return null;
@@ -91,18 +106,18 @@ export default function TripDetailsPage() {
     }
 
     const initFetch = async () => {
-      const initialTrip = await fetchTrip();
-      if (!initialTrip) return;
+      const data = await fetchTripData();
+      if (!data || !data.trip) return;
 
-      if (payment === 'success' && initialTrip.status !== 'Confirmed') {
+      if (payment === 'success' && data.activeCheckout?.status !== 'Paid') {
         setPaymentMessage({ type: 'info', text: 'Payment received. Verifying with provider... Please wait.' });
         
         pollInterval = setInterval(async () => {
           if (!isMounted) return;
           pollCount++;
-          const polledTrip = await fetchTrip(true);
+          const polledData = await fetchTripData(true);
           
-          if (polledTrip?.status === 'Confirmed') {
+          if (polledData?.activeCheckout?.status === 'Paid') {
             setPaymentMessage({ type: 'success', text: 'Payment verified and booking confirmed!' });
             clearInterval(pollInterval);
           } else if (pollCount >= maxPolls) {
@@ -110,7 +125,7 @@ export default function TripDetailsPage() {
              clearInterval(pollInterval);
           }
         }, 3000);
-      } else if (payment === 'success' && initialTrip.status === 'Confirmed') {
+      } else if (payment === 'success' && data.activeCheckout?.status === 'Paid') {
           setPaymentMessage({ type: 'success', text: 'Payment verified and booking confirmed!' });
       }
     };
@@ -121,13 +136,13 @@ export default function TripDetailsPage() {
       isMounted = false;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [fetchTrip, location.search]);
+  }, [fetchTripData, location.search]);
 
   const handleCancelConfirm = async () => {
     try {
       setCancelError(null);
       await cancelTrip(tripId);
-      await fetchTrip();
+      await fetchTripData();
     } catch (err) {
       setCancelError(err.response?.data?.message || 'Failed to cancel trip.');
     }
@@ -307,9 +322,11 @@ export default function TripDetailsPage() {
 
       <CheckoutCartWidget 
         tripId={trip.id}
+        activeCheckout={activeCheckout}
         cartHotels={cartHotels}
         cartVehicle={cartVehicle}
         cartSupplies={cartSupplies}
+        onCheckoutCreated={() => fetchTripData()}
         onClearCart={() => {
           setCartHotels([]);
           setCartVehicle(null);
@@ -321,7 +338,7 @@ export default function TripDetailsPage() {
       <AddEditTripModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        onSuccess={() => fetchTrip()}
+        onSuccess={() => fetchTripData()}
         trip={trip}
       />
       <ConfirmDialog
