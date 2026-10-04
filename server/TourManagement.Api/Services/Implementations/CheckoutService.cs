@@ -349,11 +349,17 @@ public class CheckoutService : ICheckoutService
 
     // ── GetMyCheckoutsAsync ───────────────────────────────────────────────────
     public async Task<PagedResult<CheckoutResponseDto>> GetMyCheckoutsAsync(
-        int travelerId, int page, int pageSize)
+        int travelerId, int? tripId, int page, int pageSize)
     {
         var query = _db.TripCheckouts
-            .Where(c => c.TravelerId == travelerId)
-            .OrderByDescending(c => c.CreatedAt);
+            .Where(c => c.TravelerId == travelerId);
+
+        if (tripId.HasValue)
+        {
+            query = query.Where(c => c.TripId == tripId.Value);
+        }
+
+        query = query.OrderByDescending(c => c.CreatedAt);
 
         var total = await query.CountAsync();
         var checkoutIds = await query

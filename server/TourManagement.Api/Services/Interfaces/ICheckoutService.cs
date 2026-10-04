@@ -22,7 +22,7 @@ public interface ICheckoutService
     Task<CheckoutResponseDto> GetByIdAsync(int checkoutId, int travelerId);
 
     // Get all checkouts for the requesting traveler, newest first.
-    Task<PagedResult<CheckoutResponseDto>> GetMyCheckoutsAsync(int travelerId, int page, int pageSize);
+    Task<PagedResult<CheckoutResponseDto>> GetMyCheckoutsAsync(int travelerId, int? tripId, int page, int pageSize);
 
     // Cancel an active checkout. Sets checkout to Cancelled and linked bookings to Cancelled.
     // Allowed while Status == Active (whether or not the hold has expired).
