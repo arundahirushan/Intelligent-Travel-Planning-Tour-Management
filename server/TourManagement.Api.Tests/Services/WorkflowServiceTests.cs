@@ -243,13 +243,13 @@ public class WorkflowServiceTests : IDisposable
             new Destination { Id = 1, Name = "Galle" },
             new Destination { Id = 2, Name = "Kandy" });
         _db.Hotels.AddRange(
-            new Hotel { Id = 10, DestinationId = 1, Name = "Sea View" },
-            new Hotel { Id = 20, DestinationId = 2, Name = "Hill Inn" });
+            new Hotel { Id = 10, DestinationId = 1, Name = "Sea View", Status = HotelStatus.Active },
+            new Hotel { Id = 20, DestinationId = 2, Name = "Hill Inn", Status = HotelStatus.Active });
         _db.Rooms.AddRange(
-            new Room { Id = 1, HotelId = 10, RoomType = "Double room", Capacity = 2 },
-            new Room { Id = 2, HotelId = 10, RoomType = "Triple room", Capacity = 3 },
-            new Room { Id = 3, HotelId = 20, RoomType = "Single room", Capacity = 1 });
-        _db.Vehicles.Add(new Vehicle { Id = 5, VehicleType = "Van", Model = "Toyota KDH", Capacity = 9 });
+            new Room { Id = 1, HotelId = 10, RoomType = "Double room", Capacity = 2, Status = RoomStatus.Active, TotalRooms = 5 },
+            new Room { Id = 2, HotelId = 10, RoomType = "Triple room", Capacity = 3, Status = RoomStatus.Active, TotalRooms = 5 },
+            new Room { Id = 3, HotelId = 20, RoomType = "Single room", Capacity = 1, Status = RoomStatus.Active, TotalRooms = 5 });
+        _db.Vehicles.Add(new Vehicle { Id = 5, VehicleType = "Van", Model = "Toyota KDH", Capacity = 9, Status = VehicleStatus.Active });
         await _db.SaveChangesAsync();
     }
 
@@ -347,5 +347,95 @@ public class WorkflowServiceTests : IDisposable
 
         Assert.Equal("Generated", dto.Status);
         Assert.Null(dto.DisplayDetails);
+    }
+
+    [Fact]
+    public async Task WeatherPathVerification_AvailableAndUnavailableWeather_PreservesPayloadAndDoesNotAffectAcceptanceOrApproval()
+    {
+        // Arrange: trip and realistic payload containing available forecast & unavailable advisory
+        var trip = await SetupTripAsync();
+        await SeedHotelsAndVehicleAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1, DayNumber = 1 });
+        await _db.SaveChangesAsync();
+
+        var payloadJson = @"{
+            ""Hotels"": [
+                { ""RoomId"": 1, ""CheckInDate"": ""2026-10-01T00:00:00Z"", ""CheckOutDate"": ""2026-10-05T00:00:00Z"", ""NumberOfRooms"": 1 }
+            ],
+            ""Vehicle"": {
+                ""VehicleId"": 5,
+                ""StartDate"": ""2026-10-01T00:00:00Z"",
+                ""EndDate"": ""2026-10-05T00:00:00Z"",
+                ""PickupLatitude"": 6.9,
+                ""PickupLongitude"": 79.8
+            },
+            ""PartialWeather"": [
+                {
+                    ""Destination"": ""Colombo"",
+                    ""Date"": ""2026-10-01"",
+                    ""Status"": ""Available"",
+                    ""MaxTemperatureC"": 30.5,
+                    ""MinTemperatureC"": 24.0,
+                    ""PrecipitationSumMm"": 1.2,
+                    ""Advisory"": ""Favorable conditions for sight-seeing.""
+                },
+                {
+                    ""Destination"": ""Kandy"",
+                    ""Date"": ""2026-10-04"",
+                    ""Status"": ""Unavailable_DateOutOfRange"",
+                    ""Advisory"": ""Date out of forecast range (max 16 days).""
+                }
+            ]
+        }";
+
+        _agentClient.NextResult = new AgentProposalResult
+        {
+            Status = "Generated",
+            Payload = payloadJson,
+            ExecutionSummaries = new List<AgentExecutionSummary>
+            {
+                new() { AgentIdentity = "m1_planning", FinalOutcome = "Pass" },
+                new() { AgentIdentity = "m2_accommodation", FinalOutcome = "Pass" },
+                new() { AgentIdentity = "m3_transport_weather", FinalOutcome = "Pass" },
+                new() { AgentIdentity = "m4_validation", FinalOutcome = "Pass" }
+            }
+        };
+
+        // Act 1: Verify parsing logic and preservation through Generation
+        var generated = await _workflowService.GenerateProposalAsync(trip.Id, travelerId: 1);
+        Assert.Equal("Generated", generated.Status);
+
+        var retrieved = await _workflowService.GetLatestProposalAsync(trip.Id, travelerId: 1);
+        var payloadDoc = JsonSerializer.Deserialize<JsonElement>(retrieved.Payload?.ToString() ?? "{}");
+        var weatherArray = payloadDoc.GetProperty("PartialWeather");
+        Assert.Equal(2, weatherArray.GetArrayLength());
+
+        // Field mapping check for Available item
+        var item1 = weatherArray[0];
+        Assert.Equal("Colombo", item1.GetProperty("Destination").GetString());
+        Assert.Equal("2026-10-01", item1.GetProperty("Date").GetString());
+        Assert.Equal("Available", item1.GetProperty("Status").GetString());
+        Assert.Equal(30.5, item1.GetProperty("MaxTemperatureC").GetDouble());
+        Assert.Equal(24.0, item1.GetProperty("MinTemperatureC").GetDouble());
+        Assert.Equal(1.2, item1.GetProperty("PrecipitationSumMm").GetDouble());
+        Assert.Equal("Favorable conditions for sight-seeing.", item1.GetProperty("Advisory").GetString());
+
+        // Field mapping check for Unavailable item
+        var item2 = weatherArray[1];
+        Assert.Equal("Kandy", item2.GetProperty("Destination").GetString());
+        Assert.Equal("Unavailable_DateOutOfRange", item2.GetProperty("Status").GetString());
+        Assert.Equal("Date out of forecast range (max 16 days).", item2.GetProperty("Advisory").GetString());
+
+        // Act 2: Verify traveler acceptance works despite partial weather status / presence
+        var accepted = await _workflowService.AcceptProposalAsync(trip.Id, retrieved.ProposalId, travelerId: 1);
+        Assert.Equal("PendingAdminApproval", accepted.Status);
+
+        // Act 3: Verify admin approval works and creates holds without weather blocking
+        var approved = await _workflowService.ApproveProposalAsync(retrieved.ProposalId, adminId: 99);
+        Assert.Equal("HoldPlaced", approved.Status);
+
+        // Verify hold creation (checkout) succeeded
+        var checkoutCount = await _db.TripCheckouts.CountAsync();
+        Assert.Equal(1, checkoutCount);
     }
 }

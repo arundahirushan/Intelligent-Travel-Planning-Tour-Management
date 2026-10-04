@@ -141,9 +141,12 @@ def m3_transport_weather_node(state: WorkflowState) -> WorkflowState:
             visit_date = visit.get("date")
             destinations = visit.get("visited_area_names", [])
             overnight = visit.get("overnight_area_name")
+            destination_name = visit.get("destination_name")
             all_dests = set(destinations)
             if overnight:
                 all_dests.add(overnight)
+            if destination_name:
+                all_dests.add(destination_name)
                 
             if not visit_date or not all_dests:
                 continue

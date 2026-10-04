@@ -498,7 +498,14 @@ function WeatherDisplay({ proposal }) {
           );
           return (
             <div key={i} className={`p-3 rounded-lg border ${isFavorable ? 'bg-status-success/5 border-status-success/20' : isAdverse ? 'bg-status-warning/5 border-status-warning/20' : 'bg-surface-neutral border-border-neutral'}`}>
-              <p className="font-heading font-bold text-sm text-text">{w.destination || `Forecast ${i + 1}`}</p>
+              <p className="font-heading font-bold text-sm text-text">
+                {w.districtName ? `District Weather Advisory — ${w.districtName} District` : (w.destination || `Forecast ${i + 1}`)}
+              </p>
+              {w.districtName && (
+                <p className="text-[10px] uppercase tracking-widest text-text-secondary mt-0.5 mb-1">
+                  Forecast uses a representative location within the district.
+                </p>
+              )}
               {w.date && <p className="text-body-sm text-text-secondary">{formatDateStr(w.date)}</p>}
               {advisory && <p className="text-body-sm text-text mt-1">{advisory}</p>}
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">

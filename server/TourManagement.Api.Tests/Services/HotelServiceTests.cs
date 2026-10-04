@@ -26,7 +26,7 @@ public class HotelServiceTests
         var db = new AppDbContext(options);
 
         // Seed a destination.
-        var destination = new Destination { Id = 1, Name = "Galle", Region = "Southern Province", Description = "Historic fort city." };
+        var destination = new Destination { Id = 1, Name = "Galle", Region = "Kandy", Description = "Historic fort city." };
         db.Destinations.Add(destination);
 
         // Seed a HotelOwner user.

@@ -29,7 +29,7 @@ class _DestinationListScreenState extends State<DestinationListScreen> {
   // Backend-accepted sort values.
   static const _sortOptions = [
     ('Name A–Z', null),
-    ('Region', 'region'),
+    ('District', 'region'),
     ('Oldest first', 'oldest'),
   ];
 
@@ -135,7 +135,7 @@ class _DestinationListScreenState extends State<DestinationListScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Search by name or region',
+                labelText: 'Search by name or district',
                 prefixIcon: const Icon(Icons.search),
                 border: const OutlineInputBorder(),
                 isDense: true,

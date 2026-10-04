@@ -51,6 +51,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProfileService,         TourManagement.Api.Services.Implementations.ProfileService>();
         services.AddScoped<IWorkflowService,        TourManagement.Api.Services.Implementations.WorkflowService>();
 
+        // Advisory weather lookups (Open-Meteo). Typed client so WeatherService gets its own HttpClient.
+        services.AddHttpClient<IWeatherService, TourManagement.Api.Services.Implementations.WeatherService>();
+
         // Checkout (hold) flow — the shared operation for manual and future agentic booking.
         services.AddScoped<ICheckoutService,         TourManagement.Api.Services.Implementations.CheckoutService>();
 
