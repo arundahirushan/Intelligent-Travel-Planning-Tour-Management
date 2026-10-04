@@ -4,6 +4,9 @@ using TourManagement.Api.Common.Exceptions;
 using TourManagement.Api.Data;
 using TourManagement.Api.Dtos.Checkout;
 using TourManagement.Api.Mappings;
+using System.Security.Cryptography;
+using System.Text;
+using TourManagement.Api.Configurations;
 using TourManagement.Api.Models;
 using TourManagement.Api.Services.Interfaces;
 
@@ -16,15 +19,19 @@ public class CheckoutService : ICheckoutService
     private readonly AppDbContext _db;
     private readonly IHotelService _hotelService;
     private readonly IVehicleService _vehicleService;
+    private readonly IContractService _contractService;
+    private readonly PayHereSettings _payHereSettings;
 
     // How long a hold is kept before it expires.
     private static readonly TimeSpan HoldDuration = TimeSpan.FromHours(12);
 
-    public CheckoutService(AppDbContext db, IHotelService hotelService, IVehicleService vehicleService)
+    public CheckoutService(AppDbContext db, IHotelService hotelService, IVehicleService vehicleService, IContractService contractService, PayHereSettings payHereSettings)
     {
         _db             = db;
         _hotelService   = hotelService;
         _vehicleService = vehicleService;
+        _contractService = contractService;
+        _payHereSettings = payHereSettings;
     }
 
     // ── PlaceHoldAsync ────────────────────────────────────────────────────────
@@ -47,8 +54,8 @@ public class CheckoutService : ICheckoutService
         var allHotels = dto.Hotels.ToList();
         if (dto.Hotel != null) allHotels.Add(dto.Hotel);
 
-        if (!allHotels.Any() && dto.Vehicle == null)
-            throw new ValidationException("At least one item (Hotel or Vehicle) must be selected.");
+        if (!allHotels.Any() && dto.Vehicle == null && !dto.Supplies.Any())
+            throw new ValidationException("At least one item (Hotel, Vehicle, or Supply) must be selected.");
 
         foreach (var h in allHotels)
         {
@@ -110,6 +117,12 @@ public class CheckoutService : ICheckoutService
                     long vehicleLockKey = BuildLockKey("vehicle", dto.Vehicle.VehicleId);
                     await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({vehicleLockKey})");
                 }
+
+                foreach (var sId in dto.Supplies.Select(s => s.SupplyId).Distinct())
+                {
+                    long supplyLockKey = BuildLockKey("supply", sId);
+                    await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({supplyLockKey})");
+                }
             }
 
             if (isAgenticProposal && !string.IsNullOrWhiteSpace(dto.ProposalId))
@@ -141,6 +154,15 @@ public class CheckoutService : ICheckoutService
                 vehicleSnapshot = vSnapshot;
             }
 
+            var supplyOrders = new List<SupplyOrder>();
+            decimal totalSupplyPrice = 0m;
+            foreach (var sDto in dto.Supplies)
+            {
+                var (so, sSnapshot) = await ValidateAndCreateSupplyOrderAsync(sDto, trip, travelerId);
+                supplyOrders.Add(so);
+                totalSupplyPrice += sSnapshot;
+            }
+
             var expiresAt = now.Add(HoldDuration);
             var checkout = new TripCheckout
             {
@@ -148,7 +170,8 @@ public class CheckoutService : ICheckoutService
                 TravelerId = travelerId,
                 HotelPriceSnapshot = hotelBookings.Any() ? totalHotelPrice : null,
                 VehiclePriceSnapshot = vehicleBooking != null ? vehicleSnapshot : null,
-                TotalPrice = totalHotelPrice + vehicleSnapshot,
+                TotalPrice = totalHotelPrice + vehicleSnapshot + totalSupplyPrice,
+                WebsiteFee = 1000m,
                 Status = CheckoutStatus.Active,
                 ProposalId = isAgenticProposal ? dto.ProposalId : null,
                 HoldExpiresAt = expiresAt,
@@ -166,6 +189,11 @@ public class CheckoutService : ICheckoutService
                 vehicleBooking.HoldExpiresAt = expiresAt;
                 checkout.VehicleBooking = vehicleBooking;
             }
+            foreach (var so in supplyOrders)
+            {
+                so.HoldExpiresAt = expiresAt;
+                checkout.SupplyOrders.Add(so);
+            }
 
             _db.TripCheckouts.Add(checkout);
             await _db.SaveChangesAsync(); 
@@ -176,6 +204,7 @@ public class CheckoutService : ICheckoutService
 
             foreach (var hb in hotelBookings) hb.CheckoutId = checkout.Id;
             if (vehicleBooking != null) vehicleBooking.CheckoutId = checkout.Id;
+            foreach (var so in supplyOrders) so.CheckoutId = checkout.Id;
 
             await _db.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -383,9 +412,93 @@ public class CheckoutService : ICheckoutService
             }
         }
 
+        // Cancel linked supply orders and restore stock.
+        var supplyOrders = await _db.SupplyOrders.Include(s => s.Supply).Where(s => s.CheckoutId == checkoutId).ToListAsync();
+        foreach (var so in supplyOrders)
+        {
+            if (so.Status == BookingStatus.Held)
+            {
+                so.Status = BookingStatus.Cancelled;
+                so.UpdatedAt = now;
+                so.Supply.StockQuantity += so.Quantity;
+                so.Supply.UpdatedAt = now;
+            }
+        }
+
         checkout.Status    = CheckoutStatus.Cancelled;
         checkout.UpdatedAt = now;
         await _db.SaveChangesAsync();
+    }
+
+    public async Task<PayHereInitiateResponseDto> InitiatePaymentAsync(int checkoutId, int travelerId)
+    {
+        var checkout = await _db.TripCheckouts
+            .Include(c => c.Traveler)
+            .FirstOrDefaultAsync(c => c.Id == checkoutId);
+            
+        if (checkout == null)
+            throw new NotFoundException($"Checkout with ID {checkoutId} was not found.");
+        if (checkout.TravelerId != travelerId)
+            throw new ForbiddenException("You do not have permission to initiate payment for this checkout.");
+        if (checkout.Status != CheckoutStatus.Active)
+            throw new ValidationException($"Cannot initiate payment for a checkout that is {checkout.Status}.");
+        if (checkout.HoldExpiresAt < DateTime.UtcNow)
+            throw new ValidationException("This hold has expired. Please create a new hold.");
+
+        var amountFormatted = checkout.WebsiteFee.ToString("F2");
+        var currency = "LKR";
+        var orderId = checkout.Id.ToString();
+
+        var merchantSecretHash = GetMd5Hash(_payHereSettings.MerchantSecret).ToUpper();
+        var hashString = _payHereSettings.MerchantId + orderId + amountFormatted + currency + merchantSecretHash;
+        var hash = GetMd5Hash(hashString).ToUpper();
+
+        // Create a PaymentAttempt
+        var attempt = new PaymentAttempt
+        {
+            TripCheckoutId = checkout.Id,
+            Amount = checkout.WebsiteFee,
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _db.PaymentAttempts.Add(attempt);
+        await _db.SaveChangesAsync();
+
+        var baseUrl = _payHereSettings.IsSandbox ? "https://sandbox.payhere.lk/pay/checkout" : "https://www.payhere.lk/pay/checkout";
+
+        return new PayHereInitiateResponseDto
+        {
+            MerchantId = _payHereSettings.MerchantId,
+            ReturnUrl = _payHereSettings.ReturnUrl.Replace("{tripId}", checkout.TripId.ToString()),
+            CancelUrl = _payHereSettings.CancelUrl.Replace("{tripId}", checkout.TripId.ToString()),
+            NotifyUrl = _payHereSettings.NotifyUrl,
+            OrderId = orderId,
+            Items = "Trip Booking Confirmation Fee",
+            Currency = currency,
+            Amount = amountFormatted,
+            FirstName = checkout.Traveler.FullName,
+            LastName = "Traveler",
+            Email = checkout.Traveler.Email,
+            Phone = "0000000000",
+            Address = "N/A",
+            City = "N/A",
+            Country = "Sri Lanka",
+            Hash = hash,
+            PayHereUrl = baseUrl
+        };
+    }
+
+    private static string GetMd5Hash(string input)
+    {
+        using var md5 = MD5.Create();
+        var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
+        var sb = new StringBuilder();
+        foreach (var b in bytes)
+        {
+            sb.Append(b.ToString("x2"));
+        }
+        return sb.ToString();
     }
 
     // ── ConfirmAsync ──────────────────────────────────────────────────────────
@@ -414,7 +527,10 @@ public class CheckoutService : ICheckoutService
         // Do NOT call ConfirmAsync from any UI button or automatic code path.
         // ──────────────────────────────────────────────────────────────────────────
 
-        var checkout = await _db.TripCheckouts.FindAsync(checkoutId);
+        var checkout = await _db.TripCheckouts
+            .Include(c => c.Trip)
+            .FirstOrDefaultAsync(c => c.Id == checkoutId);
+            
         if (checkout == null)
             throw new NotFoundException($"Checkout with ID {checkoutId} was not found.");
         if (checkout.Status != CheckoutStatus.Active)
@@ -441,8 +557,23 @@ public class CheckoutService : ICheckoutService
             }
         }
 
+        var supplyOrders = await _db.SupplyOrders.Where(s => s.CheckoutId == checkoutId).ToListAsync();
+        foreach (var so in supplyOrders)
+        {
+            so.Status = BookingStatus.Confirmed;
+            so.UpdatedAt = now;
+        }
+
         checkout.Status    = CheckoutStatus.Paid;
         checkout.UpdatedAt = now;
+        
+        // Also confirm the Trip so it's locked from changes.
+        if (checkout.Trip != null)
+        {
+            checkout.Trip.Status = TripStatus.Confirmed;
+            checkout.Trip.UpdatedAt = now;
+        }
+
         await _db.SaveChangesAsync();
     }
 
@@ -554,6 +685,44 @@ public class CheckoutService : ICheckoutService
         return (booking, snapshot);
     }
 
+    private async Task<(SupplyOrder booking, decimal snapshot)> ValidateAndCreateSupplyOrderAsync(
+        SupplyCheckoutItemDto item, Trip trip, int travelerId)
+    {
+        var supply = await _db.Supplies.FirstOrDefaultAsync(s => s.Id == item.SupplyId);
+        if (supply == null || supply.Status != SupplyStatus.Active)
+            throw new ValidationException($"Supply {item.SupplyId} is not available or does not exist.");
+
+        bool hasValidContract = await _contractService.IsContractCurrentlyValidAsync(supply.SupplierId);
+        if (!hasValidContract)
+            throw new ValidationException($"Supplier for supply {item.SupplyId} does not currently have a valid contract.");
+
+        if (supply.StockQuantity < item.Quantity)
+            throw new ValidationException($"Insufficient stock available for supply {supply.Name}. Requested: {item.Quantity}, available: {supply.StockQuantity}.");
+
+        // Decrement stock directly here. The transaction rollback will revert it if anything fails.
+        supply.StockQuantity -= item.Quantity;
+        supply.UpdatedAt = DateTime.UtcNow;
+
+        decimal snapshot = supply.PricePerUnit * item.Quantity;
+
+        var now = DateTime.UtcNow;
+        var booking = new SupplyOrder
+        {
+            TripId = trip.Id,
+            SupplyId = item.SupplyId,
+            Quantity = item.Quantity,
+            PriceAtOrderTime = supply.PricePerUnit,
+            Status = BookingStatus.Held,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        
+        // Let the outer function add it to checkout and assign CheckoutId
+        _db.SupplyOrders.Add(booking);
+        
+        return (booking, snapshot);
+    }
+
     // Loads a TripCheckout with all its related data and maps it to the response DTO.
     private async Task<CheckoutResponseDto> LoadCheckoutDtoAsync(int checkoutId)
     {
@@ -589,6 +758,16 @@ public class CheckoutService : ICheckoutService
 
             if (vb != null)
                 dto.VehicleItem = vb.ToHoldItemDto(c.VehiclePriceSnapshot ?? 0m);
+        }
+
+        var supplyOrders = await _db.SupplyOrders
+            .Include(s => s.Supply)
+            .Where(s => s.CheckoutId == c.Id)
+            .ToListAsync();
+            
+        foreach (var so in supplyOrders)
+        {
+            dto.Supplies.Add(so.ToHoldItemDto());
         }
 
         return dto;
@@ -675,6 +854,7 @@ public class CheckoutService : ICheckoutService
         {
             "room"    => 1_000_000,
             "vehicle" => 2_000_000,
+            "supply"  => 3_000_000,
             _         => resourceId.GetHashCode()
         };
         return (long)typeHash + resourceId;

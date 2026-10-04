@@ -170,6 +170,9 @@ public class SupplyOrderService : ISupplyOrderService
         if (order.Status == BookingStatus.Cancelled)
             throw new ValidationException("Order is already cancelled.");
 
+        if (order.Status == BookingStatus.Confirmed)
+            throw new ValidationException("Confirmed orders cannot be cancelled online as there is no refund workflow.");
+
         // Restore stock
         order.Supply.StockQuantity += order.Quantity;
         order.Supply.UpdatedAt = DateTime.UtcNow;

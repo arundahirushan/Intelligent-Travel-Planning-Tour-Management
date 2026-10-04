@@ -4,7 +4,7 @@ import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import StatusBadge from '../../../components/StatusBadge';
-import { searchHotels, createHotelBooking } from '../../../services/travelerApi';
+import { searchHotels } from '../../../services/travelerApi';
 
 // Format a number as LKR currency.
 function formatLKR(amount) {
@@ -27,7 +27,7 @@ function toDateInputValue(date) {
 //   onSuccess — called after successful booking
 //   trip     — TripDetailDto (provides TripId and default date range)
 //   destinations — array of { id, name } for the destination dropdown
-export default function BookHotelModal({ isOpen, onClose, onSuccess, trip, destinations = [] }) {
+export default function BookHotelModal({ isOpen, onClose, onAddHotel, trip, destinations = [] }) {
   const [step, setStep] = useState('search');  // 'search' | 'results' | 'confirm'
 
   // Search form
@@ -116,25 +116,23 @@ export default function BookHotelModal({ isOpen, onClose, onSuccess, trip, desti
     setBookingLoading(true);
     setBookingError(null);
     try {
-      await createHotelBooking({
+      const hotelItem = {
         TripId: trip.id,
         RoomId: selectedRoom.roomId,
         CheckInDate: checkIn,
         CheckOutDate: checkOut,
         NumberOfRooms: rooms,
-      });
-      onSuccess();
+        _hotelName: selectedRoom.hotelName,
+        _roomType: selectedRoom.roomType,
+        _price: selectedRoom.pricePerNight * nights * rooms
+      };
+      
+      if (onAddHotel) {
+        onAddHotel(hotelItem);
+      }
       onClose();
     } catch (err) {
-      console.error('Booking error response:', err.response?.data);
-      let errorMsg = err.response?.data?.message;
-      if (!errorMsg && err.response?.data?.errors) {
-        errorMsg = Object.values(err.response.data.errors).flat().join(' ');
-      }
-      if (!errorMsg && err.response?.data?.title) {
-        errorMsg = err.response.data.title;
-      }
-      setBookingError(errorMsg || 'Booking failed. Please try again.');
+      setBookingError('Failed to add hotel to cart. Please try again.');
     } finally {
       setBookingLoading(false);
     }
@@ -310,7 +308,7 @@ export default function BookHotelModal({ isOpen, onClose, onSuccess, trip, desti
           <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
             <Button type="button" variant="secondary" onClick={onClose} disabled={bookingLoading}>Cancel</Button>
             <Button type="submit" disabled={bookingLoading}>
-              {bookingLoading ? <LoadingSpinner size="sm" /> : 'Confirm Booking'}
+              {bookingLoading ? <LoadingSpinner size="sm" /> : 'Add to Checkout'}
             </Button>
           </div>
         </form>

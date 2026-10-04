@@ -57,7 +57,7 @@ public class WorkflowStaleRuleTests : IDisposable
 
         var hotelService = new HotelService(_db);
         var vehicleService = new VehicleService(_db);
-        var checkoutService = new CheckoutService(_db, hotelService, vehicleService);
+        var checkoutService = new CheckoutService(_db, hotelService, vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings());
         _service = new WorkflowService(_db, _agentClient, checkoutService, NullLogger<WorkflowService>.Instance);
     }
 

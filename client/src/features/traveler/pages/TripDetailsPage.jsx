@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import StatusBadge from '../../../components/StatusBadge';
 import ErrorBanner from '../../../components/ErrorBanner';
@@ -12,6 +12,7 @@ import AccommodationTab from '../components/AccommodationTab';
 import TransportTab from '../components/TransportTab';
 import SuppliesTab from '../components/SuppliesTab';
 import AiProposalTab from '../components/AiProposalTab';
+import CheckoutCartWidget from '../components/CheckoutCartWidget';
 import { getTripById, cancelTrip } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
@@ -45,30 +46,82 @@ function tripDays(start, end) {
 export default function TripDetailsPage() {
   const { tripId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
 
+  const [cartHotels, setCartHotels] = useState([]);
+  const [cartVehicle, setCartVehicle] = useState(null);
+  const [cartSupplies, setCartSupplies] = useState([]);
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelError, setCancelError] = useState(null);
+  const [paymentMessage, setPaymentMessage] = useState(null);
 
-  const fetchTrip = useCallback(async () => {
+  const fetchTrip = useCallback(async (isPolling = false) => {
     try {
-      setLoading(true);
+      if (!isPolling) setLoading(true);
       setError(null);
       const data = await getTripById(tripId);
       setTrip(data);
+      return data;
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load trip details.');
+      if (!isPolling) setError(err.response?.data?.message || 'Failed to load trip details.');
+      return null;
     } finally {
-      setLoading(false);
+      if (!isPolling) setLoading(false);
     }
   }, [tripId]);
 
-  useEffect(() => { fetchTrip(); }, [fetchTrip]);
+  useEffect(() => {
+    let isMounted = true;
+    let pollCount = 0;
+    const maxPolls = 10;
+    let pollInterval = null;
+
+    const queryParams = new URLSearchParams(location.search);
+    const payment = queryParams.get('payment');
+
+    if (payment === 'cancel') {
+        setPaymentMessage({ type: 'warning', text: 'Payment was cancelled.' });
+    }
+
+    const initFetch = async () => {
+      const initialTrip = await fetchTrip();
+      if (!initialTrip) return;
+
+      if (payment === 'success' && initialTrip.status !== 'Confirmed') {
+        setPaymentMessage({ type: 'info', text: 'Payment received. Verifying with provider... Please wait.' });
+        
+        pollInterval = setInterval(async () => {
+          if (!isMounted) return;
+          pollCount++;
+          const polledTrip = await fetchTrip(true);
+          
+          if (polledTrip?.status === 'Confirmed') {
+            setPaymentMessage({ type: 'success', text: 'Payment verified and booking confirmed!' });
+            clearInterval(pollInterval);
+          } else if (pollCount >= maxPolls) {
+             setPaymentMessage({ type: 'warning', text: 'Payment verification is taking longer than expected. Please check back later.' });
+             clearInterval(pollInterval);
+          }
+        }, 3000);
+      } else if (payment === 'success' && initialTrip.status === 'Confirmed') {
+          setPaymentMessage({ type: 'success', text: 'Payment verified and booking confirmed!' });
+      }
+    };
+
+    initFetch();
+
+    return () => {
+      isMounted = false;
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [fetchTrip, location.search]);
 
   const handleCancelConfirm = async () => {
     try {
@@ -121,6 +174,20 @@ export default function TripDetailsPage() {
       </Link>
 
       {/* Trip Header */}
+      {paymentMessage && (
+        <div className={`mb-4 p-4 rounded-xl border font-body ${
+          paymentMessage.type === 'success' ? 'bg-status-success/10 border-status-success/20 text-status-success' :
+          paymentMessage.type === 'warning' ? 'bg-status-warning/10 border-status-warning/20 text-status-warning' :
+          'bg-primary/10 border-primary/20 text-primary'
+        }`}>
+          <p className="font-bold flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg">
+              {paymentMessage.type === 'success' ? 'check_circle' : paymentMessage.type === 'warning' ? 'warning' : 'info'}
+            </span>
+            {paymentMessage.text}
+          </p>
+        </div>
+      )}
       <div className="bg-white border border-border-neutral rounded-2xl shadow-soft overflow-hidden mb-8">
         <div className="h-1.5 bg-gradient-to-r from-primary to-accent" />
         <div className="p-[var(--space-xl)]">
@@ -233,10 +300,22 @@ export default function TripDetailsPage() {
         {activeTab === 'itinerary' && (
           <ItineraryTab trip={trip} onTripUpdate={handleTripUpdate} />
         )}
-        {activeTab === 'accommodation' && <AccommodationTab trip={trip} />}
-        {activeTab === 'transport' && <TransportTab trip={trip} />}
-        {activeTab === 'supplies' && <SuppliesTab trip={trip} />}
+        {activeTab === 'accommodation' && <AccommodationTab trip={trip} onAddHotel={(h) => setCartHotels(prev => [...prev, h])} />}
+        {activeTab === 'transport' && <TransportTab trip={trip} onAddVehicle={(v) => setCartVehicle(v)} />}
+        {activeTab === 'supplies' && <SuppliesTab trip={trip} onAddSupply={(s) => setCartSupplies(prev => [...prev, s])} />}
       </div>
+
+      <CheckoutCartWidget 
+        tripId={trip.id}
+        cartHotels={cartHotels}
+        cartVehicle={cartVehicle}
+        cartSupplies={cartSupplies}
+        onClearCart={() => {
+          setCartHotels([]);
+          setCartVehicle(null);
+          setCartSupplies([]);
+        }}
+      />
 
       {/* Modals */}
       <AddEditTripModal

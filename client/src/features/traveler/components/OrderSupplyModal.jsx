@@ -3,7 +3,7 @@ import Modal from '../../../components/Modal';
 import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import { browseSupplies, createSupplyOrder } from '../../../services/travelerApi';
+import { browseSupplies } from '../../../services/travelerApi';
 
 function formatLKR(amount) {
   return `LKR ${Number(amount).toLocaleString('en-LK')}`;
@@ -16,9 +16,10 @@ function formatLKR(amount) {
 // Props:
 //   isOpen    — controls visibility
 //   onClose   — close handler
+//   onClose   — close handler
 //   onSuccess — called after successful order
 //   trip      — TripDetailDto (provides TripId)
-export default function OrderSupplyModal({ isOpen, onClose, onSuccess, trip }) {
+export default function OrderSupplyModal({ isOpen, onClose, onAddSupply, trip }) {
   const [step, setStep] = useState('browse');
 
   // Browse state
@@ -84,15 +85,20 @@ export default function OrderSupplyModal({ isOpen, onClose, onSuccess, trip }) {
     setOrderLoading(true);
     setOrderError(null);
     try {
-      await createSupplyOrder({
+      const supplyItem = {
         TripId: trip.id,
         SupplyId: selectedSupply.id,
         Quantity: qty,
-      });
-      onSuccess();
+        _name: selectedSupply.name,
+        _price: selectedSupply.pricePerUnit * qty
+      };
+      
+      if (onAddSupply) {
+        onAddSupply(supplyItem);
+      }
       onClose();
     } catch (err) {
-      setOrderError(err.response?.data?.message || 'Order failed. Please try again.');
+      setOrderError('Failed to add supply to cart. Please try again.');
     } finally {
       setOrderLoading(false);
     }
@@ -211,7 +217,7 @@ export default function OrderSupplyModal({ isOpen, onClose, onSuccess, trip }) {
           <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
             <Button type="button" variant="secondary" onClick={onClose} disabled={orderLoading}>Cancel</Button>
             <Button type="submit" disabled={orderLoading}>
-              {orderLoading ? <LoadingSpinner size="sm" /> : 'Place Order'}
+              {orderLoading ? <LoadingSpinner size="sm" /> : 'Add to Checkout'}
             </Button>
           </div>
         </form>
