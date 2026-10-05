@@ -71,7 +71,7 @@ public class HotelOwnerAggregateEndpointsTests
     {
         var db = CreateDb(nameof(GetMyHotelsBookingsAsync_ReturnsBookingsFromAllOwnedHotels));
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         // Owner 1 has 2 bookings across their 2 hotels
         var result = await bookingService.GetMyHotelsBookingsAsync(10, null, null, 1, 10);

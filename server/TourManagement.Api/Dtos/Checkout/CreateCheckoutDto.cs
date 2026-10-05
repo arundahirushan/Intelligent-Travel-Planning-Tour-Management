@@ -40,18 +40,31 @@ public class VehicleCheckoutItemDto
 }
 
 // Request body for POST /api/checkouts.
-// At least one of Hotel or Vehicle must be non-null (validated in CheckoutService).
+// At least one of Hotel, Vehicle, or Supplies must be non-null (validated in CheckoutService).
 // The backend looks up prices itself — the traveler never sends a price.
 public class CreateCheckoutDto
 {
     [Required]
     public int TripId { get; set; }
 
-    // Provide Hotel, Vehicle, or both.  At least one required.
+    // Provide Hotel, Vehicle, Supplies or both.  At least one required.
     public HotelCheckoutItemDto? Hotel { get; set; }
     public List<HotelCheckoutItemDto> Hotels { get; set; } = new();
     public VehicleCheckoutItemDto? Vehicle { get; set; }
+    public List<SupplyCheckoutItemDto> Supplies { get; set; } = new();
     
     // An identifier for the agentic proposal. 
     public string? ProposalId { get; set; }
+
+    // Advisory weather data collected during proposal generation.
+    public List<TourManagement.Api.Dtos.Weather.WeatherResultDto>? PartialWeather { get; set; }
+}
+
+public class SupplyCheckoutItemDto
+{
+    [Required]
+    public int SupplyId { get; set; }
+
+    [Required, Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1.")]
+    public int Quantity { get; set; }
 }
