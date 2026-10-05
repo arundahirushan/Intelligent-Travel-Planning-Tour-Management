@@ -38,6 +38,7 @@ public interface IHotelService
     Task ApproveHotelAsync(int hotelId);
     Task RejectHotelAsync(int hotelId);   // only valid from PendingApproval → Rejected
     Task SuspendHotelAsync(int hotelId);  // only valid from Active → Suspended
+    Task ReactivateHotelAsync(int hotelId); // only valid from Suspended → Active
 
     Task<PagedResult<HotelBookingSummaryDto>> GetAllBookingsAsync(string? status, int page, int pageSize);
 

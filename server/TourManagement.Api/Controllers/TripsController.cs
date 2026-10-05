@@ -79,13 +79,13 @@ public class TripsController : ControllerBase
         return Ok(ApiResponse<TripDetailDto>.Ok(result, "Trip updated."));
     }
 
-    /// <summary>Cancel a trip (only if Draft or Planned). Sets Status = Cancelled. Traveler only.</summary>
+    /// <summary>Permanently delete an unpaid trip. Traveler only.</summary>
     [HttpDelete("{id}")]
     [Authorize(Roles = Roles.Traveler)]
-    public async Task<ActionResult<ApiResponse>> Cancel(int id)
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
     {
-        await _tripService.CancelAsync(id, GetCurrentUserId());
-        return Ok(ApiResponse.Ok("Trip cancelled."));
+        await _tripService.DeleteAsync(id, GetCurrentUserId());
+        return Ok(ApiResponse.Ok("Trip deleted."));
     }
 
     /// <summary>Add an itinerary item to a trip. Traveler (owner) only.</summary>

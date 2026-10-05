@@ -111,4 +111,14 @@ class VehicleService {
       throw Exception(json['message'] ?? 'Failed to suspend vehicle');
     }
   }
+
+  /// Reactivate a suspended vehicle. Admin/SuperAdmin endpoint: POST /api/vehicles/{id}/reactivate
+  /// Only valid when vehicle status is Suspended.
+  Future<void> reactivateVehicle(int id) async {
+    final response = await _apiClient.post('/vehicles/$id/reactivate');
+    final json = jsonDecode(response.body);
+    if (json['success'] != true) {
+      throw Exception(json['message'] ?? 'Failed to reactivate vehicle');
+    }
+  }
 }

@@ -204,16 +204,35 @@ export default function RoomModal({ isOpen, onClose, onSuccess, hotelId, room })
 
         <div className="flex flex-col mb-4">
           <label className="mb-1.5 font-heading text-sm font-semibold text-text-secondary">
-            Amenities
+            Amenities <span className="text-text-secondary/60 font-normal">(optional)</span>
           </label>
-          <textarea
-            name="Amenities"
-            value={formData.Amenities}
-            onChange={handleChange}
-            rows={2}
-            className="bg-white border border-border-neutral rounded-md px-4 py-2.5 font-body text-text placeholder:text-text-secondary/60 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-            placeholder="Comma-separated, e.g. AC, WiFi, Breakfast, Balcony"
-          />
+          <div className="flex flex-wrap pt-1 pb-2 gap-2">
+            {Array.from(new Set(['AC', 'WiFi', 'Breakfast', 'Pool', 'TV', ...(formData.Amenities || '').split(',').map(s => s.trim()).filter(Boolean)])).map(amenity => {
+              const isSelected = (formData.Amenities || '').split(',').map(s => s.trim()).includes(amenity);
+              return (
+                <button
+                  key={amenity}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setFormData(prev => {
+                      const current = (prev.Amenities || '').split(',').map(s => s.trim()).filter(Boolean);
+                      const selected = current.includes(amenity);
+                      const next = selected ? current.filter(i => i !== amenity) : [...current, amenity];
+                      return { ...prev, Amenities: next.join(', ') };
+                    });
+                  }}
+                  className={`whitespace-nowrap px-4 py-1.5 rounded-full text-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 shrink-0 font-body text-sm
+                    ${isSelected
+                      ? 'ring-2 ring-primary shadow-md scale-[1.02] bg-primary/5 font-semibold text-primary'
+                      : 'ring-1 ring-border-neutral hover:ring-primary/50 hover:scale-[1.01] text-text-secondary hover:text-text'
+                    }`}
+                >
+                  {amenity}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-4 border-t border-border-neutral pt-4">

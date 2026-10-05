@@ -285,4 +285,81 @@ public class HotelServiceTests
         Assert.Single(standardResults);
         Assert.Equal(1, standardResults[0].RoomId);
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 6: ReactivateHotelAsync successfully changes status to Active
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ReactivateHotelAsync_Success_WhenSuspended()
+    {
+        var db = CreateDb(nameof(ReactivateHotelAsync_Success_WhenSuspended));
+        
+        var hotel = await db.Hotels.FindAsync(1);
+        hotel!.Status = HotelStatus.Suspended;
+        await db.SaveChangesAsync();
+
+        var service = new HotelService(db);
+
+        // Act
+        await service.ReactivateHotelAsync(1);
+
+        // Assert
+        var updatedHotel = await db.Hotels.FindAsync(1);
+        Assert.Equal(HotelStatus.Active, updatedHotel!.Status);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 7: ReactivateHotelAsync throws ValidationException if not Suspended
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(HotelStatus.Active)]
+    [InlineData(HotelStatus.PendingApproval)]
+    [InlineData(HotelStatus.Inactive)]
+    [InlineData(HotelStatus.Rejected)]
+    public async Task ReactivateHotelAsync_ThrowsWhenNotSuspended(HotelStatus status)
+    {
+        var db = CreateDb(nameof(ReactivateHotelAsync_ThrowsWhenNotSuspended) + status);
+        
+        var hotel = await db.Hotels.FindAsync(1);
+        hotel!.Status = status;
+        await db.SaveChangesAsync();
+
+        var service = new HotelService(db);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.ReactivateHotelAsync(1));
+        Assert.Contains("Only Suspended hotels can be reactivated", ex.Message);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 8: GetAllHotelsAsync with Active status excludes Suspended hotels
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetAllHotelsAsync_ActiveStatus_ExcludesSuspended()
+    {
+        var db = CreateDb(nameof(GetAllHotelsAsync_ActiveStatus_ExcludesSuspended));
+        
+        // Add a suspended hotel
+        db.Hotels.Add(new Hotel
+        {
+            Id            = 2,
+            OwnerId       = 10,
+            DestinationId = 1,
+            Name          = "Suspended Hotel",
+            Status        = HotelStatus.Suspended
+        });
+        await db.SaveChangesAsync();
+
+        var service = new HotelService(db);
+
+        // Act
+        var result = await service.GetAllHotelsAsync("Active", null, null, null, null, 1, 10);
+
+        // Assert
+        Assert.Single(result.Items);
+        Assert.Equal(1, result.Items[0].Id); // Only the active hotel
+    }
 }

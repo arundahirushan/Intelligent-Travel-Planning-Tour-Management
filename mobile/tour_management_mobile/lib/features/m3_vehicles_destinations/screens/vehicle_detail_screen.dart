@@ -294,6 +294,17 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           child: const Text('Suspend'),
         ),
       ));
+    } else if (_vehicle!.status == VehicleStatus.suspended) {
+      actions.add(Expanded(
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          onPressed: _isActionRunning
+              ? null
+              : () => _performAction(
+                  'Reactivate', () => _service.reactivateVehicle(_vehicle!.id)),
+          child: const Text('Reactivate'),
+        ),
+      ));
     }
 
     if (actions.isEmpty) return null;

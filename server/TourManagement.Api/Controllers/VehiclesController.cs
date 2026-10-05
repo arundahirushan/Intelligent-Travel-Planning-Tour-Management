@@ -156,6 +156,15 @@ public class VehiclesController : ControllerBase
         return Ok(ApiResponse.Ok("Vehicle suspended."));
     }
 
+    /// <summary>Reactivate a suspended vehicle (Status → Active). Admin / SuperAdmin only.</summary>
+    [HttpPost("{id}/reactivate")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
+    public async Task<ActionResult<ApiResponse>> Reactivate(int id)
+    {
+        await _vehicleService.ReactivateVehicleAsync(id);
+        return Ok(ApiResponse.Ok("Vehicle reactivated."));
+    }
+
     // ── Public / Traveler endpoints ──────────────────────────────────────────
 
     /// <summary>Get all accepted vehicles. Publicly accessible.</summary>

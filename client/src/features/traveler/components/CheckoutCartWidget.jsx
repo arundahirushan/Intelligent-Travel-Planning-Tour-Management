@@ -102,9 +102,9 @@ export default function CheckoutCartWidget({
   let isPaid = false;
 
   if (isSavedCheckout) {
-    hotelAmount = (activeCheckout.hotels || []).reduce((sum, h) => sum + h.totalPrice, 0);
-    vehicleAmount = activeCheckout.vehicleItem ? activeCheckout.vehicleItem.totalPrice : 0;
-    supplyAmount = (activeCheckout.supplies || []).reduce((sum, s) => sum + s.totalPrice, 0);
+    hotelAmount = (activeCheckout.hotels || []).reduce((sum, h) => sum + h.priceSnapshot, 0);
+    vehicleAmount = activeCheckout.vehicleItem ? activeCheckout.vehicleItem.priceSnapshot : 0;
+    supplyAmount = (activeCheckout.supplies || []).reduce((sum, s) => sum + s.priceSnapshot, 0);
     itemsTotal = hotelAmount + vehicleAmount + supplyAmount;
     
     bookingFee = activeCheckout.websiteFee;

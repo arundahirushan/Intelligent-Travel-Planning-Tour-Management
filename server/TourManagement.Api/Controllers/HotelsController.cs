@@ -207,6 +207,15 @@ public class HotelsController : ControllerBase
         return Ok(ApiResponse.Ok("Hotel suspended."));
     }
 
+    /// <summary>Reactivate a suspended hotel (Status → Active). Admin / SuperAdmin only.</summary>
+    [HttpPost("{id}/reactivate")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
+    public async Task<ActionResult<ApiResponse>> Reactivate(int id)
+    {
+        await _hotelService.ReactivateHotelAsync(id);
+        return Ok(ApiResponse.Ok("Hotel reactivated."));
+    }
+
     /// <summary>All bookings across all hotels. Admin / SuperAdmin only.</summary>
     [HttpGet("bookings-all")]
     [Authorize(Roles = $"{Roles.Admin},{Roles.SuperAdmin}")]
@@ -228,7 +237,7 @@ public class HotelsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        var result = await _hotelService.GetAllHotelsAsync("Accepted", null, null, null, null, page, pageSize);
+        var result = await _hotelService.GetAllHotelsAsync("Active", null, null, null, null, page, pageSize);
         return Ok(ApiResponse<PagedResult<HotelSummaryDto>>.Ok(result));
     }
 
