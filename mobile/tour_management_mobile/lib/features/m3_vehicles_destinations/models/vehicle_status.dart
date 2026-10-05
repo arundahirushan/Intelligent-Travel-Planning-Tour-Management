@@ -14,4 +14,3 @@ class BookingStatus {
   static const confirmed = 'Confirmed';
   static const cancelled = 'Cancelled';
 }
-

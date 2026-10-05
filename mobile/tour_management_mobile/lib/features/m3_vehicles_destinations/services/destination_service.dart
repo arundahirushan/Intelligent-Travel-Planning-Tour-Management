@@ -95,7 +95,8 @@ class DestinationService {
       'description': description,
     };
     // Send null explicitly to clear the image, or the new URL to update it.
-    body['imageUrl'] = (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null;
+    body['imageUrl'] =
+        (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null;
 
     final response = await _apiClient.put('/destinations/$id', body: body);
     final json = jsonDecode(response.body);
@@ -104,6 +105,30 @@ class DestinationService {
       return DestinationResponseDto.fromJson(json['data']);
     }
     throw Exception(json['message'] ?? 'Failed to update destination');
+  }
+
+  /// Uploads a destination photo. Endpoint: POST /api/uploads/listing-photo
+  /// Returns the public image URL to send in the create/update request.
+  /// Throws an Exception with the server's message (invalid type, too large, upload failed).
+  Future<String> uploadPhoto(String filePath) async {
+    final response = await _apiClient.postFile(
+      '/uploads/listing-photo',
+      fieldName: 'file',
+      filePath: filePath,
+    );
+
+    Map<String, dynamic>? json;
+    try {
+      json = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      json = null;
+    }
+
+    if (json != null && json['success'] == true && json['data'] != null) {
+      return json['data']['imageUrl'] as String;
+    }
+    throw Exception(
+        json?['message'] ?? 'Photo upload failed. Please try again.');
   }
 
   /// Delete a destination. Admin/SuperAdmin endpoint: DELETE /api/destinations/{id}
@@ -118,4 +143,3 @@ class DestinationService {
     }
   }
 }
-

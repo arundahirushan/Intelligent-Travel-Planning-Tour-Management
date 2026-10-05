@@ -29,7 +29,8 @@ class VehicleService {
     if (json['success'] == true && json['data'] != null) {
       final data = json['data'];
       final items = (data['items'] as List<dynamic>?)
-              ?.map((e) => VehicleSummaryDto.fromJson(e as Map<String, dynamic>))
+              ?.map(
+                  (e) => VehicleSummaryDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [];
       return {
@@ -54,7 +55,8 @@ class VehicleService {
     if (json['success'] == true && json['data'] != null) {
       final data = json['data'];
       final items = (data['items'] as List<dynamic>?)
-              ?.map((e) => VehicleSummaryDto.fromJson(e as Map<String, dynamic>))
+              ?.map(
+                  (e) => VehicleSummaryDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [];
       return {
@@ -110,4 +112,3 @@ class VehicleService {
     }
   }
 }
-
