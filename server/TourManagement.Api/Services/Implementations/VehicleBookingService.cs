@@ -27,28 +27,65 @@ public class VehicleBookingService : IVehicleBookingService
 
     public async Task<VehicleBookingSummaryDto> CreateAsync(CreateVehicleBookingDto dto, int travelerId)
     {
-        var checkoutDto = new TourManagement.Api.Dtos.Checkout.CreateCheckoutDto 
-        { 
-            TripId  = dto.TripId, 
-            Vehicle = new TourManagement.Api.Dtos.Checkout.VehicleCheckoutItemDto 
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
+        var trip = await _db.Trips.FirstOrDefaultAsync(t => t.Id == dto.TripId);
+        if (trip == null)
+            throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
+
+        if (trip.TravelerId != travelerId)
+            throw new ForbiddenException("You do not have permission to modify this trip.");
+
+        if (trip.Status == TripStatus.Confirmed || trip.Status == TripStatus.Completed || trip.Status == TripStatus.Cancelled)
+            throw new ValidationException($"Cannot add bookings to a trip that is {trip.Status}.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            if (_db.Database.IsRelational())
             {
-                VehicleId       = dto.VehicleId,
-                StartDate       = dto.StartDate,
-                EndDate         = dto.EndDate,
-                PickupLatitude  = dto.PickupLatitude,
-                PickupLongitude = dto.PickupLongitude,
-                PickupNote      = dto.PickupNote
+                long vehicleLockKey = 2_000_000L + dto.VehicleId;
+                await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({vehicleLockKey})");
             }
-        };
 
-        var checkoutResponse = await _checkoutService.PlaceHoldAsync(checkoutDto, travelerId);
+            await ValidateAndCheckAvailabilityAsync(
+                dto.VehicleId, dto.StartDate, dto.EndDate, trip, null);
 
-        var saved = await _db.VehicleBookings
-            .Include(b => b.Vehicle)
-            .Include(b => b.Checkout)
-            .FirstAsync(b => b.Id == checkoutResponse.VehicleItem!.VehicleBookingId);
+            var vehicle = await _db.Vehicles.FirstOrDefaultAsync(v => v.Id == dto.VehicleId);
+            int days = Math.Max(1, (int)(dto.EndDate.Date - dto.StartDate.Date).TotalDays);
+            decimal snapshot = vehicle!.PricePerDay * days;
 
-        return saved.ToSummaryDto();
+            var booking = new VehicleBooking
+            {
+                TripId = dto.TripId,
+                VehicleId = dto.VehicleId,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                PickupLatitude = dto.PickupLatitude,
+                PickupLongitude = dto.PickupLongitude,
+                PickupNote = dto.PickupNote,
+                Status = BookingStatus.Held,
+                HoldExpiresAt = DateTime.UtcNow.AddHours(12),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _db.VehicleBookings.Add(booking);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var saved = await _db.VehicleBookings
+                .Include(b => b.Vehicle)
+                .FirstAsync(b => b.Id == booking.Id);
+
+            return saved.ToSummaryDto();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<VehicleBookingSummaryDto> UpdateAsync(int id, UpdateVehicleBookingDto dto, int travelerId)
@@ -56,6 +93,9 @@ public class VehicleBookingService : IVehicleBookingService
         // Force UTC for Npgsql timestamp with time zone columns
         dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
         dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+        
+        if (dto.EndDate < dto.StartDate)
+            throw new ValidationException("EndDate must not be before StartDate.");
 
         var booking = await _db.VehicleBookings
             .Include(b => b.Trip)
@@ -137,14 +177,18 @@ public class VehicleBookingService : IVehicleBookingService
     // Returns all vehicle bookings that belong to the requesting traveler
     // (bookings are linked to trips, which are owned by the traveler).
     public async Task<PagedResult<VehicleBookingSummaryDto>> GetMyBookingsAsync(
-        int travelerId, int page, int pageSize)
+        int travelerId, int? tripId, int page, int pageSize)
     {
         var query = _db.VehicleBookings
             .Include(b => b.Vehicle)
             .Include(b => b.Trip)
             .Include(b => b.Checkout)
-            .Where(b => b.Trip.TravelerId == travelerId)
-            .OrderByDescending(b => b.CreatedAt);
+            .Where(b => b.Trip.TravelerId == travelerId);
+
+        if (tripId.HasValue)
+            query = query.Where(b => b.TripId == tripId.Value);
+
+        query = query.OrderByDescending(b => b.CreatedAt);
 
         var total = await query.CountAsync();
         var items = await query
@@ -174,6 +218,9 @@ public class VehicleBookingService : IVehicleBookingService
 
         if (booking.Status == BookingStatus.Cancelled)
             throw new ValidationException("This booking is already cancelled.");
+
+        if (booking.Status == BookingStatus.Confirmed)
+            throw new ValidationException("Confirmed bookings cannot be cancelled online as there is no refund workflow.");
 
         booking.Status    = BookingStatus.Cancelled;
         booking.UpdatedAt = DateTime.UtcNow;
@@ -238,12 +285,15 @@ public class VehicleBookingService : IVehicleBookingService
     private async Task ValidateAndCheckAvailabilityAsync(
         int vehicleId, DateTime startDate, DateTime endDate, Trip trip, int? excludeBookingId)
     {
-        if (endDate <= startDate)
-            throw new ValidationException("EndDate must be after StartDate.");
+        if (endDate < startDate)
+            throw new ValidationException("EndDate must not be before StartDate.");
 
         if (startDate.Date < trip.StartDate.Date || endDate.Date > trip.EndDate.Date)
             throw new ValidationException(
                 $"Booking dates must fall within the trip's date range ({trip.StartDate:yyyy-MM-dd} \u2013 {trip.EndDate:yyyy-MM-dd}).");
+
+        if (endDate == startDate)
+            endDate = startDate.AddDays(1);
 
         var vehicle = await _db.Vehicles.FindAsync(vehicleId);
         if (vehicle == null)

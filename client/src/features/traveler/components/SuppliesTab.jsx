@@ -17,8 +17,10 @@ function formatLKR(amount) {
 // In-place edit is therefore not supported. To change quantity, cancel and reorder.
 //
 // Props:
+// Props:
 //   trip — TripDetailDto (or null for global My Bookings page)
-export default function SuppliesTab({ trip }) {
+//   onAddSupply — callback to add to cart
+export default function SuppliesTab({ trip, onAddSupply }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,14 +37,14 @@ export default function SuppliesTab({ trip }) {
     try {
       setLoading(true);
       setError(null);
-      const data = await getMySupplyOrders({ status: statusFilter, pageSize: 100 });
+      const data = await getMySupplyOrders({ tripId: trip?.id, status: statusFilter, pageSize: 100 });
       setOrders(data.items || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load supply orders.');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [trip?.id, statusFilter]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
@@ -167,7 +169,7 @@ export default function SuppliesTab({ trip }) {
       <OrderSupplyModal
         isOpen={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
-        onSuccess={fetchOrders}
+        onAddSupply={onAddSupply}
         trip={trip}
       />
       <ConfirmDialog

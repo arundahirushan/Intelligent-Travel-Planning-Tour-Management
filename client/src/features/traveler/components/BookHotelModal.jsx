@@ -27,7 +27,7 @@ function toDateInputValue(date) {
 //   onSuccess — called after successful booking
 //   trip     — TripDetailDto (provides TripId and default date range)
 //   destinations — array of { id, name } for the destination dropdown
-export default function BookHotelModal({ isOpen, onClose, onSuccess, trip, destinations = [] }) {
+export default function BookHotelModal({ isOpen, onClose, onAddHotel, trip, destinations = [] }) {
   const [step, setStep] = useState('search');  // 'search' | 'results' | 'confirm'
 
   // Search form
@@ -121,20 +121,15 @@ export default function BookHotelModal({ isOpen, onClose, onSuccess, trip, desti
         RoomId: selectedRoom.roomId,
         CheckInDate: checkIn,
         CheckOutDate: checkOut,
-        NumberOfRooms: rooms,
+        NumberOfRooms: rooms
       });
-      onSuccess();
+      
+      if (onAddHotel) {
+        onAddHotel();
+      }
       onClose();
     } catch (err) {
-      console.error('Booking error response:', err.response?.data);
-      let errorMsg = err.response?.data?.message;
-      if (!errorMsg && err.response?.data?.errors) {
-        errorMsg = Object.values(err.response.data.errors).flat().join(' ');
-      }
-      if (!errorMsg && err.response?.data?.title) {
-        errorMsg = err.response.data.title;
-      }
-      setBookingError(errorMsg || 'Booking failed. Please try again.');
+      setBookingError(err.response?.data?.message || 'Failed to add hotel booking. Please try again.');
     } finally {
       setBookingLoading(false);
     }
@@ -310,7 +305,7 @@ export default function BookHotelModal({ isOpen, onClose, onSuccess, trip, desti
           <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
             <Button type="button" variant="secondary" onClick={onClose} disabled={bookingLoading}>Cancel</Button>
             <Button type="submit" disabled={bookingLoading}>
-              {bookingLoading ? <LoadingSpinner size="sm" /> : 'Confirm Booking'}
+              {bookingLoading ? <LoadingSpinner size="sm" /> : 'Reserve for 12 Hours'}
             </Button>
           </div>
         </form>

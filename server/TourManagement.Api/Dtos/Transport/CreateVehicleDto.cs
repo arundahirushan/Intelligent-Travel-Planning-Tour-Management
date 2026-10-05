@@ -21,5 +21,7 @@ public class CreateVehicleDto
     [Required]
     [Range(0.01, double.MaxValue, ErrorMessage = "PricePerDay must be greater than 0.")]
     public decimal PricePerDay { get; set; }
+
+    public string? ImageUrl { get; set; }
 }
 

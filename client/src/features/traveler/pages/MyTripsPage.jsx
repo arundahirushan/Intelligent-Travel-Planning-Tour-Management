@@ -10,6 +10,7 @@ import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import AddEditTripModal from '../components/AddEditTripModal';
+import CreateTripWizard from '../components/CreateTripWizard';
 import { getMyTrips, cancelTrip } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
@@ -53,8 +54,9 @@ export default function MyTripsPage() {
   const [page, setPage] = useState(1);
   const pageSize = 12;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // edit only
   const [editingTrip, setEditingTrip] = useState(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false); // create wizard
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [tripToCancel, setTripToCancel] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -117,8 +119,7 @@ export default function MyTripsPage() {
   // ── Actions ──────────────────────────────────────────────────────────────
 
   const openCreateModal = () => {
-    setEditingTrip(null);
-    setIsModalOpen(true);
+    setIsWizardOpen(true);
   };
 
   const openEditModal = (e, trip) => {
@@ -146,12 +147,15 @@ export default function MyTripsPage() {
   };
 
   const handleModalSuccess = (newTripId) => {
-    // After creating, navigate to the new trip's details page.
     if (newTripId && !editingTrip) {
       navigate(`/traveler/trips/${newTripId}`);
     } else {
       fetchTrips();
     }
+  };
+
+  const handleWizardSuccess = (newTripId) => {
+    navigate(`/traveler/trips/${newTripId}`);
   };
 
   // Can this trip still be cancelled?
@@ -291,7 +295,14 @@ export default function MyTripsPage() {
         </>
       )}
 
-      {/* Modals */}
+      {/* Create Trip Wizard (new trips only) */}
+      <CreateTripWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        onSuccess={handleWizardSuccess}
+      />
+
+      {/* Edit Trip Modal (existing trips only) */}
       <AddEditTripModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

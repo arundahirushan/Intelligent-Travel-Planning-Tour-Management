@@ -76,13 +76,13 @@ public class VehiclesController : ControllerBase
         return Ok(ApiResponse<VehicleDetailDto>.Ok(result, "Vehicle updated."));
     }
 
-    /// <summary>Soft-delete a vehicle (sets Status = Inactive). TransportProvider only.</summary>
+    /// <summary>Deletes a vehicle permanently if no bookings exist; otherwise soft-deletes (sets Status = Inactive). TransportProvider only.</summary>
     [HttpDelete("{id}")]
     [Authorize(Roles = Roles.TransportProvider)]
     public async Task<ActionResult<ApiResponse>> Delete(int id)
     {
-        await _vehicleService.DeactivateVehicleAsync(id, GetCurrentUserId());
-        return Ok(ApiResponse.Ok("Vehicle deactivated."));
+        await _vehicleService.DeleteVehicleAsync(id, GetCurrentUserId());
+        return Ok(ApiResponse.Ok("Vehicle deleted or deactivated successfully."));
     }
 
     /// <summary>Get bookings for this vehicle. TransportProvider only (ownership checked in service).</summary>
@@ -157,6 +157,17 @@ public class VehiclesController : ControllerBase
     }
 
     // ── Public / Traveler endpoints ──────────────────────────────────────────
+
+    /// <summary>Get all accepted vehicles. Publicly accessible.</summary>
+    [HttpGet("accepted")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<PagedResult<VehicleSummaryDto>>>> GetAcceptedVehicles(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        var result = await _vehicleService.GetAllVehiclesAsync("Active", null, null, null, page, pageSize);
+        return Ok(ApiResponse<PagedResult<VehicleSummaryDto>>.Ok(result));
+    }
 
     /// <summary>Search available vehicles by dates, capacity, and price. Any authenticated user.</summary>
     [HttpGet("search")]

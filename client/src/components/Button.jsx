@@ -1,12 +1,13 @@
 import React from 'react';
 
 export default function Button({ children, variant = 'primary', className = '', ...props }) {
-  const baseClasses = 'inline-flex items-center justify-center font-heading text-xs font-bold uppercase tracking-widest rounded-pill transition-all duration-200';
-  const sizeClasses = 'px-6 py-2.5 shadow-soft';
+  const baseClasses = 'inline-flex items-center justify-center font-heading text-xs font-bold uppercase tracking-widest rounded-pill transition-all duration-200 disabled:cursor-not-allowed';
+  const sizeClasses = 'px-6 py-2.5 shadow-soft disabled:shadow-none';
   
   const variants = {
-    primary: 'bg-primary text-white hover:bg-primary-dark',
-    secondary: 'bg-transparent text-text border border-border-neutral hover:bg-surface-neutral shadow-none',
+    primary: 'bg-primary text-white hover:bg-primary-dark disabled:bg-surface-neutral disabled:text-text-secondary disabled:hover:bg-surface-neutral',
+    secondary: 'bg-transparent text-text border border-border-neutral hover:bg-surface-neutral shadow-none disabled:opacity-50',
+    danger: 'bg-white border border-status-danger text-status-danger hover:bg-status-danger/10 disabled:opacity-50',
   };
 
   return (

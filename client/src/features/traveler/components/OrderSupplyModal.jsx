@@ -16,9 +16,10 @@ function formatLKR(amount) {
 // Props:
 //   isOpen    — controls visibility
 //   onClose   — close handler
+//   onClose   — close handler
 //   onSuccess — called after successful order
 //   trip      — TripDetailDto (provides TripId)
-export default function OrderSupplyModal({ isOpen, onClose, onSuccess, trip }) {
+export default function OrderSupplyModal({ isOpen, onClose, onAddSupply, trip }) {
   const [step, setStep] = useState('browse');
 
   // Browse state
@@ -87,12 +88,15 @@ export default function OrderSupplyModal({ isOpen, onClose, onSuccess, trip }) {
       await createSupplyOrder({
         TripId: trip.id,
         SupplyId: selectedSupply.id,
-        Quantity: qty,
+        Quantity: qty
       });
-      onSuccess();
+      
+      if (onAddSupply) {
+        onAddSupply();
+      }
       onClose();
     } catch (err) {
-      setOrderError(err.response?.data?.message || 'Order failed. Please try again.');
+      setOrderError(err.response?.data?.message || 'Failed to order supplies. Please try again.');
     } finally {
       setOrderLoading(false);
     }
@@ -211,7 +215,7 @@ export default function OrderSupplyModal({ isOpen, onClose, onSuccess, trip }) {
           <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
             <Button type="button" variant="secondary" onClick={onClose} disabled={orderLoading}>Cancel</Button>
             <Button type="submit" disabled={orderLoading}>
-              {orderLoading ? <LoadingSpinner size="sm" /> : 'Place Order'}
+              {orderLoading ? <LoadingSpinner size="sm" /> : 'Reserve for 12 Hours'}
             </Button>
           </div>
         </form>

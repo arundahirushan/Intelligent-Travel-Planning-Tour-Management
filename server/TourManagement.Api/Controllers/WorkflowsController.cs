@@ -22,7 +22,7 @@ public class WorkflowsController : ControllerBase
     [HttpPost("generate")]
     public async Task<ActionResult<ApiResponse<TripProposalDto>>> Generate([FromRoute] int tripId)
     {
-        var travelerId = int.Parse(User.FindFirst("id")!.Value);
+        var travelerId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var proposal = await _workflowService.GenerateProposalAsync(tripId, travelerId);
         return Ok(ApiResponse<TripProposalDto>.Ok(proposal, "Generation started/completed."));
     }
@@ -30,7 +30,7 @@ public class WorkflowsController : ControllerBase
     [HttpGet("proposal")]
     public async Task<ActionResult<ApiResponse<TripProposalDto>>> GetLatest([FromRoute] int tripId)
     {
-        var travelerId = int.Parse(User.FindFirst("id")!.Value);
+        var travelerId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var proposal = await _workflowService.GetLatestProposalAsync(tripId, travelerId);
         return Ok(ApiResponse<TripProposalDto>.Ok(proposal));
     }
@@ -38,7 +38,7 @@ public class WorkflowsController : ControllerBase
     [HttpGet("{proposalId}")]
     public async Task<ActionResult<ApiResponse<TripProposalDto>>> GetById([FromRoute] int tripId, [FromRoute] string proposalId)
     {
-        var travelerId = int.Parse(User.FindFirst("id")!.Value);
+        var travelerId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var proposal = await _workflowService.GetProposalByIdAsync(tripId, proposalId, travelerId);
         return Ok(ApiResponse<TripProposalDto>.Ok(proposal));
     }
@@ -46,7 +46,7 @@ public class WorkflowsController : ControllerBase
     [HttpPost("{proposalId}/accept")]
     public async Task<ActionResult<ApiResponse<TripProposalDto>>> Accept([FromRoute] int tripId, [FromRoute] string proposalId)
     {
-        var travelerId = int.Parse(User.FindFirst("id")!.Value);
+        var travelerId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var proposal = await _workflowService.AcceptProposalAsync(tripId, proposalId, travelerId);
         return Ok(ApiResponse<TripProposalDto>.Ok(proposal, "Proposal accepted and pending admin approval."));
     }
@@ -54,7 +54,7 @@ public class WorkflowsController : ControllerBase
     [HttpPost("{proposalId}/reject")]
     public async Task<ActionResult<ApiResponse<TripProposalDto>>> Reject([FromRoute] int tripId, [FromRoute] string proposalId, [FromBody] WorkflowDecisionDto decision)
     {
-        var travelerId = int.Parse(User.FindFirst("id")!.Value);
+        var travelerId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var proposal = await _workflowService.RejectProposalAsync(tripId, proposalId, travelerId, decision.Reason);
         return Ok(ApiResponse<TripProposalDto>.Ok(proposal, "Proposal rejected."));
     }

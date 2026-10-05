@@ -22,13 +22,16 @@ public interface ICheckoutService
     Task<CheckoutResponseDto> GetByIdAsync(int checkoutId, int travelerId);
 
     // Get all checkouts for the requesting traveler, newest first.
-    Task<PagedResult<CheckoutResponseDto>> GetMyCheckoutsAsync(int travelerId, int page, int pageSize);
+    Task<PagedResult<CheckoutResponseDto>> GetMyCheckoutsAsync(int travelerId, int? tripId, int page, int pageSize);
 
     // Cancel an active checkout. Sets checkout to Cancelled and linked bookings to Cancelled.
     // Allowed while Status == Active (whether or not the hold has expired).
     Task CancelAsync(int checkoutId, int travelerId);
 
     // ── PayHere integration point ──────────────────────────────────────────────
+    // Generates the parameters for the PayHere form including the secure hash.
+    Task<PayHereInitiateResponseDto> InitiatePaymentAsync(int checkoutId, int travelerId);
+
     // Called ONLY by the future PayHere callback handler after verifying payment.
     // Transitions:  Checkout → Paid,  HotelBooking → Confirmed,  VehicleBooking → Confirmed.
     // Throws ValidationException if the checkout is expired or not Active.

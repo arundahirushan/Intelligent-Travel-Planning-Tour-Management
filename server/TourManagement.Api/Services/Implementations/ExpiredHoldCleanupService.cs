@@ -66,48 +66,51 @@ public class ExpiredHoldCleanupService : BackgroundService
 
         var now = DateTime.UtcNow;
 
-        // Find all active checkouts past their expiry.
         var expiredCheckouts = await db.TripCheckouts
             .Where(c => c.Status == CheckoutStatus.Active && c.HoldExpiresAt <= now)
             .ToListAsync(ct);
 
-        if (expiredCheckouts.Count == 0)
-            return;
-
-        _logger.LogInformation(
-            "ExpiredHoldCleanupService: found {Count} expired checkouts to clean up.", expiredCheckouts.Count);
-
-        foreach (var checkout in expiredCheckouts)
+        foreach (var c in expiredCheckouts)
         {
-            // Cancel the linked hotel booking if it is still Held.
-            if (checkout.HotelBookingId.HasValue)
-            {
-                var hb = await db.HotelBookings.FindAsync(new object[] { checkout.HotelBookingId.Value }, ct);
-                if (hb != null && hb.Status == BookingStatus.Held)
-                {
-                    hb.Status    = BookingStatus.Cancelled;
-                    hb.UpdatedAt = now;
-                }
-            }
-
-            // Cancel the linked vehicle booking if it is still Held.
-            if (checkout.VehicleBookingId.HasValue)
-            {
-                var vb = await db.VehicleBookings.FindAsync(new object[] { checkout.VehicleBookingId.Value }, ct);
-                if (vb != null && vb.Status == BookingStatus.Held)
-                {
-                    vb.Status    = BookingStatus.Cancelled;
-                    vb.UpdatedAt = now;
-                }
-            }
-
-            checkout.Status    = CheckoutStatus.Expired;
-            checkout.UpdatedAt = now;
+            c.Status = CheckoutStatus.Expired;
+            c.UpdatedAt = now;
         }
 
-        await db.SaveChangesAsync(ct);
+        var expiredHotels = await db.HotelBookings
+            .Where(b => b.Status == BookingStatus.Held && b.HoldExpiresAt <= now)
+            .ToListAsync(ct);
+        foreach (var b in expiredHotels)
+        {
+            b.Status = BookingStatus.Cancelled;
+            b.UpdatedAt = now;
+        }
 
-        _logger.LogInformation(
-            "ExpiredHoldCleanupService: marked {Count} checkouts as Expired.", expiredCheckouts.Count);
+        var expiredVehicles = await db.VehicleBookings
+            .Where(b => b.Status == BookingStatus.Held && b.HoldExpiresAt <= now)
+            .ToListAsync(ct);
+        foreach (var b in expiredVehicles)
+        {
+            b.Status = BookingStatus.Cancelled;
+            b.UpdatedAt = now;
+        }
+
+        var expiredSupplies = await db.SupplyOrders
+            .Include(s => s.Supply)
+            .Where(s => s.Status == BookingStatus.Held && s.HoldExpiresAt <= now)
+            .ToListAsync(ct);
+        foreach (var s in expiredSupplies)
+        {
+            s.Status = BookingStatus.Cancelled;
+            s.UpdatedAt = now;
+            s.Supply.StockQuantity += s.Quantity;
+            s.Supply.UpdatedAt = now;
+        }
+
+        if (expiredCheckouts.Count > 0 || expiredHotels.Count > 0 || expiredVehicles.Count > 0 || expiredSupplies.Count > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            _logger.LogInformation("ExpiredHoldCleanupService: marked {Count1} checkouts, {Count2} hotels, {Count3} vehicles, {Count4} supplies as expired.", 
+                expiredCheckouts.Count, expiredHotels.Count, expiredVehicles.Count, expiredSupplies.Count);
+        }
     }
 }

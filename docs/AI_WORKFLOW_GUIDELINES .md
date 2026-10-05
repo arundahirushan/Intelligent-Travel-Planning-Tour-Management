@@ -2,9 +2,9 @@
 
 **Project:** Intelligent Travel Planning & Tour Management  
 
-**Version:** 1.3  
+**Version:** 1.5  
 
-**Last updated:** 2026-09-27  
+**Last updated:** 2026-10-01  
 
 **Recommended repository location:** `docs/AI_WORKFLOW_GUIDELINES.md`  
 
@@ -595,8 +595,8 @@ The team has chosen **M1 → merge → M2 → merge → M3 → merge → M4 → 
 | --- | --- | --- |
 | Member 1 — M1 | Implement structured trip planning and its graph connection; establish the small shared model-call entry point once a provider is chosen; define how assembly consumes the existing agent contracts. | A real sample plan, stable overnight-section structure, tool/model entry points, focused checks and a documented way to inspect M1 output with later agents unfinished. |
 | Member 2 — M2 | Use M1's overnight sections to search, assess and choose real accommodation. Return clear reasons when no suitable room is available. | A real M1→M2 example, room/date/occupancy/cost fields compatible with checkout, no-hotel handling for one-day trips, focused checks and unresolved limitations. |
-| Member 3 — M3 | Use the plan to assess transport needs, search suitable vehicles, integrate the agreed weather source and explain travel conditions. | M1→M2→M3 example, supported pickup/date/capacity fields, weather coverage/limitations, focused checks and transport decision behavior. |
-| Member 4 — M4 | Validate the combined output, wire any remaining assembly/validation integration, and produce clear findings. | End-to-end agent generation evidence, explicit validation outcomes, invalid-case checks and a list of backend/integration gaps still open. |
+| Member 3 — M3 | Implemented. Uses M1 plan and M2 remaining budget. Validates capacity/budget, enforces cheapest selection via fallback, provides weather advisory, and skips execution to M4 if failed. | Done. Ready for M4. |
+| Member 4 — M4 | Validate the combined output, wire any remaining assembly/validation integration, and produce clear findings. | Provide end-to-end generation evidence, verify partial-result serialization is exposed to the frontend safely, test that upstream failures successfully persist via the fallback execution logic, and provide a list of remaining backend/integration gaps. |
 
 M1 must define the assembly interface without filling unfinished agents with fake success. M2 and M3 supply the real results later; M4 verifies the combined behavior. If existing shared contracts cannot carry a required result, change both sides and their fixture in that member's branch before merging.
 
@@ -706,9 +706,9 @@ Do not describe real approvals or bookings as fully ready merely because agent g
 
 After each implementation task, report changed files, actual interfaces, migrations, exact checks/results, remaining placeholders and unverified behavior. Distinguish code-inspected behavior from tests and live verification. This document update did not run application builds or tests.
 
-| Version | Date | Change |
-| --- | --- | --- |
 | 1.0 | 2026-09-27 | Initial guideline based on the agreed foundation prompt. Records Option B day visits, four-agent boundaries, persisted review flow, Admin-only hold creation, payment deferral and verification limits. |
 | 1.1 | 2026-09-27 | Adds the flexible shared implementation plan, sequential member/merge handoffs, data connections, assembly ownership, incomplete-agent testing, shared-file coordination and open decisions. Updates reported foundation progress without claiming independent verification. Clarifies Option A hotel coverage alongside Option B day visits, manual-booking boundaries, post-hold checkout identity and deferred approval consistency work. Restores normal Markdown formatting. |
 | 1.2 | 2026-09-27 | Implements M1 Trip Planning & Coordination agent. Confirms Gemini 3.5 Flash-Lite and area-level planning. Types output plan. |
 | 1.3 | 2026-09-27 | Implements M2 Accommodation agent. Documents mixed room support per section, affordable-first budget policy, remaining budget pass-through to M3, and updated C# internal hotel search contract to support mixed-capacity filtering and comprehensive payload mappings. |
+| 1.4 | 2026-09-27 | Implements M3 Transport & Weather agent. Adds explicit pickup coordinates. Fixes same-day rental checkout bug. Implements cheapest-valid vehicle selection logic (within M2's remaining budget). Integrates Open-Meteo for advisory weather. Replaces direct edge flow with conditional skipping to M4 for validation/serialization on failure. |
+| 1.5 | 2026-10-01 | Implements M4 Trip Validation & Safety agent. Adds `POST /api/internal/proposals/validate` (read-only, no holds). Introduces `ValidateProposalRequestDto` / `ValidateProposalResultDto` DTOs. M4 sequential flow: Upstream Check → Assemble → Backend Validate → Gemini Review → Persist Result. Gemini produces explanation only; Pass/Fail is exclusively the backend's authoritative `isValid`. Added `validate_proposal` to Python `InternalAgentClient`. Added Python unit tests (test_m4_validation.py) and C# tests (InternalAgentControllerValidationTests.cs). Checks: stale-input detection, room capacity, room availability, hotel-in-trip-area, stay-boundary dates, contiguity, overnight-section coverage, vehicle existence/status/capacity/dates/pickup/availability, budget. Weather is advisory only — provider errors and bad forecasts never block a proposal. |

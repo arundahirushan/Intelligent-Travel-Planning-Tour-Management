@@ -4,7 +4,9 @@ import Input from '../../../components/Input';
 import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
+import PhotoPicker from '../../../components/PhotoPicker';
 import { createHotel, updateHotel, getDestinations } from '../../../services/hotelOwnerApi';
+import { uploadListingPhoto } from '../../../services/uploadApi';
 
 export default function AddEditHotelModal({ isOpen, onClose, onSuccess, hotel }) {
   const isEdit = !!hotel;
@@ -23,6 +25,12 @@ export default function AddEditHotelModal({ isOpen, onClose, onSuccess, hotel })
   const [loadingDestinations, setLoadingDestinations] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // New photo chosen by the user (uploaded only when Save is pressed).
+  const [photoFile, setPhotoFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  // Remembers a successful upload so a retry after a failed save does not upload again.
+  const [uploadedPhoto, setUploadedPhoto] = useState(null);
   
   // Validation errors
   const [fieldErrors, setFieldErrors] = useState({});
@@ -53,6 +61,8 @@ export default function AddEditHotelModal({ isOpen, onClose, onSuccess, hotel })
       }
       setError(null);
       setFieldErrors({});
+      setPhotoFile(null);
+      setUploadedPhoto(null);
     }
   }, [isOpen, isEdit, hotel]);
 
@@ -106,6 +116,30 @@ export default function AddEditHotelModal({ isOpen, onClose, onSuccess, hotel })
     setLoading(true);
     setError(null);
 
+    // Start from the current ImageUrl so an edit without a new photo keeps the existing image.
+    let imageUrl = formData.ImageUrl.trim() || null;
+
+    if (photoFile) {
+      try {
+        // If a previous Save already uploaded this same file (and only the save failed),
+        // reuse its URL instead of uploading a duplicate.
+        if (uploadedPhoto?.file === photoFile) {
+          imageUrl = uploadedPhoto.url;
+        } else {
+          setUploading(true);
+          imageUrl = await uploadListingPhoto(photoFile);
+          setUploadedPhoto({ file: photoFile, url: imageUrl });
+        }
+      } catch (err) {
+        // Stop here: do not save the hotel and do not touch the existing image.
+        setError(err.response?.data?.message || 'Photo upload failed. Please try again.');
+        setUploading(false);
+        setLoading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
     const payload = {
       Name: formData.Name,
       DestinationId: parseInt(formData.DestinationId, 10),
@@ -113,7 +147,7 @@ export default function AddEditHotelModal({ isOpen, onClose, onSuccess, hotel })
       Description: formData.Description,
       ContactPhone: formData.ContactPhone,
       StarRating: formData.StarRating ? parseInt(formData.StarRating, 10) : null,
-      ImageUrl: formData.ImageUrl || null
+      ImageUrl: imageUrl
     };
 
     try {
@@ -227,15 +261,28 @@ export default function AddEditHotelModal({ isOpen, onClose, onSuccess, hotel })
           </div>
         </div>
 
+        <PhotoPicker
+          file={photoFile}
+          onFileChange={setPhotoFile}
+          currentUrl={formData.ImageUrl}
+          disabled={loading}
+        />
+
         <Input 
-          label="Cover Image URL" 
+          label="Or paste a Cover Image URL" 
           name="ImageUrl" 
           value={formData.ImageUrl} 
           onChange={handleChange} 
           placeholder="https://example.com/image.jpg (optional)"
         />
+        {photoFile && formData.ImageUrl && (
+          <p className="text-xs text-text-secondary -mt-3">
+            The selected photo will be used instead of this URL.
+          </p>
+        )}
 
-        <div className="flex justify-end gap-3 mt-4 border-t border-border-neutral pt-4">
+        <div className="flex justify-end items-center gap-3 mt-4 border-t border-border-neutral pt-4">
+          {uploading && <span className="text-sm text-text-secondary">Uploading photo...</span>}
           <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
           </Button>

@@ -57,7 +57,10 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("SupplierId");
+                    b.HasIndex("SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Contracts_SupplierId_Active_Unique")
+                        .HasFilter("\"Status\" = 'Active'");
 
                     b.ToTable("Contracts");
                 });
@@ -108,7 +111,10 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("SupplierId");
+                    b.HasIndex("SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ContractRequests_SupplierId_Pending_Unique")
+                        .HasFilter("\"Status\" = 'Pending'");
 
                     b.ToTable("ContractRequests");
                 });
@@ -130,6 +136,12 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -352,6 +364,42 @@ namespace TourManagement.Api.Data.Migrations
                     b.ToTable("ItineraryItems");
                 });
 
+            modelBuilder.Entity("TourManagement.Api.Models.PaymentAttempt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayHerePaymentId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TripCheckoutId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayHerePaymentId");
+
+                    b.HasIndex("TripCheckoutId");
+
+                    b.ToTable("PaymentAttempts");
+                });
+
             modelBuilder.Entity("TourManagement.Api.Models.Room", b =>
                 {
                     b.Property<int>("Id")
@@ -458,7 +506,13 @@ namespace TourManagement.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CheckoutId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("HoldExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("PriceAtOrderTime")
@@ -481,6 +535,10 @@ namespace TourManagement.Api.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CheckoutId");
+
+                    b.HasIndex("HoldExpiresAt");
 
                     b.HasIndex("Status");
 
@@ -512,6 +570,15 @@ namespace TourManagement.Api.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Interests")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PickupLatitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PickupLongitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PickupNote")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("StartDate")
@@ -583,6 +650,9 @@ namespace TourManagement.Api.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal?>("VehiclePriceSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("WebsiteFee")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -736,6 +806,9 @@ namespace TourManagement.Api.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("Model")
                         .IsRequired()
@@ -939,6 +1012,17 @@ namespace TourManagement.Api.Data.Migrations
                     b.Navigation("Trip");
                 });
 
+            modelBuilder.Entity("TourManagement.Api.Models.PaymentAttempt", b =>
+                {
+                    b.HasOne("TourManagement.Api.Models.TripCheckout", "TripCheckout")
+                        .WithMany("PaymentAttempts")
+                        .HasForeignKey("TripCheckoutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TripCheckout");
+                });
+
             modelBuilder.Entity("TourManagement.Api.Models.Room", b =>
                 {
                     b.HasOne("TourManagement.Api.Models.Hotel", "Hotel")
@@ -963,6 +1047,11 @@ namespace TourManagement.Api.Data.Migrations
 
             modelBuilder.Entity("TourManagement.Api.Models.SupplyOrder", b =>
                 {
+                    b.HasOne("TourManagement.Api.Models.TripCheckout", "Checkout")
+                        .WithMany("SupplyOrders")
+                        .HasForeignKey("CheckoutId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TourManagement.Api.Models.Supply", "Supply")
                         .WithMany("SupplyOrders")
                         .HasForeignKey("SupplyId")
@@ -974,6 +1063,8 @@ namespace TourManagement.Api.Data.Migrations
                         .HasForeignKey("TripId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Checkout");
 
                     b.Navigation("Supply");
 
@@ -1115,6 +1206,10 @@ namespace TourManagement.Api.Data.Migrations
             modelBuilder.Entity("TourManagement.Api.Models.TripCheckout", b =>
                 {
                     b.Navigation("HotelBookings");
+
+                    b.Navigation("PaymentAttempts");
+
+                    b.Navigation("SupplyOrders");
 
                     b.Navigation("VehicleBooking");
                 });

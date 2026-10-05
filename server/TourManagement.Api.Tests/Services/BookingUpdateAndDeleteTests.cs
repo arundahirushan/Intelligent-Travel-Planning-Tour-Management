@@ -24,9 +24,12 @@ public class BookingUpdateAndDeleteTests
         db.Users.Add(new User { Id = 1, FullName = "Admin", Email = "admin@test.com", PasswordHash = "hash", Role = Roles.Admin, Status = UserStatus.Active });
         db.Users.Add(new User { Id = 2, FullName = "Traveler", Email = "traveler@test.com", PasswordHash = "hash", Role = Roles.Traveler, Status = UserStatus.Active });
         db.Users.Add(new User { Id = 3, FullName = "Supplier", Email = "s@test.com", PasswordHash = "hash", Role = Roles.Supplier, Status = UserStatus.Active });
+        db.Users.Add(new User { Id = 4, FullName = "Traveler 2", Email = "t2@test.com", PasswordHash = "hash", Role = Roles.Traveler, Status = UserStatus.Active });
         
         var trip = new Trip { Id = 1, TravelerId = 2, Title = "My Trip", StartDate = DateTime.UtcNow.AddDays(10), EndDate = DateTime.UtcNow.AddDays(20), Status = TripStatus.Draft };
         db.Trips.Add(trip);
+        db.Trips.Add(new Trip { Id = 2, TravelerId = 2, Title = "My Trip 2", StartDate = DateTime.UtcNow.AddDays(10), EndDate = DateTime.UtcNow.AddDays(20), Status = TripStatus.Draft });
+        db.Trips.Add(new Trip { Id = 3, TravelerId = 4, Title = "Another Traveler Trip", StartDate = DateTime.UtcNow.AddDays(10), EndDate = DateTime.UtcNow.AddDays(20), Status = TripStatus.Draft });
 
         var destination = new Destination { Id = 1, Name = "Galle", Region = "South", Description = "Desc" };
         db.Destinations.Add(destination);
@@ -61,7 +64,7 @@ public class BookingUpdateAndDeleteTests
     {
         var db = CreateDb(Guid.NewGuid().ToString());
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         // Pre-book room 2 completely for days 12-14
         db.HotelBookings.Add(new HotelBooking { Id = 10, TripId = 1, RoomId = 2, CheckInDate = DateTime.UtcNow.AddDays(12), CheckOutDate = DateTime.UtcNow.AddDays(14), NumberOfRooms = 1, Status = BookingStatus.Confirmed });
@@ -83,7 +86,7 @@ public class BookingUpdateAndDeleteTests
     {
         var db = CreateDb(Guid.NewGuid().ToString());
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         var checkIn = DateTime.UtcNow.AddDays(12);
         var checkOut = DateTime.UtcNow.AddDays(14);
@@ -104,7 +107,7 @@ public class BookingUpdateAndDeleteTests
     {
         var db = CreateDb(Guid.NewGuid().ToString());
         var hotelService = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         var travelerBooking = new HotelBooking { Id = 11, TripId = 1, RoomId = 1, CheckInDate = DateTime.UtcNow.AddDays(12), CheckOutDate = DateTime.UtcNow.AddDays(14), NumberOfRooms = 1, Status = BookingStatus.Cancelled };
         db.HotelBookings.Add(travelerBooking);
@@ -166,5 +169,74 @@ public class BookingUpdateAndDeleteTests
         var updatedOrder = await db.SupplyOrders.FindAsync(11);
         Assert.Equal(2, updatedOrder!.SupplyId);
         Assert.Equal(5, updatedOrder.Quantity);
+    }
+    [Fact]
+    public async Task GetMyBookingsAsync_Hotel_FiltersByTripId_WhenProvided()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var hotelService = new HotelService(db);
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
+
+        db.HotelBookings.Add(new HotelBooking { Id = 1, TripId = 1, RoomId = 1, CheckInDate = DateTime.UtcNow, CheckOutDate = DateTime.UtcNow.AddDays(1) });
+        db.HotelBookings.Add(new HotelBooking { Id = 2, TripId = 2, RoomId = 1, CheckInDate = DateTime.UtcNow, CheckOutDate = DateTime.UtcNow.AddDays(1) });
+        db.HotelBookings.Add(new HotelBooking { Id = 3, TripId = 3, RoomId = 1, CheckInDate = DateTime.UtcNow, CheckOutDate = DateTime.UtcNow.AddDays(1) }); // Another traveler
+        await db.SaveChangesAsync();
+
+        // 1. Without tripId, returns all for traveler 2 (Trip 1 and 2)
+        var allMy = await bookingService.GetMyBookingsAsync(2, null, null, 1, 10);
+        Assert.Equal(2, allMy.Items.Count);
+
+        // 2. With tripId = 1, returns only Trip 1
+        var trip1My = await bookingService.GetMyBookingsAsync(2, 1, null, 1, 10);
+        Assert.Single(trip1My.Items);
+        Assert.Equal(1, trip1My.Items[0].Id);
+        
+        // 3. Requesting another traveler's tripId (3) returns empty (ownership check)
+        var trip3My = await bookingService.GetMyBookingsAsync(2, 3, null, 1, 10);
+        Assert.Empty(trip3My.Items);
+    }
+
+    [Fact]
+    public async Task GetMyBookingsAsync_Vehicle_FiltersByTripId_WhenProvided()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var vehicleService = new VehicleBookingService(db, new VehicleService(db), new CheckoutService(db, new HotelService(db), new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
+
+        db.VehicleBookings.Add(new VehicleBooking { Id = 1, TripId = 1, VehicleId = 1, StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(1) });
+        db.VehicleBookings.Add(new VehicleBooking { Id = 2, TripId = 2, VehicleId = 1, StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(1) });
+        db.VehicleBookings.Add(new VehicleBooking { Id = 3, TripId = 3, VehicleId = 1, StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(1) }); // Another traveler
+        await db.SaveChangesAsync();
+
+        var allMy = await vehicleService.GetMyBookingsAsync(2, null, 1, 10);
+        Assert.Equal(2, allMy.Items.Count);
+
+        var trip1My = await vehicleService.GetMyBookingsAsync(2, 1, 1, 10);
+        Assert.Single(trip1My.Items);
+        Assert.Equal(1, trip1My.Items[0].Id);
+        
+        var trip3My = await vehicleService.GetMyBookingsAsync(2, 3, 1, 10);
+        Assert.Empty(trip3My.Items);
+    }
+
+    [Fact]
+    public async Task GetMyOrdersAsync_Supply_FiltersByTripId_WhenProvided()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var supplyService = new SupplyOrderService(db, new ContractService(db));
+
+        db.SupplyOrders.Add(new SupplyOrder { Id = 1, TripId = 1, SupplyId = 1, Quantity = 1 });
+        db.SupplyOrders.Add(new SupplyOrder { Id = 2, TripId = 2, SupplyId = 1, Quantity = 1 });
+        db.SupplyOrders.Add(new SupplyOrder { Id = 3, TripId = 3, SupplyId = 1, Quantity = 1 }); // Another traveler
+        await db.SaveChangesAsync();
+
+        var allMy = await supplyService.GetMyOrdersAsync(2, null, null, null, 1, 10);
+        Assert.Equal(2, allMy.Items.Count);
+
+        var trip1My = await supplyService.GetMyOrdersAsync(2, 1, null, null, 1, 10);
+        Assert.Single(trip1My.Items);
+        Assert.Equal(1, trip1My.Items[0].Id);
+        
+        var trip3My = await supplyService.GetMyOrdersAsync(2, 3, null, null, 1, 10);
+        Assert.Empty(trip3My.Items);
     }
 }

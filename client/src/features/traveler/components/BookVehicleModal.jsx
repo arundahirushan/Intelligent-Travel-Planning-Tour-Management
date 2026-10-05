@@ -25,7 +25,7 @@ function formatLKR(amount) {
 //   onClose   — close handler
 //   onSuccess — called after successful booking
 //   trip      — TripDetailDto (provides TripId and default date range)
-export default function BookVehicleModal({ isOpen, onClose, onSuccess, trip }) {
+export default function BookVehicleModal({ isOpen, onClose, onAddVehicle, trip }) {
   const [step, setStep] = useState('search');
 
   // Search form
@@ -121,12 +121,15 @@ export default function BookVehicleModal({ isOpen, onClose, onSuccess, trip }) {
         EndDate: endDate,
         PickupLatitude: pickupLat,
         PickupLongitude: pickupLng,
-        PickupNote: pickupNote || null,
+        PickupNote: pickupNote || null
       });
-      onSuccess();
+      
+      if (onAddVehicle) {
+        onAddVehicle();
+      }
       onClose();
     } catch (err) {
-      setBookingError(err.response?.data?.message || 'Booking failed. Please try again.');
+      setBookingError(err.response?.data?.message || 'Failed to add vehicle booking. Please try again.');
     } finally {
       setBookingLoading(false);
     }
@@ -273,7 +276,7 @@ export default function BookVehicleModal({ isOpen, onClose, onSuccess, trip }) {
             <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
               <Button type="button" variant="secondary" onClick={onClose} disabled={bookingLoading}>Cancel</Button>
               <Button type="submit" disabled={bookingLoading || pickupLat === null}>
-                {bookingLoading ? <LoadingSpinner size="sm" /> : 'Confirm Booking'}
+                {bookingLoading ? <LoadingSpinner size="sm" /> : 'Reserve for 12 Hours'}
               </Button>
             </div>
           </form>

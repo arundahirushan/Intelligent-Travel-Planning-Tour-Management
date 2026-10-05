@@ -26,7 +26,7 @@ public class HotelServiceTests
         var db = new AppDbContext(options);
 
         // Seed a destination.
-        var destination = new Destination { Id = 1, Name = "Galle", Region = "Southern Province", Description = "Historic fort city." };
+        var destination = new Destination { Id = 1, Name = "Galle", Region = "Kandy", Description = "Historic fort city." };
         db.Destinations.Add(destination);
 
         // Seed a HotelOwner user.
@@ -135,7 +135,7 @@ public class HotelServiceTests
         db.SaveChanges();
 
         var hotelService   = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         // Act: traveler tries to book 2 rooms — but only 1 is available.
         var dto = new CreateHotelBookingDto
@@ -213,7 +213,7 @@ public class HotelServiceTests
         db.SaveChanges();
 
         var hotelService   = new HotelService(db);
-        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db)));
+        var bookingService = new HotelBookingService(db, hotelService, new CheckoutService(db, hotelService, new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         // CheckOutDate (Oct 7) is after Trip.EndDate (Oct 5) — must be rejected.
         var dto = new CreateHotelBookingDto

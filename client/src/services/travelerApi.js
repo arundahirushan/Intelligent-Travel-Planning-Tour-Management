@@ -94,8 +94,9 @@ export async function createHotelBooking(body) {
   return apiClient.post('/hotel-bookings', body).then(unwrap);
 }
 
-export async function getMyHotelBookings({ status, page = 1, pageSize = 20 } = {}) {
+export async function getMyHotelBookings({ tripId, status, page = 1, pageSize = 20 } = {}) {
   const params = new URLSearchParams();
+  if (tripId) params.append('tripId', tripId);
   if (status && status !== 'All') params.append('status', status);
   params.append('page', page);
   params.append('pageSize', pageSize);
@@ -120,6 +121,13 @@ export async function deleteHotelBooking(id) {
 
 // ── Vehicle Search & Booking ──────────────────────────────────────────────────
 
+export async function getAcceptedVehicles({ page = 1, pageSize = 50 } = {}) {
+  const params = new URLSearchParams();
+  params.append('page', page);
+  params.append('pageSize', pageSize);
+  return apiClient.get(`/vehicles/accepted?${params.toString()}`).then(unwrap);
+}
+
 export async function searchVehicles({ startDate, endDate, minCapacity, maxPricePerDay } = {}) {
   const params = new URLSearchParams();
   params.append('startDate', startDate);
@@ -134,10 +142,11 @@ export async function createVehicleBooking(body) {
   return apiClient.post('/vehicle-bookings', body).then(unwrap);
 }
 
-export async function getMyVehicleBookings({ page = 1, pageSize = 20 } = {}) {
+export async function getMyVehicleBookings({ tripId, page = 1, pageSize = 20 } = {}) {
   // Note: the backend GET /vehicle-bookings/my does NOT support a status filter.
   // Status filtering is done client-side.
   const params = new URLSearchParams({ page, pageSize });
+  if (tripId) params.append('tripId', tripId);
   return apiClient.get(`/vehicle-bookings/my?${params.toString()}`).then(unwrap);
 }
 
@@ -175,8 +184,9 @@ export async function createSupplyOrder(body) {
   return apiClient.post('/supply-orders', body).then(unwrap);
 }
 
-export async function getMySupplyOrders({ status, sort, page = 1, pageSize = 20 } = {}) {
+export async function getMySupplyOrders({ tripId, status, sort, page = 1, pageSize = 20 } = {}) {
   const params = new URLSearchParams();
+  if (tripId) params.append('tripId', tripId);
   if (status && status !== 'All') params.append('status', status);
   if (sort) params.append('sort', sort);
   params.append('page', page);
@@ -198,4 +208,67 @@ export async function cancelSupplyOrder(id) {
 export async function deleteSupplyOrder(id) {
   // Hard delete — only allowed while Held. Restores stock.
   return apiClient.delete(`/supply-orders/${id}`).then((res) => res.data);
+}
+
+// ── AI Proposal Workflow ───────────────────────────────────────────────────────
+// All routes are under /api/trips/:tripId/workflows/ and require the Traveler role.
+
+// POST /api/trips/:tripId/workflows/generate
+// Initiates AI proposal generation. May take up to 2 minutes.
+// Uses a per-request 120-second timeout so we don't change the global default.
+export async function generateAiProposal(tripId) {
+  return apiClient
+    .post(`/trips/${tripId}/workflows/generate`, null, { timeout: 120_000 })
+    .then(unwrap);
+}
+
+// GET /api/trips/:tripId/workflows/proposal
+// Retrieves the latest saved proposal for the trip (any status).
+// Returns the persisted TripProposalDto with deserialized InputSnapshot and Payload.
+export async function getLatestProposal(tripId) {
+  return apiClient.get(`/trips/${tripId}/workflows/proposal`).then(unwrap);
+}
+
+// POST /api/trips/:tripId/workflows/:proposalId/accept
+// Traveler accepts a Generated+M4Pass proposal. Moves it to PendingAdminApproval.
+// No body required — the backend uses the proposalId from the route.
+export async function acceptProposal(tripId, proposalId) {
+  return apiClient
+    .post(`/trips/${tripId}/workflows/${proposalId}/accept`)
+    .then(unwrap);
+}
+
+// POST /api/trips/:tripId/workflows/:proposalId/reject
+// Traveler rejects a Generated or PendingAdminApproval proposal.
+// body: { Decision: "Reject", Reason?: string }
+export async function rejectProposal(tripId, proposalId, reason) {
+  return apiClient
+    .post(`/trips/${tripId}/workflows/${proposalId}/reject`, {
+      Decision: 'Reject',
+      Reason: reason || null,
+    })
+    .then(unwrap);
+}
+
+// ── Unified Checkout ──────────────────────────────────────────────────────────
+
+export async function placeHold(body) {
+  // body: { TripId, Hotels: [], Vehicle: {}, Supplies: [] }
+  return apiClient.post('/checkouts', body).then(unwrap);
+}
+
+export async function initiatePayment(checkoutId) {
+  return apiClient.post(`/checkouts/${checkoutId}/initiate-payment`).then(unwrap);
+}
+
+export async function getMyCheckouts({ tripId, page = 1, pageSize = 20 } = {}) {
+  const params = new URLSearchParams();
+  if (tripId) params.append('tripId', tripId);
+  params.append('page', page);
+  params.append('pageSize', pageSize);
+  return apiClient.get(`/checkouts/my?${params.toString()}`).then(unwrap);
+}
+
+export async function getCheckoutById(id) {
+  return apiClient.get(`/checkouts/${id}`).then(unwrap);
 }

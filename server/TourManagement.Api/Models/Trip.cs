@@ -21,6 +21,10 @@ public class Trip
     // We keep this as a plain string for now — no separate tags table needed.
     public string? Interests { get; set; }
 
+    public decimal? PickupLatitude { get; set; }
+    public decimal? PickupLongitude { get; set; }
+    public string? PickupNote { get; set; }
+
     // Stored as a string in the DB (see AppDbContext) for readability.
     public TripStatus Status { get; set; } = TripStatus.Draft;
 

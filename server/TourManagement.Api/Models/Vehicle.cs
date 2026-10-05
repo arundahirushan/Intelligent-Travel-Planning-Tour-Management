@@ -21,11 +21,14 @@ public class Vehicle
     // Maximum number of passengers this vehicle can carry.
     public int Capacity { get; set; }
 
-    // Daily rental price in LKR (this project is Sri Lanka only).
     public decimal PricePerDay { get; set; }
+
+    // Optional photo URL of the vehicle.
+    public string? ImageUrl { get; set; }
 
     // Stored as a string in the DB (see AppDbContext).
     public VehicleStatus Status { get; set; } = VehicleStatus.PendingApproval;
+
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

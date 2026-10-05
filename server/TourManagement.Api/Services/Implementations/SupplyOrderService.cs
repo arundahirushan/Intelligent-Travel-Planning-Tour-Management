@@ -23,7 +23,6 @@ public class SupplyOrderService : ISupplyOrderService
 
     public async Task<SupplyOrderSummaryDto> CreateAsync(CreateSupplyOrderDto dto, int travelerId)
     {
-        // 1. Verify trip ownership
         var trip = await _db.Trips.FirstOrDefaultAsync(t => t.Id == dto.TripId);
         if (trip == null)
             throw new NotFoundException($"Trip with ID {dto.TripId} not found.");
@@ -31,42 +30,56 @@ public class SupplyOrderService : ISupplyOrderService
         if (trip.TravelerId != travelerId)
             throw new ForbiddenException("You do not have permission to order supplies for this trip.");
 
-        // 2. Load the Supply
-        var supply = await _db.Supplies.FirstOrDefaultAsync(s => s.Id == dto.SupplyId);
-        if (supply == null || supply.Status != SupplyStatus.Active)
-            throw new ValidationException("Supply is not available or does not exist.");
+        if (trip.Status == TripStatus.Confirmed || trip.Status == TripStatus.Completed || trip.Status == TripStatus.Cancelled)
+            throw new ValidationException($"Cannot add bookings to a trip that is {trip.Status}.");
 
-        // 3. Contract Validity Check (using existing IContractService)
-        bool hasValidContract = await _contractService.IsContractCurrentlyValidAsync(supply.SupplierId);
-        if (!hasValidContract)
-            throw new ValidationException("This supplier does not currently have a valid contract.");
-
-        // 4. Stock Check
-        if (supply.StockQuantity < dto.Quantity)
-            throw new ValidationException("Insufficient stock available.");
-
-        // 5. Decrement Stock and create order
-        supply.StockQuantity -= dto.Quantity;
-        supply.UpdatedAt = DateTime.UtcNow;
-
-        var order = new SupplyOrder
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            TripId = dto.TripId,
-            SupplyId = dto.SupplyId,
-            Quantity = dto.Quantity,
-            PriceAtOrderTime = supply.PricePerUnit,
-            Status = BookingStatus.Held,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+            if (_db.Database.IsRelational())
+            {
+                long supplyLockKey = 3_000_000L + dto.SupplyId;
+                await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({supplyLockKey})");
+            }
 
-        _db.SupplyOrders.Add(order);
+            var supply = await _db.Supplies.FirstOrDefaultAsync(s => s.Id == dto.SupplyId);
+            if (supply == null || supply.Status != SupplyStatus.Active)
+                throw new ValidationException("Supply is not available or does not exist.");
 
-        // Atomic save ensures stock doesn't go negative on race conditions
-        await _db.SaveChangesAsync();
+            bool hasValidContract = await _contractService.IsContractCurrentlyValidAsync(supply.SupplierId);
+            if (!hasValidContract)
+                throw new ValidationException("This supplier does not currently have a valid contract.");
 
-        order.Supply = supply; // populate for mapping
-        return order.ToSummaryDto();
+            if (supply.StockQuantity < dto.Quantity)
+                throw new ValidationException("Insufficient stock available.");
+
+            supply.StockQuantity -= dto.Quantity;
+            supply.UpdatedAt = DateTime.UtcNow;
+
+            var order = new SupplyOrder
+            {
+                TripId = dto.TripId,
+                SupplyId = dto.SupplyId,
+                Quantity = dto.Quantity,
+                PriceAtOrderTime = supply.PricePerUnit,
+                Status = BookingStatus.Held,
+                HoldExpiresAt = DateTime.UtcNow.AddHours(12),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _db.SupplyOrders.Add(order);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            order.Supply = supply;
+            return order.ToSummaryDto();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<SupplyOrderSummaryDto> UpdateAsync(int id, UpdateSupplyOrderDto dto, int travelerId)
@@ -140,11 +153,14 @@ public class SupplyOrderService : ISupplyOrderService
     }
 
     public async Task<PagedResult<SupplyOrderSummaryDto>> GetMyOrdersAsync(
-        int travelerId, string? status, string? sort, int page, int pageSize)
+        int travelerId, int? tripId, string? status, string? sort, int page, int pageSize)
     {
         var query = _db.SupplyOrders
             .Include(o => o.Supply)
             .Where(o => o.Trip.TravelerId == travelerId);
+
+        if (tripId.HasValue)
+            query = query.Where(o => o.TripId == tripId.Value);
 
         return await ApplyFiltersAndPaginateAsync(query, status, sort, page, pageSize);
     }
@@ -169,6 +185,9 @@ public class SupplyOrderService : ISupplyOrderService
 
         if (order.Status == BookingStatus.Cancelled)
             throw new ValidationException("Order is already cancelled.");
+
+        if (order.Status == BookingStatus.Confirmed)
+            throw new ValidationException("Confirmed orders cannot be cancelled online as there is no refund workflow.");
 
         // Restore stock
         order.Supply.StockQuantity += order.Quantity;

@@ -27,7 +27,8 @@ function formatDate(dateStr) {
 //
 // Props:
 //   trip — TripDetailDto (or null for global My Bookings page)
-export default function TransportTab({ trip }) {
+//   onAddVehicle — callback to add to cart
+export default function TransportTab({ trip, onAddVehicle }) {
   const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,14 +49,14 @@ export default function TransportTab({ trip }) {
       setLoading(true);
       setError(null);
       // Backend has no status filter — load all and filter client-side.
-      const data = await getMyVehicleBookings({ pageSize: 200 });
+      const data = await getMyVehicleBookings({ tripId: trip?.id, pageSize: 200 });
       setAllBookings(data.items || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load vehicle bookings.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [trip?.id]);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
@@ -219,7 +220,7 @@ export default function TransportTab({ trip }) {
       <BookVehicleModal
         isOpen={bookModalOpen}
         onClose={() => setBookModalOpen(false)}
-        onSuccess={fetchBookings}
+        onAddVehicle={onAddVehicle}
         trip={trip}
       />
       <PickupLocationModal

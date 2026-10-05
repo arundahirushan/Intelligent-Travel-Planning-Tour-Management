@@ -14,7 +14,8 @@ public static class SupplyOrderMappings
             Quantity = order.Quantity,
             PriceAtOrderTime = order.PriceAtOrderTime,
             TotalPrice = order.Quantity * order.PriceAtOrderTime,
-            Status = order.Status
+            Status = order.Status,
+            HoldExpiresAt = order.HoldExpiresAt
         };
     }
 }

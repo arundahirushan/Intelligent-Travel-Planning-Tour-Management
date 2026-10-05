@@ -16,10 +16,18 @@ public class SupplyOrder
     // Reuse existing BookingStatus enum
     public BookingStatus Status { get; set; } = BookingStatus.Held;
 
+    // Optional linkage to a TripCheckout when this order is held for payment.
+    public int? CheckoutId { get; set; }
+
+    // UTC timestamp at which this hold expires (mirrors TripCheckout).
+    // Null if the item is confirmed or not currently held.
+    public DateTime? HoldExpiresAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties
     public Trip Trip { get; set; } = null!;
     public Supply Supply { get; set; } = null!;
+    public TripCheckout? Checkout { get; set; }
 }

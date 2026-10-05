@@ -35,10 +35,23 @@ export default function DestinationPage() {
       {/* Navbar overlay header (we'll just use a small dark gradient at top to make nav readable if it's transparent, or assume global nav works) */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-canvas/90 backdrop-blur-md border-b border-border-blue/70 transition-all">
         <div className="max-w-7xl mx-auto h-20 px-6 lg:px-12 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
-            <img src="/logo.png" alt="Easy Planner Logo" className="h-8 w-auto object-contain" />
-            <span className="font-heading text-xl font-bold tracking-tight text-text hidden sm:inline-block">Easy Planner</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/" className="text-text-secondary hover:text-primary transition-colors flex items-center justify-center bg-white/50 hover:bg-white rounded-full w-9 h-9 backdrop-blur shadow-sm" title="Back to Home">
+              <span className="material-symbols-outlined text-xl">arrow_back</span>
+            </Link>
+            <Link to="/" className="flex items-center gap-3 group">
+              <img src="/logo.png" alt="Easy Planner Logo" className="h-8 w-auto object-contain" />
+              <span className="font-heading text-xl font-bold tracking-tight text-text hidden sm:inline-block">Easy Planner</span>
+            </Link>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-9">
+            <Link to="/#destinations" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Destinations</Link>
+            <Link to="/#accommodation" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Accommodation</Link>
+            <Link to="/#vehicles" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">Vehicles</Link>
+            <Link to="/#how-it-works" className="font-heading text-sm font-semibold tracking-wide text-text-secondary hover:text-primary transition-colors">How It Works</Link>
+          </nav>
+
           <div className="flex items-center gap-4">
             {isAuthenticated ? (
               <Link to={getDashboardPath()} className="inline-flex items-center justify-center px-6 py-2 bg-primary text-white font-heading text-xs font-bold uppercase tracking-widest rounded-pill hover:bg-primary-dark transition-all shadow-sm">
@@ -55,13 +68,13 @@ export default function DestinationPage() {
 
       {/* 1. HERO SECTION */}
       <section className="relative w-full h-[60vh] min-h-[500px] flex flex-col justify-end">
-        <img 
-          src={destination.heroImage} 
-          alt={destination.name} 
-          className="absolute inset-0 w-full h-full object-cover" 
+        <img
+          src={destination.heroImage}
+          alt={destination.name}
+          className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10"></div>
-        
+
         <div className="relative z-10 max-w-5xl mx-auto px-6 lg:px-12 w-full pb-16">
           <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white font-heading text-[10px] font-bold uppercase tracking-widest border border-white/10 shadow-sm mb-4">
             {destination.region}
@@ -88,10 +101,10 @@ export default function DestinationPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 lg:px-12 mt-16 grid grid-cols-1 lg:grid-cols-3 gap-16">
-        
+
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-16">
-          
+
           {/* 3. OVERVIEW */}
           <section>
             <h2 className="font-heading text-2xl sm:text-3xl font-bold text-text uppercase tracking-tight mb-6">
@@ -150,7 +163,7 @@ export default function DestinationPage() {
 
         {/* Sidebar Column */}
         <div className="lg:col-span-1 space-y-12">
-          
+
           {/* 7. THINGS TO DO */}
           <section className="bg-surface-blue rounded-2xl p-6 sm:p-8">
             <h3 className="font-heading text-xl font-bold text-text uppercase tracking-tight mb-6 flex items-center gap-2">

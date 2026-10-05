@@ -4,7 +4,9 @@ import Input from '../../../components/Input';
 import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
+import PhotoPicker from '../../../components/PhotoPicker';
 import { createVehicle, updateVehicle } from '../../../services/transportProviderApi';
+import { uploadListingPhoto } from '../../../services/uploadApi';
 
 // Fields mirror CreateVehicleDto / UpdateVehicleDto exactly.
 const EMPTY_FORM = {
@@ -13,6 +15,7 @@ const EMPTY_FORM = {
   RegistrationNumber: '',
   Capacity: '',
   PricePerDay: '',
+  ImageUrl: '',
 };
 
 export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicle }) {
@@ -22,6 +25,12 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // New photo chosen by the user (uploaded only when Save is pressed).
+  const [photoFile, setPhotoFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  // Remembers a successful upload so a retry after a failed save does not upload again.
+  const [uploadedPhoto, setUploadedPhoto] = useState(null);
 
   // Populate form when editing, reset when adding
   useEffect(() => {
@@ -33,12 +42,15 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
           RegistrationNumber: vehicle.registrationNumber || '',
           Capacity: vehicle.capacity?.toString() || '',
           PricePerDay: vehicle.pricePerDay?.toString() || '',
+          ImageUrl: vehicle.imageUrl || '',
         });
       } else {
         setFormData(EMPTY_FORM);
       }
       setError(null);
       setFieldErrors({});
+      setPhotoFile(null);
+      setUploadedPhoto(null);
     }
   }, [isOpen, isEdit, vehicle]);
 
@@ -55,6 +67,8 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
       setFieldErrors(prev => ({ ...prev, [name]: null }));
     }
   };
+
+
 
   // Client-side validation before sending to the API
   const validate = () => {
@@ -90,17 +104,43 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
       return;
     }
 
+    setLoading(true);
+    setError(null);
+
+    // Start from the current ImageUrl so an edit without a new photo keeps the existing image.
+    let imageUrl = formData.ImageUrl?.trim() || null;
+
+    if (photoFile) {
+      try {
+        // If a previous Save already uploaded this same file (and only the save failed),
+        // reuse its URL instead of uploading a duplicate.
+        if (uploadedPhoto?.file === photoFile) {
+          imageUrl = uploadedPhoto.url;
+        } else {
+          setUploading(true);
+          imageUrl = await uploadListingPhoto(photoFile);
+          setUploadedPhoto({ file: photoFile, url: imageUrl });
+        }
+      } catch (err) {
+        // Stop here: do not save the vehicle and do not touch the existing image.
+        setError(err.response?.data?.message || 'Photo upload failed. Please try again.');
+        setUploading(false);
+        setLoading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
     const body = {
       VehicleType: formData.VehicleType.trim(),
       Model: formData.Model.trim(),
       RegistrationNumber: formData.RegistrationNumber.trim(),
       Capacity: parseInt(formData.Capacity, 10),
       PricePerDay: parseFloat(formData.PricePerDay),
+      ImageUrl: imageUrl,
     };
 
     try {
-      setLoading(true);
-      setError(null);
       if (isEdit) {
         await updateVehicle(vehicle.id, body);
       } else {
@@ -211,7 +251,29 @@ export default function AddEditVehicleModal({ isOpen, onClose, onSuccess, vehicl
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
+        <PhotoPicker
+          file={photoFile}
+          onFileChange={setPhotoFile}
+          currentUrl={formData.ImageUrl}
+          disabled={loading}
+        />
+
+        <Input 
+          label="Or paste a Cover Image URL" 
+          name="ImageUrl" 
+          value={formData.ImageUrl} 
+          onChange={handleChange} 
+          error={fieldErrors.ImageUrl}
+          placeholder="https://example.com/image.jpg (optional)"
+        />
+        {photoFile && formData.ImageUrl && (
+          <p className="text-xs text-text-secondary -mt-3">
+            The selected photo will be used instead of this URL.
+          </p>
+        )}
+
+        <div className="flex justify-end items-center gap-3 pt-2">
+          {uploading && <span className="text-sm text-text-secondary">Uploading photo...</span>}
           <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
             Cancel
           </Button>

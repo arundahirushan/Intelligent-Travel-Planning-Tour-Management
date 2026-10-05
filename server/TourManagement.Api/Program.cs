@@ -14,8 +14,19 @@ var jwtSettings = builder.Configuration
     .GetSection("JwtSettings")
     .Get<JwtSettings>() ?? throw new InvalidOperationException("JwtSettings not configured.");
 
+var payHereSettings = builder.Configuration
+    .GetSection("PayHereSettings")
+    .Get<PayHereSettings>() ?? new PayHereSettings();
+
+// Supabase Storage (listing photos). Url and ServiceRoleKey come from user-secrets / env vars.
+var storageSettings = builder.Configuration
+    .GetSection("SupabaseStorage")
+    .Get<SupabaseStorageSettings>() ?? new SupabaseStorageSettings();
+
 // Register the settings object so services can inject it.
 builder.Services.AddSingleton(jwtSettings);
+builder.Services.AddSingleton(payHereSettings);
+builder.Services.AddSingleton(storageSettings);
 
 // ── Controllers ─────────────────────────────────────────────────────────────
 // Configure JSON to serialize enums as their string names (e.g. "Draft" not 0).
