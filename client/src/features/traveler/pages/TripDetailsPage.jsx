@@ -27,6 +27,7 @@ const TABS = [
   { key: 'accommodation', label: 'Accommodation', icon: 'hotel' },
   { key: 'transport', label: 'Transport', icon: 'directions_car' },
   { key: 'supplies', label: 'Supplies', icon: 'inventory_2' },
+  { key: 'payment', label: 'Payment', icon: 'payment' },
 ];
 
 function formatDate(dateStr) {
@@ -47,11 +48,12 @@ export default function TripDetailsPage() {
   const { tripId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const initialTab = new URLSearchParams(location.search).get('payment') ? 'payment' : 'overview';
 
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const [cartHotels, setCartHotels] = useState([]);
   const [cartVehicle, setCartVehicle] = useState(null);
@@ -318,21 +320,22 @@ export default function TripDetailsPage() {
         {activeTab === 'accommodation' && <AccommodationTab trip={trip} onAddHotel={(h) => setCartHotels(prev => [...prev, h])} />}
         {activeTab === 'transport' && <TransportTab trip={trip} onAddVehicle={(v) => setCartVehicle(v)} />}
         {activeTab === 'supplies' && <SuppliesTab trip={trip} onAddSupply={(s) => setCartSupplies(prev => [...prev, s])} />}
+        {activeTab === 'payment' && (
+          <CheckoutCartWidget 
+            tripId={trip.id}
+            activeCheckout={activeCheckout}
+            cartHotels={cartHotels}
+            cartVehicle={cartVehicle}
+            cartSupplies={cartSupplies}
+            onCheckoutCreated={() => fetchTripData()}
+            onClearCart={() => {
+              setCartHotels([]);
+              setCartVehicle(null);
+              setCartSupplies([]);
+            }}
+          />
+        )}
       </div>
-
-      <CheckoutCartWidget 
-        tripId={trip.id}
-        activeCheckout={activeCheckout}
-        cartHotels={cartHotels}
-        cartVehicle={cartVehicle}
-        cartSupplies={cartSupplies}
-        onCheckoutCreated={() => fetchTripData()}
-        onClearCart={() => {
-          setCartHotels([]);
-          setCartVehicle(null);
-          setCartSupplies([]);
-        }}
-      />
 
       {/* Modals */}
       <AddEditTripModal
@@ -417,6 +420,7 @@ function OverviewTab({ trip, onNavigateToTab }) {
             { icon: 'hotel', label: 'Book Hotel', tab: 'accommodation' },
             { icon: 'directions_car', label: 'Book Vehicle', tab: 'transport' },
             { icon: 'inventory_2', label: 'Order Supplies', tab: 'supplies' },
+            { icon: 'payment', label: 'Checkout & Pay', tab: 'payment' },
           ].map((a) => (
             <button
               key={a.tab}

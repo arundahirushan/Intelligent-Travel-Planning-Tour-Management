@@ -22,10 +22,8 @@ export default function CheckoutCartWidget({
   
   if (activeCheckout?._error) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border-neutral shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 z-50">
-        <div className="max-w-7xl mx-auto">
-          <ErrorBanner message={activeCheckout.message} />
-        </div>
+      <div className="bg-white border border-border-neutral rounded-xl p-6 shadow-soft">
+        <ErrorBanner message={activeCheckout.message} />
       </div>
     );
   }
@@ -34,7 +32,15 @@ export default function CheckoutCartWidget({
   const isLocalCart = !isSavedCheckout && (cartHotels.length > 0 || cartVehicle || cartSupplies.length > 0);
 
   if (!isSavedCheckout && !isLocalCart) {
-    return null;
+    return (
+      <div className="bg-white border border-border-neutral rounded-xl p-8 shadow-soft text-center">
+        <span className="material-symbols-outlined text-4xl text-text-secondary mb-3">shopping_cart</span>
+        <h3 className="font-heading font-bold text-text mb-2">No items to checkout</h3>
+        <p className="text-body-sm text-text-secondary max-w-md mx-auto">
+          You haven't made any selections to reserve, and there are no saved checkouts for this trip. Add items from the Accommodation, Transport, or Supplies tabs first.
+        </p>
+      </div>
+    );
   }
 
   // Determine items and totals depending on mode
@@ -175,8 +181,8 @@ export default function CheckoutCartWidget({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border-neutral shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 z-50">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="bg-white border border-border-neutral rounded-xl p-6 shadow-soft">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h3 className="font-heading font-bold text-text">{statusText}</h3>
@@ -218,7 +224,7 @@ export default function CheckoutCartWidget({
         </div>
       </div>
       {checkoutError && (
-        <div className="max-w-7xl mx-auto mt-3">
+        <div className="mt-4">
           <ErrorBanner message={checkoutError} />
         </div>
       )}
