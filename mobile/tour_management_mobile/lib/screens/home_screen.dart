@@ -4,6 +4,7 @@ import 'login_screen.dart';
 import '../features/m1_users_proposals_trips/m1_dashboard_screen.dart';
 import '../features/m2_accommodation/screens/m2_dashboard_screen.dart';
 import '../features/m3_vehicles_destinations/m3_dashboard_screen.dart';
+import '../features/m4_supplier_contracts/m4_dashboard_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final AuthService authService;
@@ -68,9 +69,11 @@ class HomeScreen extends StatelessWidget {
             _buildFeatureCard(
               context,
               'M4',
-              'Users & Contracts',
-              Icons.people,
+              'Suppliers & Contracts',
+              Icons.handshake_outlined,
               Colors.blue,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const M4DashboardScreen())),
             ),
           ],
         ),
