@@ -177,14 +177,18 @@ public class VehicleBookingService : IVehicleBookingService
     // Returns all vehicle bookings that belong to the requesting traveler
     // (bookings are linked to trips, which are owned by the traveler).
     public async Task<PagedResult<VehicleBookingSummaryDto>> GetMyBookingsAsync(
-        int travelerId, int page, int pageSize)
+        int travelerId, int? tripId, int page, int pageSize)
     {
         var query = _db.VehicleBookings
             .Include(b => b.Vehicle)
             .Include(b => b.Trip)
             .Include(b => b.Checkout)
-            .Where(b => b.Trip.TravelerId == travelerId)
-            .OrderByDescending(b => b.CreatedAt);
+            .Where(b => b.Trip.TravelerId == travelerId);
+
+        if (tripId.HasValue)
+            query = query.Where(b => b.TripId == tripId.Value);
+
+        query = query.OrderByDescending(b => b.CreatedAt);
 
         var total = await query.CountAsync();
         var items = await query

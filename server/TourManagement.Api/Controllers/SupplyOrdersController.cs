@@ -48,13 +48,14 @@ public class SupplyOrdersController : ControllerBase
     [HttpGet("my")]
     [Authorize(Roles = Roles.Traveler)]
     public async Task<ActionResult<ApiResponse<PagedResult<SupplyOrderSummaryDto>>>> GetMyOrders(
+        [FromQuery] int? tripId,
         [FromQuery] string? status,
         [FromQuery] string? sort,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         var result = await _supplyOrderService.GetMyOrdersAsync(
-            GetCurrentUserId(), status, sort, page, pageSize);
+            GetCurrentUserId(), tripId, status, sort, page, pageSize);
         return Ok(ApiResponse<PagedResult<SupplyOrderSummaryDto>>.Ok(result));
     }
 

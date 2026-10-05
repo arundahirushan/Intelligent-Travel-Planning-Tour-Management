@@ -29,9 +29,9 @@ export default function CheckoutCartWidget({
       setLoadingHolds(true);
       try {
         const [hResp, vResp, sResp] = await Promise.all([
-          getMyHotelBookings(tripId, 'Held'),
-          getMyVehicleBookings(tripId, 'Held'),
-          getMySupplyOrders(tripId, 'Held')
+          getMyHotelBookings({ tripId, status: 'Held', pageSize: 100 }),
+          getMyVehicleBookings({ tripId, status: 'Held', pageSize: 100 }),
+          getMySupplyOrders({ tripId, status: 'Held', pageSize: 100 })
         ]);
         
         const now = new Date();
@@ -74,10 +74,10 @@ export default function CheckoutCartWidget({
   const isSavedCheckout = !!activeCheckout;
   
   const hotelCount = isSavedCheckout ? (activeCheckout.hotels?.length || 0) : holds.hotels.length;
-  const hasVehicle = isSavedCheckout ? !!activeCheckout.vehicleItem : holds.vehicles.length > 0;
+  const vehicleCount = isSavedCheckout ? (activeCheckout.vehicleItem ? 1 : 0) : holds.vehicles.length;
   const supplyCount = isSavedCheckout ? (activeCheckout.supplies?.length || 0) : holds.supplies.length;
   
-  const hasItems = hotelCount > 0 || hasVehicle || supplyCount > 0;
+  const hasItems = hotelCount > 0 || vehicleCount > 0 || supplyCount > 0;
 
   if (!isSavedCheckout && !hasItems && !loadingHolds) {
     return (
@@ -92,15 +92,24 @@ export default function CheckoutCartWidget({
   }
 
   let itemsTotal = 0;
-  let websiteFee = 1000;
+  let hotelAmount = 0;
+  let vehicleAmount = 0;
+  let supplyAmount = 0;
+  let bookingFee = 1000;
   let statusText = 'Ready to Pay';
   let statusBadge = null;
   let isPaymentAllowed = false;
+  let isPaid = false;
 
   if (isSavedCheckout) {
-    itemsTotal = activeCheckout.totalPrice;
-    websiteFee = activeCheckout.websiteFee;
+    hotelAmount = (activeCheckout.hotels || []).reduce((sum, h) => sum + h.totalPrice, 0);
+    vehicleAmount = activeCheckout.vehicleItem ? activeCheckout.vehicleItem.totalPrice : 0;
+    supplyAmount = (activeCheckout.supplies || []).reduce((sum, s) => sum + s.totalPrice, 0);
+    itemsTotal = hotelAmount + vehicleAmount + supplyAmount;
+    
+    bookingFee = activeCheckout.websiteFee;
     isPaymentAllowed = activeCheckout.status === 'Active';
+    isPaid = activeCheckout.status === 'Paid';
     
     if (activeCheckout.status === 'Active') {
       statusBadge = <span className="px-2 py-0.5 rounded text-xs font-bold bg-status-success/20 text-status-success">ACTIVE HOLD</span>;
@@ -116,14 +125,14 @@ export default function CheckoutCartWidget({
       statusText = 'Checkout Cancelled';
     }
   } else {
-    itemsTotal = holds.hotels.reduce((sum, h) => sum + h.priceSnapshot, 0) +
-                 holds.vehicles.reduce((sum, v) => sum + v.priceSnapshot, 0) +
-                 holds.supplies.reduce((sum, s) => sum + (s.priceAtOrderTime * s.quantity), 0);
+    hotelAmount = holds.hotels.reduce((sum, h) => sum + h.totalPrice, 0);
+    vehicleAmount = holds.vehicles.reduce((sum, v) => sum + v.totalPrice, 0);
+    supplyAmount = holds.supplies.reduce((sum, s) => sum + s.totalPrice, 0);
+    itemsTotal = hotelAmount + vehicleAmount + supplyAmount;
+    
     isPaymentAllowed = true;
     statusBadge = <span className="px-2 py-0.5 rounded text-xs font-bold bg-status-warning/20 text-status-warning">PENDING PAYMENT</span>;
   }
-
-  const grandTotal = itemsTotal + websiteFee;
 
   const handlePay = async () => {
     setCheckoutLoading(true);
@@ -184,41 +193,101 @@ export default function CheckoutCartWidget({
         <div className="flex justify-center p-4"><LoadingSpinner size="md" /></div>
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
+          <div className="flex flex-col lg:flex-row justify-between gap-6">
+            <div className="flex-1">
               <div className="flex items-center gap-3 mb-1">
                 <h3 className="font-heading font-bold text-text">{statusText}</h3>
                 {statusBadge}
               </div>
-              <p className="text-body-sm text-text-secondary">
-                {hotelCount} Hotel{hotelCount !== 1 ? 's' : ''}, 
-                {hasVehicle ? ' 1 Vehicle' : ' 0 Vehicles'}, 
-                {supplyCount} Supply Order{supplyCount !== 1 ? 's' : ''}
-              </p>
+              
+              <div className="mt-4">
+                <p className="font-heading font-bold text-sm text-text-secondary mb-2">Trip Cost Breakdown</p>
+                <div className="space-y-1 max-w-sm">
+                  <div className="flex justify-between items-center text-body-sm text-text">
+                    <span>Hotel</span>
+                    <span className="font-heading font-bold">{formatLKR(hotelAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm text-text">
+                    <span>Vehicle</span>
+                    <span className="font-heading font-bold">{formatLKR(vehicleAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm text-text">
+                    <span>Supplies</span>
+                    <span className="font-heading font-bold">{formatLKR(supplyAmount)}</span>
+                  </div>
+                </div>
+              </div>
               
               {!isSavedCheckout && (
-                <div className="mt-3 text-xs text-text-secondary space-y-1">
+                <div className="mt-4 text-xs text-text-secondary space-y-1">
                    {holds.hotels.map(h => <p key={`h-${h.id}`}>Hotel {h.room?.hotel?.name || ''} - Expires: {new Date(h.holdExpiresAt).toLocaleString()}</p>)}
                    {holds.vehicles.map(v => <p key={`v-${v.id}`}>Vehicle - Expires: {new Date(v.holdExpiresAt).toLocaleString()}</p>)}
                    {holds.supplies.map(s => <p key={`s-${s.id}`}>Supply {s.supply?.name || ''} - Expires: {new Date(s.holdExpiresAt).toLocaleString()}</p>)}
                 </div>
               )}
-              {isSavedCheckout && activeCheckout.holdExpiresAt && (
-                <p className="text-xs text-text-secondary mt-1">Expires: {new Date(activeCheckout.holdExpiresAt).toLocaleString()}</p>
+              {isSavedCheckout && activeCheckout.holdExpiresAt && !isPaid && (
+                <p className="text-xs text-text-secondary mt-4">Expires: {new Date(activeCheckout.holdExpiresAt).toLocaleString()}</p>
               )}
             </div>
             
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-body-sm text-text-secondary">Provider: {formatLKR(itemsTotal)} + Fee: {formatLKR(websiteFee)}</p>
-                <p className="font-heading font-bold text-primary text-headline-sm">{formatLKR(grandTotal)} Total</p>
+            <div className="shrink-0 w-full lg:w-80">
+              <div className="flex flex-col gap-2 border border-border-neutral rounded-lg p-4 bg-surface-neutral/30">
+                {isPaid ? (
+                  <>
+                    <p className="font-heading font-bold text-status-success mb-2">Booking Fee Paid</p>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Paid through EasyPlanner:</span>
+                      <span className="font-heading font-bold">{formatLKR(bookingFee)}</span>
+                    </div>
+                    <div className="border-t border-border-neutral my-1"></div>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Trip / Provider Cost:</span>
+                      <span className="font-heading font-bold">{formatLKR(itemsTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Remaining Provider Cost:</span>
+                      <span className="font-heading font-bold">{formatLKR(itemsTotal)}</span>
+                    </div>
+                    <p className="text-xs text-text-secondary mt-2">
+                      The EasyPlanner booking fee is separate from the provider cost.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Trip / Provider Cost</span>
+                      <span className="font-heading font-bold">{formatLKR(itemsTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">EasyPlanner Booking Fee</span>
+                      <span className="font-heading font-bold">{formatLKR(bookingFee)}</span>
+                    </div>
+                    
+                    <div className="border-t border-border-neutral my-1"></div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="font-heading font-bold text-text">Amount to Pay Now</span>
+                      <span className="font-heading font-bold text-primary text-headline-sm">{formatLKR(bookingFee)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center text-xs text-text-secondary mt-1">
+                      <span>Remaining Provider Cost</span>
+                      <span>{formatLKR(itemsTotal)}</span>
+                    </div>
+                  </>
+                )}
               </div>
               
-              <div className="flex items-center gap-3">
-                <Button onClick={handlePay} disabled={!isPaymentAllowed || checkoutLoading} className={isPaymentAllowed ? '' : 'opacity-50 cursor-not-allowed'}>
-                  {checkoutLoading ? <LoadingSpinner size="sm" /> : 'Pay LKR 1,000'}
-                </Button>
-              </div>
+              {!isPaid && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <Button onClick={handlePay} disabled={!isPaymentAllowed || checkoutLoading} className={`w-full ${isPaymentAllowed ? '' : 'opacity-50 cursor-not-allowed'}`}>
+                    {checkoutLoading ? <LoadingSpinner size="sm" /> : `Pay ${formatLKR(bookingFee)}`}
+                  </Button>
+                  <p className="text-xs text-center text-text-secondary">
+                    The {formatLKR(bookingFee)} EasyPlanner booking fee is separate from your trip/provider cost. The provider cost is paid later.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           {checkoutError && (
