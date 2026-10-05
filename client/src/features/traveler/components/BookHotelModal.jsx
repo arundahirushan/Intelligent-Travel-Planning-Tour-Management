@@ -4,7 +4,7 @@ import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import StatusBadge from '../../../components/StatusBadge';
-import { searchHotels } from '../../../services/travelerApi';
+import { searchHotels, createHotelBooking } from '../../../services/travelerApi';
 
 // Format a number as LKR currency.
 function formatLKR(amount) {
@@ -116,23 +116,20 @@ export default function BookHotelModal({ isOpen, onClose, onAddHotel, trip, dest
     setBookingLoading(true);
     setBookingError(null);
     try {
-      const hotelItem = {
+      await createHotelBooking({
         TripId: trip.id,
         RoomId: selectedRoom.roomId,
         CheckInDate: checkIn,
         CheckOutDate: checkOut,
-        NumberOfRooms: rooms,
-        _hotelName: selectedRoom.hotelName,
-        _roomType: selectedRoom.roomType,
-        _price: selectedRoom.pricePerNight * nights * rooms
-      };
+        NumberOfRooms: rooms
+      });
       
       if (onAddHotel) {
-        onAddHotel(hotelItem);
+        onAddHotel();
       }
       onClose();
     } catch (err) {
-      setBookingError('Failed to add hotel to cart. Please try again.');
+      setBookingError(err.response?.data?.message || 'Failed to add hotel booking. Please try again.');
     } finally {
       setBookingLoading(false);
     }
@@ -308,7 +305,7 @@ export default function BookHotelModal({ isOpen, onClose, onAddHotel, trip, dest
           <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
             <Button type="button" variant="secondary" onClick={onClose} disabled={bookingLoading}>Cancel</Button>
             <Button type="submit" disabled={bookingLoading}>
-              {bookingLoading ? <LoadingSpinner size="sm" /> : 'Add to Checkout'}
+              {bookingLoading ? <LoadingSpinner size="sm" /> : 'Reserve for 12 Hours'}
             </Button>
           </div>
         </form>

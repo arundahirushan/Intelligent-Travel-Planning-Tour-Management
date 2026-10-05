@@ -55,10 +55,6 @@ export default function TripDetailsPage() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  const [cartHotels, setCartHotels] = useState([]);
-  const [cartVehicle, setCartVehicle] = useState(null);
-  const [cartSupplies, setCartSupplies] = useState([]);
-
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelError, setCancelError] = useState(null);
@@ -317,22 +313,14 @@ export default function TripDetailsPage() {
         {activeTab === 'itinerary' && (
           <ItineraryTab trip={trip} onTripUpdate={handleTripUpdate} />
         )}
-        {activeTab === 'accommodation' && <AccommodationTab trip={trip} onAddHotel={(h) => setCartHotels(prev => [...prev, h])} />}
-        {activeTab === 'transport' && <TransportTab trip={trip} onAddVehicle={(v) => setCartVehicle(v)} />}
-        {activeTab === 'supplies' && <SuppliesTab trip={trip} onAddSupply={(s) => setCartSupplies(prev => [...prev, s])} />}
+        {activeTab === 'accommodation' && <AccommodationTab trip={trip} onAddHotel={() => fetchTripData()} />}
+        {activeTab === 'transport' && <TransportTab trip={trip} onAddVehicle={() => fetchTripData()} />}
+        {activeTab === 'supplies' && <SuppliesTab trip={trip} onAddSupply={() => fetchTripData()} />}
         {activeTab === 'payment' && (
           <CheckoutCartWidget 
             tripId={trip.id}
             activeCheckout={activeCheckout}
-            cartHotels={cartHotels}
-            cartVehicle={cartVehicle}
-            cartSupplies={cartSupplies}
             onCheckoutCreated={() => fetchTripData()}
-            onClearCart={() => {
-              setCartHotels([]);
-              setCartVehicle(null);
-              setCartSupplies([]);
-            }}
           />
         )}
       </div>
