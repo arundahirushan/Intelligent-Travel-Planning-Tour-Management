@@ -30,8 +30,8 @@ export async function updateTrip(id, body) {
   return apiClient.put(`/trips/${id}`, body).then(unwrap);
 }
 
-export async function cancelTrip(id) {
-  // Soft-cancel: sets Status = Cancelled. Only while Draft or Planned.
+export async function deleteTrip(id) {
+  // Permanently delete an unpaid trip.
   return apiClient.delete(`/trips/${id}`).then((res) => res.data);
 }
 

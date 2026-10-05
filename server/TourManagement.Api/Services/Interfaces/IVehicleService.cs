@@ -31,6 +31,7 @@ public interface IVehicleService
     Task ApproveVehicleAsync(int vehicleId);
     Task RejectVehicleAsync(int vehicleId);   // only valid from PendingApproval → Rejected
     Task SuspendVehicleAsync(int vehicleId);  // only valid from Active → Suspended
+    Task ReactivateVehicleAsync(int vehicleId); // only valid from Suspended → Active
 
     // ── Public / Traveler operations ─────────────────────────────────────────
 
