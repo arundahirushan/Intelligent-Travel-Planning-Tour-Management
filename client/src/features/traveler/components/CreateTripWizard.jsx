@@ -489,9 +489,12 @@ function TripDetailsForm({ selectedIds, onBack, onClose, onSuccess }) {
                     type="button"
                     aria-pressed={isSelected}
                     onClick={() => {
-                      const current = formData.Interests.split(',').map(s => s.trim()).filter(Boolean);
-                      const next = isSelected ? current.filter(i => i !== interest) : [...current, interest];
-                      setFormData(prev => ({ ...prev, Interests: next.join(', ') }));
+                      setFormData(prev => {
+                        const current = (prev.Interests || '').split(',').map(s => s.trim()).filter(Boolean);
+                        const selected = current.includes(interest);
+                        const next = selected ? current.filter(i => i !== interest) : [...current, interest];
+                        return { ...prev, Interests: next.join(', ') };
+                      });
                     }}
                     className={`whitespace-nowrap px-4 py-1.5 rounded-full text-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 shrink-0 font-body text-sm
                       ${isSelected
