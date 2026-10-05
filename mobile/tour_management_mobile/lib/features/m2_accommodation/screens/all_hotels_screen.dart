@@ -131,6 +131,7 @@ class _AllHotelsScreenState extends State<AllHotelsScreen> {
           Expanded(
             flex: 1,
             child: DropdownButtonFormField<String>(
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Status',
                 border: OutlineInputBorder(),

@@ -10,7 +10,7 @@ class M2DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('M2: Hotels & Accommodation'),
+        title: const Text('Hotels & Accommodation'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),

@@ -11,7 +11,7 @@ class M3DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('M3: Vehicles & Destinations'),
+        title: const Text('Vehicles & Destinations'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
