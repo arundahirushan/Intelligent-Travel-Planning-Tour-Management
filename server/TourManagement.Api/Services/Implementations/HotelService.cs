@@ -327,6 +327,20 @@ public class HotelService : IHotelService
         await _db.SaveChangesAsync();
     }
 
+    // Reactivate a suspended listing (Status → Active).
+    public async Task ReactivateHotelAsync(int hotelId)
+    {
+        var hotel = await GetHotelOrThrowAsync(hotelId);
+
+        if (hotel.Status != HotelStatus.Suspended)
+            throw new ValidationException(
+                $"Only Suspended hotels can be reactivated. Current status is {hotel.Status}.");
+
+        hotel.Status    = HotelStatus.Active;
+        hotel.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
     // Admin oversight view of all bookings across all hotels.
     public async Task<PagedResult<HotelBookingSummaryDto>> GetAllBookingsAsync(
         string? status, int page, int pageSize)

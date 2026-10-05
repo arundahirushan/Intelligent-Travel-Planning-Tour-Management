@@ -255,6 +255,20 @@ public class VehicleService : IVehicleService
         await _db.SaveChangesAsync();
     }
 
+    // Reactivate a suspended listing (Status → Active).
+    public async Task ReactivateVehicleAsync(int vehicleId)
+    {
+        var vehicle = await GetVehicleOrThrowAsync(vehicleId);
+
+        if (vehicle.Status != VehicleStatus.Suspended)
+            throw new ValidationException(
+                $"Only Suspended vehicles can be reactivated. Current status is {vehicle.Status}.");
+
+        vehicle.Status    = VehicleStatus.Active;
+        vehicle.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
     // ── Public / Traveler: search and view ───────────────────────────────────
 
     // Main availability search. Each vehicle is one physical unit — it's either

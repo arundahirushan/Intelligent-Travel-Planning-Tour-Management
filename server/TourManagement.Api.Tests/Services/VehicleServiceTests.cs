@@ -344,5 +344,52 @@ public class VehicleServiceTests
         Assert.True(vehicle1.IsBookedToday, "Vehicle 1 should be booked today.");
         Assert.False(vehicle2.IsBookedToday, "Vehicle 2 should NOT be booked today.");
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 8: ReactivateVehicleAsync successfully changes status to Active
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ReactivateVehicleAsync_Success_WhenSuspended()
+    {
+        var db = CreateDb(nameof(ReactivateVehicleAsync_Success_WhenSuspended));
+        
+        var vehicle = await db.Vehicles.FindAsync(1);
+        vehicle!.Status = VehicleStatus.Suspended;
+        await db.SaveChangesAsync();
+
+        var service = new VehicleService(db);
+
+        // Act
+        await service.ReactivateVehicleAsync(1);
+
+        // Assert
+        var updatedVehicle = await db.Vehicles.FindAsync(1);
+        Assert.Equal(VehicleStatus.Active, updatedVehicle!.Status);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Test 9: ReactivateVehicleAsync throws ValidationException if not Suspended
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(VehicleStatus.Active)]
+    [InlineData(VehicleStatus.PendingApproval)]
+    [InlineData(VehicleStatus.Inactive)]
+    [InlineData(VehicleStatus.Rejected)]
+    public async Task ReactivateVehicleAsync_ThrowsWhenNotSuspended(VehicleStatus status)
+    {
+        var db = CreateDb(nameof(ReactivateVehicleAsync_ThrowsWhenNotSuspended) + status);
+        
+        var vehicle = await db.Vehicles.FindAsync(1);
+        vehicle!.Status = status;
+        await db.SaveChangesAsync();
+
+        var service = new VehicleService(db);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<TourManagement.Api.Common.Exceptions.ValidationException>(() => service.ReactivateVehicleAsync(1));
+        Assert.Contains("Only Suspended vehicles can be reactivated", ex.Message);
+    }
 }
 
