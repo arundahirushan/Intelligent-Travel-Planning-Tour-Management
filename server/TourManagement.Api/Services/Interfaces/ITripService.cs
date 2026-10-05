@@ -19,8 +19,8 @@ public interface ITripService
     // Traveler: update a trip (only while Status = Draft).
     Task<TripDetailDto> UpdateAsync(int id, UpdateTripDto dto, int requestingUserId);
 
-    // Traveler: cancel a trip (only if Draft or Planned).
-    Task CancelAsync(int id, int requestingUserId);
+    // Traveler: permanently delete an unpaid trip.
+    Task DeleteAsync(int id, int requestingUserId);
 
     // Admin override: force-cancel any trip regardless of status.
     Task ForceCancelAsync(int id);

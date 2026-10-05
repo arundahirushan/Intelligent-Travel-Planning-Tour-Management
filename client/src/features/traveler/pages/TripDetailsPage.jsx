@@ -13,7 +13,7 @@ import TransportTab from '../components/TransportTab';
 import SuppliesTab from '../components/SuppliesTab';
 import AiProposalTab from '../components/AiProposalTab';
 import CheckoutCartWidget from '../components/CheckoutCartWidget';
-import { getTripById, cancelTrip, getMyCheckouts } from '../../../services/travelerApi';
+import { getTripById, deleteTrip, getMyCheckouts } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
   { icon: 'luggage', label: 'My Trips', path: '/traveler/trips' },
@@ -56,8 +56,8 @@ export default function TripDetailsPage() {
   const [activeTab, setActiveTab] = useState(initialTab);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-  const [cancelError, setCancelError] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const [paymentMessage, setPaymentMessage] = useState(null);
   const [activeCheckout, setActiveCheckout] = useState(null);
 
@@ -136,13 +136,14 @@ export default function TripDetailsPage() {
     };
   }, [fetchTripData, location.search]);
 
-  const handleCancelConfirm = async () => {
+  const handleDeleteConfirm = async () => {
     try {
-      setCancelError(null);
-      await cancelTrip(tripId);
-      await fetchTripData();
+      setDeleteError(null);
+      await deleteTrip(tripId);
+      navigate('/traveler/trips');
     } catch (err) {
-      setCancelError(err.response?.data?.message || 'Failed to cancel trip.');
+      setDeleteError(err.response?.data?.message || 'Failed to delete trip.');
+      throw err; // For ConfirmDialog
     }
   };
 
@@ -173,7 +174,7 @@ export default function TripDetailsPage() {
 
   const duration = tripDays(trip.startDate, trip.endDate);
   const isEditable = trip.status === 'Draft';
-  const isCancellable = ['Draft', 'Planned'].includes(trip.status);
+  const isDeletable = !['Confirmed', 'Completed'].includes(trip.status);
 
   return (
     <DashboardLayout navItems={NAV_ITEMS} roleBadge="Traveler" profileRoute="/traveler/profile">
@@ -261,21 +262,21 @@ export default function TripDetailsPage() {
                   </span>
                 </Button>
               )}
-              {isCancellable && (
+              {isDeletable && (
                 <Button
-                  onClick={() => setCancelConfirmOpen(true)}
+                  onClick={() => setDeleteConfirmOpen(true)}
                   variant="danger"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm">cancel</span>
-                    Cancel Trip
+                    <span className="material-symbols-outlined text-sm">delete</span>
+                    Delete Trip
                   </span>
                 </Button>
               )}
             </div>
           </div>
 
-          {cancelError && <ErrorBanner message={cancelError} className="mt-4" />}
+          {deleteError && <ErrorBanner message={deleteError} className="mt-4" />}
         </div>
       </div>
 
@@ -333,12 +334,12 @@ export default function TripDetailsPage() {
         trip={trip}
       />
       <ConfirmDialog
-        isOpen={cancelConfirmOpen}
-        onClose={() => setCancelConfirmOpen(false)}
-        onConfirm={handleCancelConfirm}
-        title="Cancel Trip"
-        message={`Are you sure you want to cancel "${trip.title}"? This action cannot be undone.`}
-        confirmLabel="Cancel Trip"
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Trip"
+        message="Permanently delete this trip? Any held bookings will be released. This cannot be undone."
+        confirmLabel="Delete Trip"
         isDanger
       />
     </DashboardLayout>
