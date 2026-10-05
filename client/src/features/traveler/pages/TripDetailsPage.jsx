@@ -396,32 +396,7 @@ function OverviewTab({ trip, onNavigateToTab }) {
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="bg-gradient-to-br from-primary to-accent rounded-xl p-6 text-white lg:col-span-2">
-        <p className="font-heading font-bold text-lg mb-1">Ready to plan your Sri Lanka adventure?</p>
-        <p className="text-white/80 text-body-sm mb-5">
-          Build your day-by-day itinerary, then book accommodation, transport, and supplies — all in one place.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {[
-            { icon: 'smart_toy', label: 'AI Proposal', tab: 'ai-proposal' },
-            { icon: 'map', label: 'Build Itinerary', tab: 'itinerary' },
-            { icon: 'hotel', label: 'Book Hotel', tab: 'accommodation' },
-            { icon: 'directions_car', label: 'Book Vehicle', tab: 'transport' },
-            { icon: 'inventory_2', label: 'Order Supplies', tab: 'supplies' },
-            { icon: 'payment', label: 'Checkout & Pay', tab: 'payment' },
-          ].map((a) => (
-            <button
-              key={a.tab}
-              onClick={() => onNavigateToTab(a.tab)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-pill text-white font-heading font-bold text-sm transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm">{a.icon}</span>
-              {a.label}
-            </button>
-          ))}
-        </div>
-      </div>
+
     </div>
   );
 }
