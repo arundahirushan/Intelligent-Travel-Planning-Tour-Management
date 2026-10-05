@@ -105,9 +105,12 @@ Controller → Service → Repository → AppDbContext → PostgreSQL
   `"JwtSettings": { "SecretKey": "" }`) with **empty string placeholders**
   so the shape is visible to developers — but the real values must always
   come from User Secrets / environment variables at runtime.
-- Database is hosted on Supabase (PostgreSQL) — used *only* as a database
-  host. Do not use Supabase's built-in Auth, auto-generated REST API, or
-  client SDKs anywhere in this project.
+- Database is hosted on Supabase (PostgreSQL) — used as a database host and,
+  for listing photos only, a public Storage bucket (`listing-photos`). Do not
+  use Supabase's built-in Auth, auto-generated REST API, or client SDKs
+  anywhere in this project. Storage is called from the API with plain
+  `HttpClient`; its URL and server key (`SupabaseStorage:*`) are secrets that
+  stay on the backend. See `docs/SUPABASE_STORAGE_SETUP.md`.
 
 ## Agentic AI Integration
 - The Python (`ai-service/`) is **internal-only**. Nothing outside

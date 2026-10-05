@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Button from '../../../components/Button';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import ErrorBanner from '../../../components/ErrorBanner';
-import { placeHold, initiatePayment } from '../../../services/travelerApi';
+import { placeHold, initiatePayment, getMyHotelBookings, getMyVehicleBookings, getMySupplyOrders } from '../../../services/travelerApi';
 
 function formatLKR(amount) {
   return `LKR ${Number(amount).toLocaleString('en-LK')}`;
@@ -11,15 +11,58 @@ function formatLKR(amount) {
 export default function CheckoutCartWidget({ 
   tripId, 
   activeCheckout,
-  cartHotels, 
-  cartVehicle, 
-  cartSupplies, 
-  onClearCart,
   onCheckoutCreated
 }) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
   
+  const [holds, setHolds] = useState({ hotels: [], vehicles: [], supplies: [] });
+  const [loadingHolds, setLoadingHolds] = useState(true);
+
+  useEffect(() => {
+    async function loadHolds() {
+      if (activeCheckout) {
+        setLoadingHolds(false);
+        return; // If there's an active checkout, we don't necessarily need to fetch separate holds for manual booking, because they are already covered. But wait, AI checkouts might also be active.
+      }
+
+      setLoadingHolds(true);
+      try {
+        const [hResp, vResp, sResp] = await Promise.all([
+          getMyHotelBookings({ tripId, status: 'Held', pageSize: 100 }),
+          getMyVehicleBookings({ tripId, status: 'Held', pageSize: 100 }),
+          getMySupplyOrders({ tripId, status: 'Held', pageSize: 100 })
+        ]);
+        
+        const now = new Date();
+        const activeHotels = (hResp.items || []).filter(h => new Date(h.holdExpiresAt) > now);
+        const activeVehicles = (vResp.items || []).filter(v => new Date(v.holdExpiresAt) > now);
+        const activeSupplies = (sResp.items || []).filter(s => new Date(s.holdExpiresAt) > now);
+        
+        setHolds({ hotels: activeHotels, vehicles: activeVehicles, supplies: activeSupplies });
+      } catch (err) {
+        console.error("Failed to load active holds:", err);
+      } finally {
+        setLoadingHolds(false);
+      }
+    }
+    loadHolds();
+    
+    // Refresh timers every minute
+    const interval = setInterval(() => {
+      setHolds(prev => {
+        const now = new Date();
+        return {
+          hotels: prev.hotels.filter(h => new Date(h.holdExpiresAt) > now),
+          vehicles: prev.vehicles.filter(v => new Date(v.holdExpiresAt) > now),
+          supplies: prev.supplies.filter(s => new Date(s.holdExpiresAt) > now)
+        };
+      });
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [tripId, activeCheckout]);
+
   if (activeCheckout?._error) {
     return (
       <div className="bg-white border border-border-neutral rounded-xl p-6 shadow-soft">
@@ -29,48 +72,48 @@ export default function CheckoutCartWidget({
   }
 
   const isSavedCheckout = !!activeCheckout;
-  const isLocalCart = !isSavedCheckout && (cartHotels.length > 0 || cartVehicle || cartSupplies.length > 0);
+  
+  const hotelCount = isSavedCheckout ? (activeCheckout.hotels?.length || 0) : holds.hotels.length;
+  const vehicleCount = isSavedCheckout ? (activeCheckout.vehicleItem ? 1 : 0) : holds.vehicles.length;
+  const supplyCount = isSavedCheckout ? (activeCheckout.supplies?.length || 0) : holds.supplies.length;
+  
+  const hasItems = hotelCount > 0 || vehicleCount > 0 || supplyCount > 0;
 
-  if (!isSavedCheckout && !isLocalCart) {
+  if (!isSavedCheckout && !hasItems && !loadingHolds) {
     return (
       <div className="bg-white border border-border-neutral rounded-xl p-8 shadow-soft text-center">
         <span className="material-symbols-outlined text-4xl text-text-secondary mb-3">shopping_cart</span>
-        <h3 className="font-heading font-bold text-text mb-2">No items to checkout</h3>
+        <h3 className="font-heading font-bold text-text mb-2">No active bookings to pay for</h3>
         <p className="text-body-sm text-text-secondary max-w-md mx-auto">
-          You haven't made any selections to reserve, and there are no saved checkouts for this trip. Add items from the Accommodation, Transport, or Supplies tabs first.
+          You haven't reserved any items, or your previous holds have expired. Add items from the Accommodation, Transport, or Supplies tabs first.
         </p>
       </div>
     );
   }
 
-  // Determine items and totals depending on mode
-  let hotelCount = 0;
-  let hasVehicle = false;
-  let supplyCount = 0;
   let itemsTotal = 0;
-  let websiteFee = 1000;
-  
-  let statusText = 'Ready to Reserve';
+  let hotelAmount = 0;
+  let vehicleAmount = 0;
+  let supplyAmount = 0;
+  let bookingFee = 1000;
+  let statusText = 'Ready to Pay';
   let statusBadge = null;
-  let expiryText = null;
   let isPaymentAllowed = false;
-  let isPlaceHoldAllowed = false;
+  let isPaid = false;
 
   if (isSavedCheckout) {
-    hotelCount = activeCheckout.hotels?.length || 0;
-    hasVehicle = !!activeCheckout.vehicleItem;
-    supplyCount = activeCheckout.supplies?.length || 0;
-    itemsTotal = activeCheckout.totalPrice;
-    websiteFee = activeCheckout.websiteFee;
+    hotelAmount = (activeCheckout.hotels || []).reduce((sum, h) => sum + h.totalPrice, 0);
+    vehicleAmount = activeCheckout.vehicleItem ? activeCheckout.vehicleItem.totalPrice : 0;
+    supplyAmount = (activeCheckout.supplies || []).reduce((sum, s) => sum + s.totalPrice, 0);
+    itemsTotal = hotelAmount + vehicleAmount + supplyAmount;
     
+    bookingFee = activeCheckout.websiteFee;
     isPaymentAllowed = activeCheckout.status === 'Active';
+    isPaid = activeCheckout.status === 'Paid';
     
-    // Status badges
     if (activeCheckout.status === 'Active') {
       statusBadge = <span className="px-2 py-0.5 rounded text-xs font-bold bg-status-success/20 text-status-success">ACTIVE HOLD</span>;
-      const expiry = new Date(activeCheckout.holdExpiresAt);
-      expiryText = `Expires: ${expiry.toLocaleString()}`;
-      statusText = 'Hold Placed';
+      statusText = 'Payment Pending';
     } else if (activeCheckout.status === 'Paid') {
       statusBadge = <span className="px-2 py-0.5 rounded text-xs font-bold bg-primary/20 text-primary">PAID & CONFIRMED</span>;
       statusText = 'Payment Completed';
@@ -80,66 +123,30 @@ export default function CheckoutCartWidget({
     } else if (activeCheckout.status === 'Cancelled') {
       statusBadge = <span className="px-2 py-0.5 rounded text-xs font-bold bg-status-neutral/20 text-status-neutral">CANCELLED</span>;
       statusText = 'Checkout Cancelled';
-    } else {
-      statusBadge = <span className="px-2 py-0.5 rounded text-xs font-bold bg-status-neutral/20 text-status-neutral">{activeCheckout.status}</span>;
-      statusText = 'Saved Checkout';
     }
   } else {
-    hotelCount = cartHotels.length;
-    hasVehicle = !!cartVehicle;
-    supplyCount = cartSupplies.length;
-    itemsTotal = cartHotels.reduce((sum, h) => sum + h._price, 0) +
-                 (cartVehicle ? cartVehicle._price : 0) +
-                 cartSupplies.reduce((sum, s) => sum + s._price, 0);
-    isPlaceHoldAllowed = true;
+    hotelAmount = holds.hotels.reduce((sum, h) => sum + h.totalPrice, 0);
+    vehicleAmount = holds.vehicles.reduce((sum, v) => sum + v.totalPrice, 0);
+    supplyAmount = holds.supplies.reduce((sum, s) => sum + s.totalPrice, 0);
+    itemsTotal = hotelAmount + vehicleAmount + supplyAmount;
+    
+    isPaymentAllowed = true;
+    statusBadge = <span className="px-2 py-0.5 rounded text-xs font-bold bg-status-warning/20 text-status-warning">PENDING PAYMENT</span>;
   }
-
-  const grandTotal = itemsTotal + websiteFee;
-
-  const handlePlaceHold = async () => {
-    setCheckoutLoading(true);
-    setCheckoutError(null);
-    try {
-      const holdBody = {
-        TripId: tripId,
-        Hotels: cartHotels.map(h => ({
-          RoomId: h.RoomId,
-          CheckInDate: h.CheckInDate,
-          CheckOutDate: h.CheckOutDate,
-          NumberOfRooms: h.NumberOfRooms
-        })),
-        Vehicle: cartVehicle ? {
-          VehicleId: cartVehicle.VehicleId,
-          StartDate: cartVehicle.StartDate,
-          EndDate: cartVehicle.EndDate,
-          PickupLatitude: cartVehicle.PickupLatitude,
-          PickupLongitude: cartVehicle.PickupLongitude,
-          PickupNote: cartVehicle.PickupNote
-        } : null,
-        Supplies: cartSupplies.map(s => ({
-          SupplyId: s.SupplyId,
-          Quantity: s.Quantity
-        }))
-      };
-
-      const checkoutResp = await placeHold(holdBody);
-      onClearCart();
-      if (onCheckoutCreated) {
-        onCheckoutCreated();
-      }
-    } catch (err) {
-      console.error(err);
-      setCheckoutError(err.response?.data?.message || 'Failed to place hold. Please try again.');
-    } finally {
-      setCheckoutLoading(false);
-    }
-  };
 
   const handlePay = async () => {
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
-      const paymentInfo = await initiatePayment(activeCheckout.id);
+      let checkoutIdToPay = activeCheckout?.id;
+      
+      // If we don't have a saved checkout session yet, we create one out of the active holds
+      if (!isSavedCheckout) {
+        const checkoutResp = await placeHold({ TripId: tripId });
+        checkoutIdToPay = checkoutResp.id;
+      }
+      
+      const paymentInfo = await initiatePayment(checkoutIdToPay);
       
       const form = document.createElement('form');
       form.method = 'POST';
@@ -182,51 +189,113 @@ export default function CheckoutCartWidget({
 
   return (
     <div className="bg-white border border-border-neutral rounded-xl p-6 shadow-soft">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h3 className="font-heading font-bold text-text">{statusText}</h3>
-            {statusBadge}
-          </div>
-          <p className="text-body-sm text-text-secondary">
-            {hotelCount} Hotel{hotelCount !== 1 ? 's' : ''}, 
-            {hasVehicle ? ' 1 Vehicle' : ' 0 Vehicles'}, 
-            {supplyCount} Supply Order{supplyCount !== 1 ? 's' : ''}
-          </p>
-          {expiryText && <p className="text-xs text-text-secondary mt-1">{expiryText}</p>}
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <p className="text-body-sm text-text-secondary">Provider: {formatLKR(itemsTotal)} + Fee: {formatLKR(websiteFee)}</p>
-            <p className="font-heading font-bold text-primary text-headline-sm">{formatLKR(grandTotal)} Total</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {!isSavedCheckout && (
-              <Button variant="secondary" onClick={onClearCart} disabled={checkoutLoading}>
-                Clear
-              </Button>
-            )}
+      {loadingHolds ? (
+        <div className="flex justify-center p-4"><LoadingSpinner size="md" /></div>
+      ) : (
+        <>
+          <div className="flex flex-col lg:flex-row justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-1">
+                <h3 className="font-heading font-bold text-text">{statusText}</h3>
+                {statusBadge}
+              </div>
+              
+              <div className="mt-4">
+                <p className="font-heading font-bold text-sm text-text-secondary mb-2">Trip Cost Breakdown</p>
+                <div className="space-y-1 max-w-sm">
+                  <div className="flex justify-between items-center text-body-sm text-text">
+                    <span>Hotel</span>
+                    <span className="font-heading font-bold">{formatLKR(hotelAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm text-text">
+                    <span>Vehicle</span>
+                    <span className="font-heading font-bold">{formatLKR(vehicleAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-body-sm text-text">
+                    <span>Supplies</span>
+                    <span className="font-heading font-bold">{formatLKR(supplyAmount)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {!isSavedCheckout && (
+                <div className="mt-4 text-xs text-text-secondary space-y-1">
+                   {holds.hotels.map(h => <p key={`h-${h.id}`}>Hotel {h.room?.hotel?.name || ''} - Expires: {new Date(h.holdExpiresAt).toLocaleString()}</p>)}
+                   {holds.vehicles.map(v => <p key={`v-${v.id}`}>Vehicle - Expires: {new Date(v.holdExpiresAt).toLocaleString()}</p>)}
+                   {holds.supplies.map(s => <p key={`s-${s.id}`}>Supply {s.supply?.name || ''} - Expires: {new Date(s.holdExpiresAt).toLocaleString()}</p>)}
+                </div>
+              )}
+              {isSavedCheckout && activeCheckout.holdExpiresAt && !isPaid && (
+                <p className="text-xs text-text-secondary mt-4">Expires: {new Date(activeCheckout.holdExpiresAt).toLocaleString()}</p>
+              )}
+            </div>
             
-            {isPlaceHoldAllowed && (
-              <Button onClick={handlePlaceHold} disabled={checkoutLoading}>
-                {checkoutLoading ? <LoadingSpinner size="sm" /> : 'Reserve All Bookings'}
-              </Button>
-            )}
-
-            {isSavedCheckout && (
-              <Button onClick={handlePay} disabled={!isPaymentAllowed || checkoutLoading} className={isPaymentAllowed ? '' : 'opacity-50 cursor-not-allowed'}>
-                {checkoutLoading ? <LoadingSpinner size="sm" /> : 'Pay LKR 1,000'}
-              </Button>
-            )}
+            <div className="shrink-0 w-full lg:w-80">
+              <div className="flex flex-col gap-2 border border-border-neutral rounded-lg p-4 bg-surface-neutral/30">
+                {isPaid ? (
+                  <>
+                    <p className="font-heading font-bold text-status-success mb-2">Booking Fee Paid</p>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Paid through EasyPlanner:</span>
+                      <span className="font-heading font-bold">{formatLKR(bookingFee)}</span>
+                    </div>
+                    <div className="border-t border-border-neutral my-1"></div>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Trip / Provider Cost:</span>
+                      <span className="font-heading font-bold">{formatLKR(itemsTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Remaining Provider Cost:</span>
+                      <span className="font-heading font-bold">{formatLKR(itemsTotal)}</span>
+                    </div>
+                    <p className="text-xs text-text-secondary mt-2">
+                      The EasyPlanner booking fee is separate from the provider cost.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">Trip / Provider Cost</span>
+                      <span className="font-heading font-bold">{formatLKR(itemsTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-body-sm">
+                      <span className="text-text-secondary">EasyPlanner Booking Fee</span>
+                      <span className="font-heading font-bold">{formatLKR(bookingFee)}</span>
+                    </div>
+                    
+                    <div className="border-t border-border-neutral my-1"></div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="font-heading font-bold text-text">Amount to Pay Now</span>
+                      <span className="font-heading font-bold text-primary text-headline-sm">{formatLKR(bookingFee)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center text-xs text-text-secondary mt-1">
+                      <span>Remaining Provider Cost</span>
+                      <span>{formatLKR(itemsTotal)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              {!isPaid && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <Button onClick={handlePay} disabled={!isPaymentAllowed || checkoutLoading} className={`w-full ${isPaymentAllowed ? '' : 'opacity-50 cursor-not-allowed'}`}>
+                    {checkoutLoading ? <LoadingSpinner size="sm" /> : `Pay ${formatLKR(bookingFee)}`}
+                  </Button>
+                  <p className="text-xs text-center text-text-secondary">
+                    The {formatLKR(bookingFee)} EasyPlanner booking fee is separate from your trip/provider cost. The provider cost is paid later.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
-      {checkoutError && (
-        <div className="mt-4">
-          <ErrorBanner message={checkoutError} />
-        </div>
+          {checkoutError && (
+            <div className="mt-4">
+              <ErrorBanner message={checkoutError} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

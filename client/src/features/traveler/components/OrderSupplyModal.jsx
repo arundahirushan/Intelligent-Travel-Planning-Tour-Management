@@ -3,7 +3,7 @@ import Modal from '../../../components/Modal';
 import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import { browseSupplies } from '../../../services/travelerApi';
+import { browseSupplies, createSupplyOrder } from '../../../services/travelerApi';
 
 function formatLKR(amount) {
   return `LKR ${Number(amount).toLocaleString('en-LK')}`;
@@ -85,20 +85,18 @@ export default function OrderSupplyModal({ isOpen, onClose, onAddSupply, trip })
     setOrderLoading(true);
     setOrderError(null);
     try {
-      const supplyItem = {
+      await createSupplyOrder({
         TripId: trip.id,
         SupplyId: selectedSupply.id,
-        Quantity: qty,
-        _name: selectedSupply.name,
-        _price: selectedSupply.pricePerUnit * qty
-      };
+        Quantity: qty
+      });
       
       if (onAddSupply) {
-        onAddSupply(supplyItem);
+        onAddSupply();
       }
       onClose();
     } catch (err) {
-      setOrderError('Failed to add supply to cart. Please try again.');
+      setOrderError(err.response?.data?.message || 'Failed to order supplies. Please try again.');
     } finally {
       setOrderLoading(false);
     }
@@ -217,7 +215,7 @@ export default function OrderSupplyModal({ isOpen, onClose, onAddSupply, trip })
           <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
             <Button type="button" variant="secondary" onClick={onClose} disabled={orderLoading}>Cancel</Button>
             <Button type="submit" disabled={orderLoading}>
-              {orderLoading ? <LoadingSpinner size="sm" /> : 'Add to Checkout'}
+              {orderLoading ? <LoadingSpinner size="sm" /> : 'Reserve for 12 Hours'}
             </Button>
           </div>
         </form>

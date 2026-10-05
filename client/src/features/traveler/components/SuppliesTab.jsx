@@ -37,14 +37,14 @@ export default function SuppliesTab({ trip, onAddSupply }) {
     try {
       setLoading(true);
       setError(null);
-      const data = await getMySupplyOrders({ status: statusFilter, pageSize: 100 });
+      const data = await getMySupplyOrders({ tripId: trip?.id, status: statusFilter, pageSize: 100 });
       setOrders(data.items || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load supply orders.');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [trip?.id, statusFilter]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 

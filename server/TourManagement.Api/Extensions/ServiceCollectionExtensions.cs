@@ -54,6 +54,10 @@ public static class ServiceCollectionExtensions
         // Advisory weather lookups (Open-Meteo). Typed client so WeatherService gets its own HttpClient.
         services.AddHttpClient<IWeatherService, TourManagement.Api.Services.Implementations.WeatherService>();
 
+        // Listing photo uploads to Supabase Storage. Typed client with a short timeout (max 5 MB files).
+        services.AddHttpClient<IImageUploadService, TourManagement.Api.Services.Implementations.ImageUploadService>(
+            client => client.Timeout = TimeSpan.FromSeconds(30));
+
         // Checkout (hold) flow — the shared operation for manual and future agentic booking.
         services.AddScoped<ICheckoutService,         TourManagement.Api.Services.Implementations.CheckoutService>();
 

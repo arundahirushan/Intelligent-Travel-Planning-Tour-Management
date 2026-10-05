@@ -7,6 +7,7 @@ export default function Button({ children, variant = 'primary', className = '', 
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary-dark disabled:bg-surface-neutral disabled:text-text-secondary disabled:hover:bg-surface-neutral',
     secondary: 'bg-transparent text-text border border-border-neutral hover:bg-surface-neutral shadow-none disabled:opacity-50',
+    danger: 'bg-white border border-status-danger text-status-danger hover:bg-status-danger/10 disabled:opacity-50',
   };
 
   return (

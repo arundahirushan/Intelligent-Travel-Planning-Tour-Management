@@ -41,14 +41,14 @@ export default function AccommodationTab({ trip, onAddHotel }) {
     try {
       setLoading(true);
       setError(null);
-      const data = await getMyHotelBookings({ status: statusFilter, pageSize: 100 });
+      const data = await getMyHotelBookings({ tripId: trip?.id, status: statusFilter, pageSize: 100 });
       setBookings(data.items || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load hotel bookings.');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [trip?.id, statusFilter]);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
