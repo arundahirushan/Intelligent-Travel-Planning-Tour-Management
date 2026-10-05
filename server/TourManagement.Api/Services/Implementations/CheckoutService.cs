@@ -41,7 +41,71 @@ public class CheckoutService : ICheckoutService
     // the last available room or vehicle.
     public async Task<CheckoutResponseDto> PlaceHoldAsync(CreateCheckoutDto dto, int travelerId)
     {
-        return await PlaceHoldInternalAsync(dto, travelerId, isAgenticProposal: false);
+        var trip = await _db.Trips.FirstOrDefaultAsync(t => t.Id == dto.TripId);
+        if (trip == null) throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
+        if (trip.TravelerId != travelerId) throw new ForbiddenException("You can only place holds for your own trips.");
+
+        var now = DateTime.UtcNow;
+
+        var hotels = await _db.HotelBookings.Where(b => b.TripId == dto.TripId && b.Status == BookingStatus.Held && b.HoldExpiresAt > now).ToListAsync();
+        var vehicles = await _db.VehicleBookings.Include(v => v.Vehicle).Where(b => b.TripId == dto.TripId && b.Status == BookingStatus.Held && b.HoldExpiresAt > now).ToListAsync();
+        var vehicle = vehicles.OrderByDescending(v => v.CreatedAt).FirstOrDefault(); // Only one vehicle per checkout supported
+        var supplies = await _db.SupplyOrders.Where(b => b.TripId == dto.TripId && b.Status == BookingStatus.Held && b.HoldExpiresAt > now).ToListAsync();
+
+        if (!hotels.Any() && vehicle == null && !supplies.Any())
+            throw new ValidationException("No active bookings remain for this trip. Payment is unavailable.");
+
+        var existingCheckout = await _db.TripCheckouts
+            .Where(c => c.TripId == dto.TripId && c.Status == CheckoutStatus.Active && c.HoldExpiresAt > now)
+            .FirstOrDefaultAsync();
+
+        if (existingCheckout != null)
+        {
+            existingCheckout.Status = CheckoutStatus.Cancelled;
+            existingCheckout.UpdatedAt = now;
+        }
+
+        var maxExpiry = now;
+        if (hotels.Any()) maxExpiry = hotels.Max(h => h.HoldExpiresAt!.Value) > maxExpiry ? hotels.Max(h => h.HoldExpiresAt!.Value) : maxExpiry;
+        if (vehicle != null) maxExpiry = vehicle.HoldExpiresAt!.Value > maxExpiry ? vehicle.HoldExpiresAt!.Value : maxExpiry;
+        if (supplies.Any()) maxExpiry = supplies.Max(s => s.HoldExpiresAt!.Value) > maxExpiry ? supplies.Max(s => s.HoldExpiresAt!.Value) : maxExpiry;
+
+        decimal totalHotelPrice = hotels.Sum(h => h.PriceSnapshot ?? 0m);
+        decimal vehiclePrice = 0m;
+        if (vehicle != null)
+        {
+            int days = Math.Max(1, (int)(vehicle.EndDate.Date - vehicle.StartDate.Date).TotalDays);
+            vehiclePrice = vehicle.Vehicle.PricePerDay * days;
+        }
+        decimal totalSupplyPrice = supplies.Sum(s => s.PriceAtOrderTime * s.Quantity);
+
+        var checkout = new TripCheckout
+        {
+            TripId = dto.TripId,
+            TravelerId = travelerId,
+            HotelPriceSnapshot = hotels.Any() ? totalHotelPrice : null,
+            VehiclePriceSnapshot = vehicle != null ? vehiclePrice : null,
+            TotalPrice = totalHotelPrice + vehiclePrice + totalSupplyPrice,
+            WebsiteFee = 1000m,
+            Status = CheckoutStatus.Active,
+            HoldExpiresAt = maxExpiry,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        _db.TripCheckouts.Add(checkout);
+        await _db.SaveChangesAsync();
+
+        foreach (var h in hotels) h.CheckoutId = checkout.Id;
+        if (vehicle != null) vehicle.CheckoutId = checkout.Id;
+        foreach (var s in supplies) s.CheckoutId = checkout.Id;
+
+        if (hotels.Any()) checkout.HotelBookingId = hotels.First().Id;
+        if (vehicle != null) checkout.VehicleBookingId = vehicle.Id;
+
+        await _db.SaveChangesAsync();
+
+        return await LoadCheckoutDtoAsync(checkout.Id);
     }
 
     public async Task<CheckoutResponseDto> PlaceApprovedProposalHoldAsync(CreateCheckoutDto dto, int travelerId)
