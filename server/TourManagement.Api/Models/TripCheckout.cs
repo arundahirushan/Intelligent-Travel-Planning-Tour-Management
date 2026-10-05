@@ -33,6 +33,10 @@ public class TripCheckout
     // Sum of the snapshots above.  Stored so it never needs to be recomputed.
     public decimal TotalPrice { get; set; }
 
+    // Website booking-confirmation fee charged directly to the traveler via PayHere.
+    // LKR 1000 flat fee per trip.
+    public decimal WebsiteFee { get; set; } = 1000.00m;
+
     // Active = items are held.  Expired/Cancelled = items freed.  Paid = confirmed (future).
     // Stored as a string in the DB (see AppDbContext).
     public CheckoutStatus Status { get; set; } = CheckoutStatus.Active;
@@ -52,4 +56,9 @@ public class TripCheckout
     public HotelBooking? HotelBooking => HotelBookings.FirstOrDefault();
     public List<HotelBooking> HotelBookings { get; set; } = new();
     public VehicleBooking? VehicleBooking { get; set; }
+
+    public List<SupplyOrder> SupplyOrders { get; set; } = new();
+    
+    // Payments made or attempted for this checkout
+    public List<PaymentAttempt> PaymentAttempts { get; set; } = new();
 }

@@ -13,11 +13,6 @@ class VehicleRecommendation(BaseModel):
     explanation: str = Field(..., description="A concise explanation for this recommendation.")
 
 def m3_transport_weather_node(state: WorkflowState) -> WorkflowState:
-    client = InternalAgentClient(
-        proposal_id=state["proposal_id"],
-        secret=os.environ.get("INTERNAL_API_SECRET", "super-secret-key")
-    )
-    
     summary = AgentExecutionSummary(
         agentIdentity="m3_transport_weather",
         status="InProgress",
@@ -25,6 +20,10 @@ def m3_transport_weather_node(state: WorkflowState) -> WorkflowState:
     )
     
     try:
+        client = InternalAgentClient(
+            proposal_id=state["proposal_id"],
+            ai_secret=os.environ.get("AI_SECRET", "dev-secret-do-not-use-in-prod")
+        )
         snapshot = state.get("input_snapshot", {})
         pickup_lat = snapshot.get("PickupLatitude")
         pickup_lon = snapshot.get("PickupLongitude")
@@ -88,7 +87,7 @@ def m3_transport_weather_node(state: WorkflowState) -> WorkflowState:
         
         def get_model_recommendation():
             response = ai_client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash-lite',
                 contents=prompt,
                 config=genai.types.GenerateContentConfig(
                     response_mime_type="application/json",
@@ -140,29 +139,42 @@ def m3_transport_weather_node(state: WorkflowState) -> WorkflowState:
         visited_pairs = set()
         for visit in visits:
             visit_date = visit.get("date")
-            dest = visit.get("destination_name")
-            if not visit_date or not dest: continue
-            
-            pair = (visit_date, dest)
-            if pair in visited_pairs: continue
-            visited_pairs.add(pair)
-            
-            try:
-                w = client.get_weather(dest, visit_date)
-                weather_results.append(w)
-            except Exception as e:
-                weather_results.append({
-                    "destination": dest,
-                    "date": visit_date,
-                    "status": "Unavailable_ProviderError",
-                    "advisory": f"Weather service unavailable: {str(e)}"
-                })
+            destinations = visit.get("visited_area_names", [])
+            overnight = visit.get("overnight_area_name")
+            destination_name = visit.get("destination_name")
+            all_dests = set(destinations)
+            if overnight:
+                all_dests.add(overnight)
+            if destination_name:
+                all_dests.add(destination_name)
+                
+            if not visit_date or not all_dests:
+                continue
+                
+            for dest in all_dests:
+                pair = (visit_date, dest)
+                if pair in visited_pairs: continue
+                visited_pairs.add(pair)
+                
+                try:
+                    w = client.get_weather(dest, visit_date)
+                    weather_results.append(w)
+                except Exception as e:
+                    weather_results.append({
+                        "destination": dest,
+                        "date": visit_date,
+                        "status": "Unavailable_ProviderError",
+                        "advisory": f"Weather service unavailable: {str(e)}"
+                    })
                 
         state["weather"] = weather_results
         
         summary.status = "Success"
         summary.finalOutcome = "Pass"
-        summary.resultSummary = f"Selected vehicle {selected_v['vehicleId']} ({selected_v['model']}) for {selected_v['totalCost']} LKR. Weather retrieved for {len(weather_results)} area/date pairs."
+        summary.resultSummary = json.dumps({
+            "message": f"Selected vehicle {selected_v['vehicleId']} ({selected_v['model']}) for {selected_v['totalCost']} LKR.",
+            "weather_pairs_retrieved": len(weather_results),
+        })
         
     except Exception as e:
         summary.status = "AgentFailed"

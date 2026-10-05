@@ -56,10 +56,11 @@ public class CheckoutsController : ControllerBase
     [HttpGet("my")]
     [Authorize(Roles = Roles.Traveler)]
     public async Task<ActionResult<ApiResponse<PagedResult<CheckoutResponseDto>>>> GetMyCheckouts(
+        [FromQuery] int? tripId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await _checkoutService.GetMyCheckoutsAsync(GetCurrentUserId(), page, pageSize);
+        var result = await _checkoutService.GetMyCheckoutsAsync(GetCurrentUserId(), tripId, page, pageSize);
         return Ok(ApiResponse<PagedResult<CheckoutResponseDto>>.Ok(result));
     }
 
@@ -88,8 +89,17 @@ public class CheckoutsController : ControllerBase
     }
 
     // ── PayHere integration point ─────────────────────────────────────────────
-    // POST /{id}/confirm is reserved for the future PayHere callback handler.
-    // It is NOT exposed here — the PayHere callback will be a separate unauthenticated
-    // endpoint verified by HMAC signature.  Do not add a confirm endpoint in this task.
-    // ──────────────────────────────────────────────────────────────────────────
+    
+    /// <summary>
+    /// Initiate a PayHere payment for an active checkout.
+    /// Returns the parameters required to initialize the PayHere JS SDK or form.
+    /// Traveler only.
+    /// </summary>
+    [HttpPost("{id}/initiate-payment")]
+    [Authorize(Roles = Roles.Traveler)]
+    public async Task<ActionResult<ApiResponse<PayHereInitiateResponseDto>>> InitiatePayment(int id)
+    {
+        var result = await _checkoutService.InitiatePaymentAsync(id, GetCurrentUserId());
+        return Ok(ApiResponse<PayHereInitiateResponseDto>.Ok(result, "Payment initialized."));
+    }
 }

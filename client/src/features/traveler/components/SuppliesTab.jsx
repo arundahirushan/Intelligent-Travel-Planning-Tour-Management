@@ -17,8 +17,10 @@ function formatLKR(amount) {
 // In-place edit is therefore not supported. To change quantity, cancel and reorder.
 //
 // Props:
+// Props:
 //   trip — TripDetailDto (or null for global My Bookings page)
-export default function SuppliesTab({ trip }) {
+//   onAddSupply — callback to add to cart
+export default function SuppliesTab({ trip, onAddSupply }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -167,7 +169,7 @@ export default function SuppliesTab({ trip }) {
       <OrderSupplyModal
         isOpen={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
-        onSuccess={fetchOrders}
+        onAddSupply={onAddSupply}
         trip={trip}
       />
       <ConfirmDialog

@@ -43,11 +43,23 @@ public class CheckoutResponseDto
 
     // Total price at hold time (sum of item snapshots).
     public decimal TotalPrice { get; set; }
+    
+    public decimal WebsiteFee { get; set; }
 
     // Either or both of these will be populated, depending on what was held.
     public HotelHoldItemDto? HotelItem { get; set; }
     public List<HotelHoldItemDto> Hotels { get; set; } = new();
     public VehicleHoldItemDto? VehicleItem { get; set; }
+    public List<SupplyHoldItemDto> Supplies { get; set; } = new();
 
     public DateTime CreatedAt { get; set; }
+}
+
+public class SupplyHoldItemDto
+{
+    public int SupplyOrderId { get; set; }
+    public string SupplyName { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal PriceSnapshot { get; set; }
 }

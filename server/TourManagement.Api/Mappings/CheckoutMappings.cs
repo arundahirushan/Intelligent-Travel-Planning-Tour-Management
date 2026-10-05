@@ -18,6 +18,7 @@ public static class CheckoutMappings
             Status        = checkout.Status,
             HoldExpiresAt = checkout.HoldExpiresAt,
             TotalPrice    = checkout.TotalPrice,
+            WebsiteFee    = checkout.WebsiteFee,
             CreatedAt     = checkout.CreatedAt,
         };
     }
@@ -51,6 +52,20 @@ public static class CheckoutMappings
             StartDate          = booking.StartDate,
             EndDate            = booking.EndDate,
             PriceSnapshot      = priceSnapshot,
+        };
+    }
+
+    // Maps a SupplyOrder to a SupplyHoldItemDto, using the price captured at hold time.
+    // Assumes order.Supply is loaded.
+    public static SupplyHoldItemDto ToHoldItemDto(this SupplyOrder order)
+    {
+        return new SupplyHoldItemDto
+        {
+            SupplyOrderId = order.Id,
+            SupplyName    = order.Supply?.Name        ?? string.Empty,
+            Description   = order.Supply?.Description ?? string.Empty,
+            Quantity      = order.Quantity,
+            PriceSnapshot = order.PriceAtOrderTime,
         };
     }
 }

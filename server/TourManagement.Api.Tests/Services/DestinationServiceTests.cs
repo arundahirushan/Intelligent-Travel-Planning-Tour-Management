@@ -58,7 +58,7 @@ public class DestinationServiceTests
         // Arrange
         var db = CreateDb(nameof(DeleteAsync_Blocked_WhenHotelReferences));
 
-        var dest = new Destination { Id = 1, Name = "Galle", Region = "Southern Province", Description = "Fort city." };
+        var dest = new Destination { Id = 1, Name = "Galle", Region = "Kandy", Description = "Fort city." };
         db.Destinations.Add(dest);
 
         var owner = new User
@@ -201,7 +201,7 @@ public class DestinationServiceTests
         var db = CreateDb(nameof(GetAllAsync_ReturnsFilteredAndPaginatedResults));
 
         db.Destinations.AddRange(
-            new Destination { Id = 1, Name = "Galle", Region = "Southern Province", Description = "Fort." },
+            new Destination { Id = 1, Name = "Galle", Region = "Kandy", Description = "Fort." },
             new Destination { Id = 2, Name = "Ella", Region = "Uva Province", Description = "Mountain." },
             new Destination { Id = 3, Name = "Colombo", Region = "Western Province", Description = "City." }
         );
@@ -230,7 +230,7 @@ public class DestinationServiceTests
         var dto = new CreateDestinationDto
         {
             Name = "Mirissa",
-            Region = "Southern Province",
+            Region = "Kandy",
             Description = "Beach town.",
             ImageUrl = "https://example.com/mirissa.jpg"
         };
@@ -238,7 +238,7 @@ public class DestinationServiceTests
         var result = await service.CreateAsync(dto);
 
         Assert.Equal("Mirissa", result.Name);
-        Assert.Equal("Southern Province", result.Region);
+        Assert.Equal("Kandy", result.Region);
         Assert.Equal("https://example.com/mirissa.jpg", result.ImageUrl);
         Assert.True(result.Id > 0);
     }

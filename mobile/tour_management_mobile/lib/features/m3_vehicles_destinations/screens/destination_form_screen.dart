@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/sri_lanka_districts.dart';
 import '../models/destination_response_dto.dart';
 import '../services/destination_service.dart';
 
@@ -28,9 +29,11 @@ class _DestinationFormScreenState extends State<DestinationFormScreen> {
   final DestinationService _service = DestinationService();
 
   late final TextEditingController _nameController;
-  late final TextEditingController _regionController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _imageUrlController;
+
+  String? _selectedDistrict;
+  String? _legacyRegionMessage;
 
   bool _isSubmitting = false;
 
@@ -41,15 +44,21 @@ class _DestinationFormScreenState extends State<DestinationFormScreen> {
     super.initState();
     final d = widget.existing;
     _nameController = TextEditingController(text: d?.name ?? '');
-    _regionController = TextEditingController(text: d?.region ?? '');
     _descriptionController = TextEditingController(text: d?.description ?? '');
     _imageUrlController = TextEditingController(text: d?.imageUrl ?? '');
+
+    if (d != null && d.region.isNotEmpty) {
+      if (sriLankaDistricts.contains(d.region)) {
+        _selectedDistrict = d.region;
+      } else {
+        _legacyRegionMessage = 'Current legacy region: ${d.region}. Please select a district.';
+      }
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _regionController.dispose();
     _descriptionController.dispose();
     _imageUrlController.dispose();
     super.dispose();
@@ -62,7 +71,7 @@ class _DestinationFormScreenState extends State<DestinationFormScreen> {
     setState(() => _isSubmitting = true);
 
     final name = _nameController.text.trim();
-    final region = _regionController.text.trim();
+    final region = _selectedDistrict!;
     final description = _descriptionController.text.trim();
     final imageUrl = _imageUrlController.text.trim();
 
@@ -134,17 +143,46 @@ class _DestinationFormScreenState extends State<DestinationFormScreen> {
                     (v == null || v.trim().isEmpty) ? 'Name is required.' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _regionController,
+              if (_legacyRegionMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    border: Border.all(color: Colors.orange.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _legacyRegionMessage!,
+                          style: TextStyle(color: Colors.orange.shade900, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              DropdownButtonFormField<String>(
+                value: _selectedDistrict,
                 decoration: const InputDecoration(
-                  labelText: 'Region *',
-                  hintText: 'e.g. Southern Province, Hill Country',
+                  labelText: 'District *',
                   border: OutlineInputBorder(),
                 ),
-                textInputAction: TextInputAction.next,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Region is required.'
-                    : null,
+                items: sriLankaDistricts.map((d) => DropdownMenuItem(
+                  value: d,
+                  child: Text(d),
+                )).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedDistrict = val;
+                    _legacyRegionMessage = null; // Clear warning when they pick one
+                  });
+                },
+                validator: (v) => v == null ? 'District is required.' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(

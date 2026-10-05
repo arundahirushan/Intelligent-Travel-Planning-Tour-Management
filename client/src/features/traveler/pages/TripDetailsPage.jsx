@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import StatusBadge from '../../../components/StatusBadge';
 import ErrorBanner from '../../../components/ErrorBanner';
@@ -11,7 +11,9 @@ import ItineraryTab from '../components/ItineraryTab';
 import AccommodationTab from '../components/AccommodationTab';
 import TransportTab from '../components/TransportTab';
 import SuppliesTab from '../components/SuppliesTab';
-import { getTripById, cancelTrip } from '../../../services/travelerApi';
+import AiProposalTab from '../components/AiProposalTab';
+import CheckoutCartWidget from '../components/CheckoutCartWidget';
+import { getTripById, cancelTrip, getMyCheckouts } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
   { icon: 'luggage', label: 'My Trips', path: '/traveler/trips' },
@@ -20,10 +22,12 @@ const NAV_ITEMS = [
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: 'info' },
+  { key: 'ai-proposal', label: 'AI Proposal', icon: 'smart_toy' },
   { key: 'itinerary', label: 'Itinerary', icon: 'map' },
   { key: 'accommodation', label: 'Accommodation', icon: 'hotel' },
   { key: 'transport', label: 'Transport', icon: 'directions_car' },
   { key: 'supplies', label: 'Supplies', icon: 'inventory_2' },
+  { key: 'payment', label: 'Payment', icon: 'payment' },
 ];
 
 function formatDate(dateStr) {
@@ -43,36 +47,104 @@ function tripDays(start, end) {
 export default function TripDetailsPage() {
   const { tripId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialTab = new URLSearchParams(location.search).get('payment') ? 'payment' : 'overview';
 
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  const [cartHotels, setCartHotels] = useState([]);
+  const [cartVehicle, setCartVehicle] = useState(null);
+  const [cartSupplies, setCartSupplies] = useState([]);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelError, setCancelError] = useState(null);
+  const [paymentMessage, setPaymentMessage] = useState(null);
+  const [activeCheckout, setActiveCheckout] = useState(null);
 
-  const fetchTrip = useCallback(async () => {
+  const fetchTripData = useCallback(async (isPolling = false) => {
     try {
-      setLoading(true);
+      if (!isPolling) setLoading(true);
       setError(null);
-      const data = await getTripById(tripId);
-      setTrip(data);
+      
+      const tripData = await getTripById(tripId);
+      setTrip(tripData);
+      
+      let currentCheckout = null;
+      try {
+        const checkoutRes = await getMyCheckouts({ tripId });
+        const checkouts = checkoutRes.items || [];
+        const active = checkouts.find(c => c.status === 'Active' || c.status === 'Paid');
+        currentCheckout = active || checkouts[0] || null;
+        setActiveCheckout(currentCheckout);
+      } catch (err) {
+        console.error("Failed to load checkouts", err);
+        setActiveCheckout({ _error: true, message: 'Failed to retrieve checkout status' });
+      }
+
+      return { trip: tripData, activeCheckout: currentCheckout };
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load trip details.');
+      if (!isPolling) setError(err.response?.data?.message || 'Failed to load trip details.');
+      return null;
     } finally {
-      setLoading(false);
+      if (!isPolling) setLoading(false);
     }
   }, [tripId]);
 
-  useEffect(() => { fetchTrip(); }, [fetchTrip]);
+  useEffect(() => {
+    let isMounted = true;
+    let pollCount = 0;
+    const maxPolls = 10;
+    let pollInterval = null;
+
+    const queryParams = new URLSearchParams(location.search);
+    const payment = queryParams.get('payment');
+
+    if (payment === 'cancel') {
+        setPaymentMessage({ type: 'warning', text: 'Payment was cancelled.' });
+    }
+
+    const initFetch = async () => {
+      const data = await fetchTripData();
+      if (!data || !data.trip) return;
+
+      if (payment === 'success' && data.activeCheckout?.status !== 'Paid') {
+        setPaymentMessage({ type: 'info', text: 'Payment received. Verifying with provider... Please wait.' });
+        
+        pollInterval = setInterval(async () => {
+          if (!isMounted) return;
+          pollCount++;
+          const polledData = await fetchTripData(true);
+          
+          if (polledData?.activeCheckout?.status === 'Paid') {
+            setPaymentMessage({ type: 'success', text: 'Payment verified and booking confirmed!' });
+            clearInterval(pollInterval);
+          } else if (pollCount >= maxPolls) {
+             setPaymentMessage({ type: 'warning', text: 'Payment verification is taking longer than expected. Please check back later.' });
+             clearInterval(pollInterval);
+          }
+        }, 3000);
+      } else if (payment === 'success' && data.activeCheckout?.status === 'Paid') {
+          setPaymentMessage({ type: 'success', text: 'Payment verified and booking confirmed!' });
+      }
+    };
+
+    initFetch();
+
+    return () => {
+      isMounted = false;
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [fetchTripData, location.search]);
 
   const handleCancelConfirm = async () => {
     try {
       setCancelError(null);
       await cancelTrip(tripId);
-      await fetchTrip();
+      await fetchTripData();
     } catch (err) {
       setCancelError(err.response?.data?.message || 'Failed to cancel trip.');
     }
@@ -119,6 +191,20 @@ export default function TripDetailsPage() {
       </Link>
 
       {/* Trip Header */}
+      {paymentMessage && (
+        <div className={`mb-4 p-4 rounded-xl border font-body ${
+          paymentMessage.type === 'success' ? 'bg-status-success/10 border-status-success/20 text-status-success' :
+          paymentMessage.type === 'warning' ? 'bg-status-warning/10 border-status-warning/20 text-status-warning' :
+          'bg-primary/10 border-primary/20 text-primary'
+        }`}>
+          <p className="font-bold flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg">
+              {paymentMessage.type === 'success' ? 'check_circle' : paymentMessage.type === 'warning' ? 'warning' : 'info'}
+            </span>
+            {paymentMessage.text}
+          </p>
+        </div>
+      )}
       <div className="bg-white border border-border-neutral rounded-2xl shadow-soft overflow-hidden mb-8">
         <div className="h-1.5 bg-gradient-to-r from-primary to-accent" />
         <div className="p-[var(--space-xl)]">
@@ -219,20 +305,43 @@ export default function TripDetailsPage() {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'overview' && <OverviewTab trip={trip} />}
+        {activeTab === 'overview' && (
+          <OverviewTab trip={trip} onNavigateToTab={setActiveTab} />
+        )}
+        {activeTab === 'ai-proposal' && (
+          <AiProposalTab
+            trip={trip}
+            onOpenEditTrip={() => setEditModalOpen(true)}
+          />
+        )}
         {activeTab === 'itinerary' && (
           <ItineraryTab trip={trip} onTripUpdate={handleTripUpdate} />
         )}
-        {activeTab === 'accommodation' && <AccommodationTab trip={trip} />}
-        {activeTab === 'transport' && <TransportTab trip={trip} />}
-        {activeTab === 'supplies' && <SuppliesTab trip={trip} />}
+        {activeTab === 'accommodation' && <AccommodationTab trip={trip} onAddHotel={(h) => setCartHotels(prev => [...prev, h])} />}
+        {activeTab === 'transport' && <TransportTab trip={trip} onAddVehicle={(v) => setCartVehicle(v)} />}
+        {activeTab === 'supplies' && <SuppliesTab trip={trip} onAddSupply={(s) => setCartSupplies(prev => [...prev, s])} />}
+        {activeTab === 'payment' && (
+          <CheckoutCartWidget 
+            tripId={trip.id}
+            activeCheckout={activeCheckout}
+            cartHotels={cartHotels}
+            cartVehicle={cartVehicle}
+            cartSupplies={cartSupplies}
+            onCheckoutCreated={() => fetchTripData()}
+            onClearCart={() => {
+              setCartHotels([]);
+              setCartVehicle(null);
+              setCartSupplies([]);
+            }}
+          />
+        )}
       </div>
 
       {/* Modals */}
       <AddEditTripModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        onSuccess={() => fetchTrip()}
+        onSuccess={() => fetchTripData()}
         trip={trip}
       />
       <ConfirmDialog
@@ -250,7 +359,7 @@ export default function TripDetailsPage() {
 
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
-function OverviewTab({ trip }) {
+function OverviewTab({ trip, onNavigateToTab }) {
   const items = trip.itineraryItems || [];
   const destinations = [...new Set(items.map((i) => i.destinationName))];
 
@@ -306,22 +415,16 @@ function OverviewTab({ trip }) {
         </p>
         <div className="flex flex-wrap gap-3">
           {[
+            { icon: 'smart_toy', label: 'AI Proposal', tab: 'ai-proposal' },
             { icon: 'map', label: 'Build Itinerary', tab: 'itinerary' },
             { icon: 'hotel', label: 'Book Hotel', tab: 'accommodation' },
             { icon: 'directions_car', label: 'Book Vehicle', tab: 'transport' },
             { icon: 'inventory_2', label: 'Order Supplies', tab: 'supplies' },
+            { icon: 'payment', label: 'Checkout & Pay', tab: 'payment' },
           ].map((a) => (
             <button
               key={a.tab}
-              onClick={() => {
-                // Scroll to tabs area
-                document.getElementById('trip-tabs-anchor')?.scrollIntoView({ behavior: 'smooth' });
-                // Navigate to the tab via a small delay so the scroll can start
-                setTimeout(() => {
-                  const event = new CustomEvent('set-trip-tab', { detail: a.tab });
-                  window.dispatchEvent(event);
-                }, 50);
-              }}
+              onClick={() => onNavigateToTab(a.tab)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-pill text-white font-heading font-bold text-sm transition-colors"
             >
               <span className="material-symbols-outlined text-sm">{a.icon}</span>

@@ -60,7 +60,7 @@ public class CheckoutServiceAgenticTests
 
     private static CheckoutService BuildService(AppDbContext db)
     {
-        return new CheckoutService(db, new HotelService(db), new VehicleService(db));
+        return new CheckoutService(db, new HotelService(db), new VehicleService(db), null!, new TourManagement.Api.Configurations.PayHereSettings());
     }
 
     [Fact]

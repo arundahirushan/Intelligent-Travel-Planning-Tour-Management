@@ -39,7 +39,7 @@ public class CheckoutServiceTests
         // Seed a destination.
         db.Destinations.Add(new Destination
         {
-            Id = 1, Name = "Galle", Region = "Southern Province", Description = "Test."
+            Id = 1, Name = "Galle", Region = "Kandy", Description = "Test."
         });
 
         // Seed a hotel owner and an active hotel with one room type (TotalRooms=2).
@@ -83,7 +83,7 @@ public class CheckoutServiceTests
     {
         var hotelService   = new HotelService(db);
         var vehicleService = new VehicleService(db);
-        return new CheckoutService(db, hotelService, vehicleService);
+        return new CheckoutService(db, hotelService, vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings());
     }
 
     private static HotelCheckoutItemDto DefaultHotelItem() => new()
@@ -429,6 +429,195 @@ public class CheckoutServiceTests
         // Linked hotel booking should also be Cancelled.
         var booking = await db.HotelBookings.FindAsync(result.HotelItem!.HotelBookingId);
         Assert.Equal(BookingStatus.Cancelled, booking!.Status);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Tests 14–21: ValidateAgenticProposalAsync capacity and grouping rules
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ValidateAgenticProposal_CapacityExactlyEquals_Passes()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_CapacityExactlyEquals_Passes));
+        var service = BuildService(db);
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1 });
+        await db.SaveChangesAsync();
+
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                new() { RoomId = 1, NumberOfRooms = 2, CheckInDate = trip.StartDate, CheckOutDate = trip.EndDate } // 2 rooms * 2 capacity = 4 (matches trip.GroupSize)
+            }
+        };
+
+        await service.ValidateAgenticProposalAsync(dto, trip);
+    }
+
+    [Fact]
+    public async Task ValidateAgenticProposal_CapacityExceeds_Passes()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_CapacityExceeds_Passes));
+        var service = BuildService(db);
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1 });
+        trip.GroupSize = 3;
+        await db.SaveChangesAsync();
+
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                new() { RoomId = 1, NumberOfRooms = 2, CheckInDate = trip.StartDate, CheckOutDate = trip.EndDate } // Capacity 4 > 3
+            }
+        };
+
+        await service.ValidateAgenticProposalAsync(dto, trip);
+    }
+
+    [Fact]
+    public async Task ValidateAgenticProposal_CapacityInsufficient_Throws()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_CapacityInsufficient_Throws));
+        var service = BuildService(db);
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1 });
+        await db.SaveChangesAsync();
+
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                new() { RoomId = 1, NumberOfRooms = 1, CheckInDate = trip.StartDate, CheckOutDate = trip.EndDate } // Capacity 2 < 4
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.ValidateAgenticProposalAsync(dto, trip));
+        Assert.Contains("insufficient capacity", ex.Message);
+        Assert.Contains("Required: 4, Available: 2", ex.Message);
+    }
+
+    [Fact]
+    public async Task ValidateAgenticProposal_MixedRoomTypes_ContributeToOneStay()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_MixedRoomTypes_ContributeToOneStay));
+        db.Rooms.Add(new Room { Id = 2, HotelId = 1, RoomType = "Single", PricePerNight = 3000m, Capacity = 1, TotalRooms = 5, Status = RoomStatus.Active });
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1 });
+        trip.GroupSize = 5;
+        await db.SaveChangesAsync();
+
+        var service = BuildService(db);
+
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                new() { RoomId = 1, NumberOfRooms = 2, CheckInDate = trip.StartDate, CheckOutDate = trip.EndDate }, // 2 * 2 = 4
+                new() { RoomId = 2, NumberOfRooms = 1, CheckInDate = trip.StartDate, CheckOutDate = trip.EndDate }  // 1 * 1 = 1
+            }
+        };
+
+        // Total capacity = 5. Matches group size.
+        await service.ValidateAgenticProposalAsync(dto, trip);
+    }
+
+    [Fact]
+    public async Task ValidateAgenticProposal_MultipleStays_FailsIfOneInsufficient()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_MultipleStays_FailsIfOneInsufficient));
+        db.Destinations.Add(new Destination { Id = 2, Name = "Kandy" });
+        db.Hotels.Add(new Hotel { Id = 2, OwnerId = 10, DestinationId = 2, Name = "Hill View", Status = HotelStatus.Active });
+        db.Rooms.Add(new Room { Id = 3, HotelId = 2, RoomType = "Standard", Capacity = 2, TotalRooms = 5, Status = RoomStatus.Active });
+        
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1 });
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 2 });
+        trip.GroupSize = 4;
+        await db.SaveChangesAsync();
+
+        var service = BuildService(db);
+        var midDate = trip.StartDate.AddDays(2);
+
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                // First stay has capacity 6 (excess)
+                new() { RoomId = 1, NumberOfRooms = 3, CheckInDate = trip.StartDate, CheckOutDate = midDate },
+                // Second stay has capacity 2 (insufficient)
+                new() { RoomId = 3, NumberOfRooms = 1, CheckInDate = midDate, CheckOutDate = trip.EndDate }
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.ValidateAgenticProposalAsync(dto, trip));
+        Assert.Contains("insufficient capacity", ex.Message);
+        Assert.Contains("Hill View", ex.Message);
+    }
+
+    [Fact]
+    public async Task ValidateAgenticProposal_SameDayTrip_NoHotels_Passes()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_SameDayTrip_NoHotels_Passes));
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.StartDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        trip.EndDate = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        await db.SaveChangesAsync();
+
+        var service = BuildService(db);
+        var dto = new CreateCheckoutDto { TripId = 1, Hotels = new List<HotelCheckoutItemDto>() };
+
+        await service.ValidateAgenticProposalAsync(dto, trip);
+    }
+
+    [Fact]
+    public async Task ValidateAgenticProposal_InvalidRoomId_Throws()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_InvalidRoomId_Throws));
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1 });
+        await db.SaveChangesAsync();
+
+        var service = BuildService(db);
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                new() { RoomId = 999, NumberOfRooms = 2, CheckInDate = trip.StartDate, CheckOutDate = trip.EndDate }
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.ValidateAgenticProposalAsync(dto, trip));
+        Assert.Contains("not found", ex.Message);
+    }
+
+    [Fact]
+    public async Task ValidateAgenticProposal_NonPositiveQuantity_Throws()
+    {
+        var db = CreateDb(nameof(ValidateAgenticProposal_NonPositiveQuantity_Throws));
+        var trip = await db.Trips.Include(t => t.ItineraryItems).FirstAsync();
+        trip.ItineraryItems.Add(new ItineraryItem { DestinationId = 1 });
+        await db.SaveChangesAsync();
+
+        var service = BuildService(db);
+        var dto = new CreateCheckoutDto
+        {
+            TripId = 1,
+            Hotels = new List<HotelCheckoutItemDto>
+            {
+                new() { RoomId = 1, NumberOfRooms = 0, CheckInDate = trip.StartDate, CheckOutDate = trip.EndDate }
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.ValidateAgenticProposalAsync(dto, trip));
+        Assert.Contains("must be positive", ex.Message);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
