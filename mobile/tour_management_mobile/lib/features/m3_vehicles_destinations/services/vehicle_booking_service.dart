@@ -38,4 +38,3 @@ class VehicleBookingService {
     throw Exception(json['message'] ?? 'Failed to load vehicle bookings');
   }
 }
-

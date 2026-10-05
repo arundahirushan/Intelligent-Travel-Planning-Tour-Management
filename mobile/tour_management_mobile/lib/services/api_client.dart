@@ -55,6 +55,27 @@ class ApiClient {
     return response;
   }
 
+  /// Uploads one file as multipart/form-data (used for listing photos).
+  Future<http.Response> postFile(
+    String endpoint, {
+    required String fieldName,
+    required String filePath,
+  }) async {
+    final headers = await _getHeaders();
+    // The multipart request sets its own Content-Type (with the boundary).
+    headers.remove('Content-Type');
+
+    final request = http.MultipartRequest(
+        'POST', Uri.parse('${Config.apiBaseUrl}$endpoint'))
+      ..headers.addAll(headers)
+      ..files.add(await http.MultipartFile.fromPath(fieldName, filePath));
+
+    final streamed = await client.send(request);
+    final response = await http.Response.fromStream(streamed);
+    _handleUnauthorized(response);
+    return response;
+  }
+
   void _handleUnauthorized(http.Response response) {
     if (response.statusCode == 401 && onUnauthorized != null) {
       onUnauthorized!();
