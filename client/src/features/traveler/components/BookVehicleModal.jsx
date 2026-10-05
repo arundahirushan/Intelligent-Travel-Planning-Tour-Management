@@ -4,7 +4,7 @@ import Button from '../../../components/Button';
 import ErrorBanner from '../../../components/ErrorBanner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import PickupLocationPickerModal from '../../../components/PickupLocationPickerModal';
-import { searchVehicles } from '../../../services/travelerApi';
+import { searchVehicles, createVehicleBooking } from '../../../services/travelerApi';
 
 function toDateInputValue(date) {
   if (!date) return '';
@@ -114,24 +114,22 @@ export default function BookVehicleModal({ isOpen, onClose, onAddVehicle, trip }
     setBookingLoading(true);
     setBookingError(null);
     try {
-      const vehicleItem = {
+      await createVehicleBooking({
         TripId: trip.id,
         VehicleId: selectedVehicle.vehicleId,
         StartDate: startDate,
         EndDate: endDate,
         PickupLatitude: pickupLat,
         PickupLongitude: pickupLng,
-        PickupNote: pickupNote || null,
-        _model: selectedVehicle.model,
-        _price: selectedVehicle.pricePerDay * days
-      };
+        PickupNote: pickupNote || null
+      });
       
       if (onAddVehicle) {
-        onAddVehicle(vehicleItem);
+        onAddVehicle();
       }
       onClose();
     } catch (err) {
-      setBookingError('Failed to add vehicle to cart. Please try again.');
+      setBookingError(err.response?.data?.message || 'Failed to add vehicle booking. Please try again.');
     } finally {
       setBookingLoading(false);
     }
@@ -278,7 +276,7 @@ export default function BookVehicleModal({ isOpen, onClose, onAddVehicle, trip }
             <div className="flex justify-end gap-3 border-t border-border-neutral pt-4">
               <Button type="button" variant="secondary" onClick={onClose} disabled={bookingLoading}>Cancel</Button>
               <Button type="submit" disabled={bookingLoading || pickupLat === null}>
-                {bookingLoading ? <LoadingSpinner size="sm" /> : 'Add to Checkout'}
+                {bookingLoading ? <LoadingSpinner size="sm" /> : 'Reserve for 12 Hours'}
               </Button>
             </div>
           </form>

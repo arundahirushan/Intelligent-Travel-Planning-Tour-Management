@@ -27,28 +27,65 @@ public class VehicleBookingService : IVehicleBookingService
 
     public async Task<VehicleBookingSummaryDto> CreateAsync(CreateVehicleBookingDto dto, int travelerId)
     {
-        var checkoutDto = new TourManagement.Api.Dtos.Checkout.CreateCheckoutDto 
-        { 
-            TripId  = dto.TripId, 
-            Vehicle = new TourManagement.Api.Dtos.Checkout.VehicleCheckoutItemDto 
+        dto.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        dto.EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc);
+
+        var trip = await _db.Trips.FirstOrDefaultAsync(t => t.Id == dto.TripId);
+        if (trip == null)
+            throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
+
+        if (trip.TravelerId != travelerId)
+            throw new ForbiddenException("You do not have permission to modify this trip.");
+
+        if (trip.Status == TripStatus.Confirmed || trip.Status == TripStatus.Completed || trip.Status == TripStatus.Cancelled)
+            throw new ValidationException($"Cannot add bookings to a trip that is {trip.Status}.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            if (_db.Database.IsRelational())
             {
-                VehicleId       = dto.VehicleId,
-                StartDate       = dto.StartDate,
-                EndDate         = dto.EndDate,
-                PickupLatitude  = dto.PickupLatitude,
-                PickupLongitude = dto.PickupLongitude,
-                PickupNote      = dto.PickupNote
+                long vehicleLockKey = 2_000_000L + dto.VehicleId;
+                await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({vehicleLockKey})");
             }
-        };
 
-        var checkoutResponse = await _checkoutService.PlaceHoldAsync(checkoutDto, travelerId);
+            await ValidateAndCheckAvailabilityAsync(
+                dto.VehicleId, dto.StartDate, dto.EndDate, trip, null);
 
-        var saved = await _db.VehicleBookings
-            .Include(b => b.Vehicle)
-            .Include(b => b.Checkout)
-            .FirstAsync(b => b.Id == checkoutResponse.VehicleItem!.VehicleBookingId);
+            var vehicle = await _db.Vehicles.FirstOrDefaultAsync(v => v.Id == dto.VehicleId);
+            int days = Math.Max(1, (int)(dto.EndDate.Date - dto.StartDate.Date).TotalDays);
+            decimal snapshot = vehicle!.PricePerDay * days;
 
-        return saved.ToSummaryDto();
+            var booking = new VehicleBooking
+            {
+                TripId = dto.TripId,
+                VehicleId = dto.VehicleId,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                PickupLatitude = dto.PickupLatitude,
+                PickupLongitude = dto.PickupLongitude,
+                PickupNote = dto.PickupNote,
+                Status = BookingStatus.Held,
+                HoldExpiresAt = DateTime.UtcNow.AddHours(12),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _db.VehicleBookings.Add(booking);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var saved = await _db.VehicleBookings
+                .Include(b => b.Vehicle)
+                .FirstAsync(b => b.Id == booking.Id);
+
+            return saved.ToSummaryDto();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<VehicleBookingSummaryDto> UpdateAsync(int id, UpdateVehicleBookingDto dto, int travelerId)
