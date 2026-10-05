@@ -27,7 +27,8 @@ function formatDate(dateStr) {
 //
 // Props:
 //   trip — TripDetailDto (or null for global My Bookings page)
-export default function TransportTab({ trip }) {
+//   onAddVehicle — callback to add to cart
+export default function TransportTab({ trip, onAddVehicle }) {
   const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -219,7 +220,7 @@ export default function TransportTab({ trip }) {
       <BookVehicleModal
         isOpen={bookModalOpen}
         onClose={() => setBookModalOpen(false)}
-        onSuccess={fetchBookings}
+        onAddVehicle={onAddVehicle}
         trip={trip}
       />
       <PickupLocationModal

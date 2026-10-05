@@ -166,7 +166,7 @@ public class VehicleServiceTests
         db.SaveChanges();
 
         var vehicleService  = new VehicleService(db);
-        var bookingService  = new VehicleBookingService(db, vehicleService, new CheckoutService(db, new HotelService(db), vehicleService));
+        var bookingService  = new VehicleBookingService(db, vehicleService, new CheckoutService(db, new HotelService(db), vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         // Act: traveler tries to book the same vehicle for an overlapping window (Oct 3–7).
         var dto = new CreateVehicleBookingDto
@@ -230,7 +230,7 @@ public class VehicleServiceTests
         await db.SaveChangesAsync();
 
         var vehicleService = new VehicleService(db);
-        var bookingService = new VehicleBookingService(db, vehicleService, new CheckoutService(db, new HotelService(db), vehicleService));
+        var bookingService = new VehicleBookingService(db, vehicleService, new CheckoutService(db, new HotelService(db), vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         // EndDate (Oct 8) is after Trip.EndDate (Oct 5) — must be rejected.
         var dto = new CreateVehicleBookingDto
@@ -293,7 +293,7 @@ public class VehicleServiceTests
         await db.SaveChangesAsync();
 
         var vehicleService = new VehicleService(db);
-        var bookingService = new VehicleBookingService(db, vehicleService, new CheckoutService(db, new HotelService(db), vehicleService));
+        var bookingService = new VehicleBookingService(db, vehicleService, new CheckoutService(db, new HotelService(db), vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings()));
 
         // Act: provider 1 asks for their vehicles' bookings
         var result = await bookingService.GetMyVehiclesBookingsAsync(1, null, null, 1, 10);

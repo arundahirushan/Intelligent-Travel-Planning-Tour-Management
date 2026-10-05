@@ -26,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<TripCheckout> TripCheckouts => Set<TripCheckout>();
     public DbSet<TripProposal> TripProposals => Set<TripProposal>();
     public DbSet<ExecutionSummary> ExecutionSummaries => Set<ExecutionSummary>();
+    public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -380,6 +381,15 @@ public class AppDbContext : DbContext
                   .WithMany(s => s.SupplyOrders)
                   .HasForeignKey(so => so.SupplyId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            // HoldExpiresAt is queried in every availability check — index it.
+            entity.HasIndex(so => so.HoldExpiresAt);
+
+            // CheckoutId FK — SetNull so deleting a checkout doesn't delete the order.
+            entity.HasOne(so => so.Checkout)
+                  .WithMany(c => c.SupplyOrders)
+                  .HasForeignKey(so => so.CheckoutId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── TripCheckout ──────────────────────────────────────────────────────
@@ -396,6 +406,8 @@ public class AppDbContext : DbContext
             entity.Property(c => c.VehiclePriceSnapshot)
                   .HasColumnType("decimal(18,2)");
             entity.Property(c => c.TotalPrice)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(c => c.WebsiteFee)
                   .HasColumnType("decimal(18,2)");
 
             // Columns used frequently in WHERE / ORDER BY.
@@ -457,6 +469,21 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ExecutionSummary>(entity =>
         {
             entity.HasIndex(e => e.TripProposalId);
+        });
+
+        // ── PaymentAttempt ────────────────────────────────────────────────────
+        modelBuilder.Entity<PaymentAttempt>(entity =>
+        {
+            entity.Property(pa => pa.Amount)
+                  .HasColumnType("decimal(18,2)");
+            
+            entity.HasIndex(pa => pa.TripCheckoutId);
+            entity.HasIndex(pa => pa.PayHerePaymentId);
+
+            entity.HasOne(pa => pa.TripCheckout)
+                  .WithMany(tc => tc.PaymentAttempts)
+                  .HasForeignKey(pa => pa.TripCheckoutId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

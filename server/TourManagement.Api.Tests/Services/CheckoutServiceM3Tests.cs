@@ -26,7 +26,7 @@ public class CheckoutServiceM3Tests : IDisposable
         var hotelService = new HotelService(_db);
         var vehicleService = new VehicleService(_db);
         
-        _checkoutService = new CheckoutService(_db, hotelService, vehicleService);
+        _checkoutService = new CheckoutService(_db, hotelService, vehicleService, null!, new TourManagement.Api.Configurations.PayHereSettings());
     }
 
     public void Dispose()

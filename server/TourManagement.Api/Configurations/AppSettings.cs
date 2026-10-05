@@ -14,11 +14,6 @@ public class JwtSettings
     public int ExpiresInHours { get; set; } = 2;
 }
 
-// PayHere payment gateway configuration (used by a different team member's component).
-public class PayHereSettings
-{
-    // Properties added later.
-}
 
 // Internal Python ai-service base URL and timeout settings.
 public class AiServiceSettings

@@ -22,7 +22,8 @@ function formatDate(dateStr) {
 //
 // Props:
 //   trip — TripDetailDto (or null for global My Bookings page)
-export default function AccommodationTab({ trip }) {
+//   onAddHotel — callback to add to cart
+export default function AccommodationTab({ trip, onAddHotel }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -208,7 +209,7 @@ export default function AccommodationTab({ trip }) {
       <BookHotelModal
         isOpen={bookModalOpen}
         onClose={() => setBookModalOpen(false)}
-        onSuccess={fetchBookings}
+        onAddHotel={onAddHotel}
         trip={trip}
         destinations={destinations}
       />

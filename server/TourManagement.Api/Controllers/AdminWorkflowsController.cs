@@ -37,7 +37,7 @@ public class AdminWorkflowsController : ControllerBase
     [HttpPost("{proposalId}/approve")]
     public async Task<ActionResult<ApiResponse<TripProposalDto>>> Approve([FromRoute] string proposalId)
     {
-        var adminId = int.Parse(User.FindFirst("id")!.Value);
+        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var proposal = await _workflowService.ApproveProposalAsync(proposalId, adminId);
         return Ok(ApiResponse<TripProposalDto>.Ok(proposal, "Proposal approved and hold placed."));
     }
@@ -45,7 +45,7 @@ public class AdminWorkflowsController : ControllerBase
     [HttpPost("{proposalId}/reject")]
     public async Task<ActionResult<ApiResponse<TripProposalDto>>> Reject([FromRoute] string proposalId, [FromBody] WorkflowDecisionDto decision)
     {
-        var adminId = int.Parse(User.FindFirst("id")!.Value);
+        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var proposal = await _workflowService.RejectProposalAdminAsync(proposalId, adminId, decision.Reason);
         return Ok(ApiResponse<TripProposalDto>.Ok(proposal, "Proposal rejected by admin."));
     }

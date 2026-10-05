@@ -14,8 +14,13 @@ var jwtSettings = builder.Configuration
     .GetSection("JwtSettings")
     .Get<JwtSettings>() ?? throw new InvalidOperationException("JwtSettings not configured.");
 
+var payHereSettings = builder.Configuration
+    .GetSection("PayHereSettings")
+    .Get<PayHereSettings>() ?? new PayHereSettings();
+
 // Register the settings object so services can inject it.
 builder.Services.AddSingleton(jwtSettings);
+builder.Services.AddSingleton(payHereSettings);
 
 // ── Controllers ─────────────────────────────────────────────────────────────
 // Configure JSON to serialize enums as their string names (e.g. "Draft" not 0).
