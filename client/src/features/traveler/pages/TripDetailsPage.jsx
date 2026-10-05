@@ -264,7 +264,7 @@ export default function TripDetailsPage() {
               {isCancellable && (
                 <Button
                   onClick={() => setCancelConfirmOpen(true)}
-                  className="bg-white border border-status-danger text-status-danger hover:bg-red-50 px-5 py-2.5 rounded-pill font-heading font-bold text-label-button transition-colors"
+                  variant="danger"
                 >
                   <span className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-sm">cancel</span>
