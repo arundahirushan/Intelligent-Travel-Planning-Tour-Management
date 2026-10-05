@@ -126,19 +126,61 @@ public class TripService : ITripService
         return await LoadTripDetailAsync(trip.Id);
     }
 
-    // Cancel a trip (traveler action). Only allowed if Draft or Planned.
-    // We set Status = Cancelled instead of deleting, so history is preserved.
-    public async Task CancelAsync(int id, int requestingUserId)
+    // Traveler: permanently delete an unpaid trip.
+    public async Task DeleteAsync(int id, int requestingUserId)
     {
         var trip = await GetTripOrThrowAsync(id);
         CheckOwnerOrAdmin(trip, requestingUserId, Roles.Traveler);
 
-        if (trip.Status != TripStatus.Draft && trip.Status != TripStatus.Planned)
-            throw new ValidationException("Trips can only be cancelled while in Draft or Planned status.");
+        if (trip.Status == TripStatus.Confirmed)
+            throw new ValidationException("Paid trips cannot be deleted.");
 
-        trip.Status    = TripStatus.Cancelled;
-        trip.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        bool hasPaidCheckout = await _db.TripCheckouts.AnyAsync(c => c.TripId == id && c.Status == CheckoutStatus.Paid);
+        if (hasPaidCheckout)
+            throw new ValidationException("Paid trips cannot be deleted.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            var checkouts = await _db.TripCheckouts.Where(c => c.TripId == id).ToListAsync();
+            var checkoutIds = checkouts.Select(c => c.Id).ToList();
+            var paymentAttempts = await _db.PaymentAttempts.Where(pa => checkoutIds.Contains(pa.TripCheckoutId)).ToListAsync();
+            
+            var hotels = await _db.HotelBookings.Where(b => b.TripId == id).ToListAsync();
+            var vehicles = await _db.VehicleBookings.Where(b => b.TripId == id).ToListAsync();
+            var supplies = await _db.SupplyOrders.Include(s => s.Supply).Where(s => s.TripId == id).ToListAsync();
+
+            if (hotels.Any(b => b.Status == BookingStatus.Confirmed) || 
+                vehicles.Any(b => b.Status == BookingStatus.Confirmed) || 
+                supplies.Any(s => s.Status == BookingStatus.Confirmed))
+            {
+                throw new ValidationException("Paid trips cannot be deleted.");
+            }
+
+            foreach (var s in supplies)
+            {
+                if (s.Status == BookingStatus.Held)
+                {
+                    s.Supply.StockQuantity += s.Quantity;
+                    s.Supply.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+
+            _db.PaymentAttempts.RemoveRange(paymentAttempts);
+            _db.SupplyOrders.RemoveRange(supplies);
+            _db.VehicleBookings.RemoveRange(vehicles);
+            _db.HotelBookings.RemoveRange(hotels);
+            _db.TripCheckouts.RemoveRange(checkouts);
+            _db.Trips.Remove(trip);
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     // Admin override — force-cancel any trip regardless of its current status.

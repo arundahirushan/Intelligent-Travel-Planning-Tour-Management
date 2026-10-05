@@ -30,8 +30,8 @@ export async function updateTrip(id, body) {
   return apiClient.put(`/trips/${id}`, body).then(unwrap);
 }
 
-export async function cancelTrip(id) {
-  // Soft-cancel: sets Status = Cancelled. Only while Draft or Planned.
+export async function deleteTrip(id) {
+  // Permanently delete an unpaid trip.
   return apiClient.delete(`/trips/${id}`).then((res) => res.data);
 }
 
@@ -94,8 +94,9 @@ export async function createHotelBooking(body) {
   return apiClient.post('/hotel-bookings', body).then(unwrap);
 }
 
-export async function getMyHotelBookings({ status, page = 1, pageSize = 20 } = {}) {
+export async function getMyHotelBookings({ tripId, status, page = 1, pageSize = 20 } = {}) {
   const params = new URLSearchParams();
+  if (tripId) params.append('tripId', tripId);
   if (status && status !== 'All') params.append('status', status);
   params.append('page', page);
   params.append('pageSize', pageSize);
@@ -141,10 +142,11 @@ export async function createVehicleBooking(body) {
   return apiClient.post('/vehicle-bookings', body).then(unwrap);
 }
 
-export async function getMyVehicleBookings({ page = 1, pageSize = 20 } = {}) {
+export async function getMyVehicleBookings({ tripId, page = 1, pageSize = 20 } = {}) {
   // Note: the backend GET /vehicle-bookings/my does NOT support a status filter.
   // Status filtering is done client-side.
   const params = new URLSearchParams({ page, pageSize });
+  if (tripId) params.append('tripId', tripId);
   return apiClient.get(`/vehicle-bookings/my?${params.toString()}`).then(unwrap);
 }
 
@@ -182,8 +184,9 @@ export async function createSupplyOrder(body) {
   return apiClient.post('/supply-orders', body).then(unwrap);
 }
 
-export async function getMySupplyOrders({ status, sort, page = 1, pageSize = 20 } = {}) {
+export async function getMySupplyOrders({ tripId, status, sort, page = 1, pageSize = 20 } = {}) {
   const params = new URLSearchParams();
+  if (tripId) params.append('tripId', tripId);
   if (status && status !== 'All') params.append('status', status);
   if (sort) params.append('sort', sort);
   params.append('page', page);

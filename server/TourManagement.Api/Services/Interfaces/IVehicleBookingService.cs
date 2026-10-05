@@ -10,7 +10,7 @@ public interface IVehicleBookingService
     Task<VehicleBookingSummaryDto> CreateAsync(CreateVehicleBookingDto dto, int travelerId);
     Task<VehicleBookingSummaryDto> UpdateAsync(int id, UpdateVehicleBookingDto dto, int travelerId);
     Task DeleteAsync(int id, int requestingUserId, string requestingUserRole);
-    Task<PagedResult<VehicleBookingSummaryDto>> GetMyBookingsAsync(int travelerId, int page, int pageSize);
+    Task<PagedResult<VehicleBookingSummaryDto>> GetMyBookingsAsync(int travelerId, int? tripId, int page, int pageSize);
     Task CancelAsync(int bookingId, int requestingUserId, string requestingUserRole);
 
     // Get bookings across all vehicles owned by a specific transport provider

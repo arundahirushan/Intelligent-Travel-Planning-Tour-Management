@@ -13,7 +13,7 @@ import TransportTab from '../components/TransportTab';
 import SuppliesTab from '../components/SuppliesTab';
 import AiProposalTab from '../components/AiProposalTab';
 import CheckoutCartWidget from '../components/CheckoutCartWidget';
-import { getTripById, cancelTrip, getMyCheckouts } from '../../../services/travelerApi';
+import { getTripById, deleteTrip, getMyCheckouts } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
   { icon: 'luggage', label: 'My Trips', path: '/traveler/trips' },
@@ -55,13 +55,9 @@ export default function TripDetailsPage() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  const [cartHotels, setCartHotels] = useState([]);
-  const [cartVehicle, setCartVehicle] = useState(null);
-  const [cartSupplies, setCartSupplies] = useState([]);
-
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-  const [cancelError, setCancelError] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const [paymentMessage, setPaymentMessage] = useState(null);
   const [activeCheckout, setActiveCheckout] = useState(null);
 
@@ -140,13 +136,14 @@ export default function TripDetailsPage() {
     };
   }, [fetchTripData, location.search]);
 
-  const handleCancelConfirm = async () => {
+  const handleDeleteConfirm = async () => {
     try {
-      setCancelError(null);
-      await cancelTrip(tripId);
-      await fetchTripData();
+      setDeleteError(null);
+      await deleteTrip(tripId);
+      navigate('/traveler/trips');
     } catch (err) {
-      setCancelError(err.response?.data?.message || 'Failed to cancel trip.');
+      setDeleteError(err.response?.data?.message || 'Failed to delete trip.');
+      throw err; // For ConfirmDialog
     }
   };
 
@@ -177,7 +174,7 @@ export default function TripDetailsPage() {
 
   const duration = tripDays(trip.startDate, trip.endDate);
   const isEditable = trip.status === 'Draft';
-  const isCancellable = ['Draft', 'Planned'].includes(trip.status);
+  const isDeletable = !['Confirmed', 'Completed'].includes(trip.status);
 
   return (
     <DashboardLayout navItems={NAV_ITEMS} roleBadge="Traveler" profileRoute="/traveler/profile">
@@ -265,21 +262,21 @@ export default function TripDetailsPage() {
                   </span>
                 </Button>
               )}
-              {isCancellable && (
+              {isDeletable && (
                 <Button
-                  onClick={() => setCancelConfirmOpen(true)}
-                  className="bg-white border border-status-danger text-status-danger hover:bg-red-50 px-5 py-2.5 rounded-pill font-heading font-bold text-label-button transition-colors"
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  variant="danger"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm">cancel</span>
-                    Cancel Trip
+                    <span className="material-symbols-outlined text-sm">delete</span>
+                    Delete Trip
                   </span>
                 </Button>
               )}
             </div>
           </div>
 
-          {cancelError && <ErrorBanner message={cancelError} className="mt-4" />}
+          {deleteError && <ErrorBanner message={deleteError} className="mt-4" />}
         </div>
       </div>
 
@@ -317,22 +314,14 @@ export default function TripDetailsPage() {
         {activeTab === 'itinerary' && (
           <ItineraryTab trip={trip} onTripUpdate={handleTripUpdate} />
         )}
-        {activeTab === 'accommodation' && <AccommodationTab trip={trip} onAddHotel={(h) => setCartHotels(prev => [...prev, h])} />}
-        {activeTab === 'transport' && <TransportTab trip={trip} onAddVehicle={(v) => setCartVehicle(v)} />}
-        {activeTab === 'supplies' && <SuppliesTab trip={trip} onAddSupply={(s) => setCartSupplies(prev => [...prev, s])} />}
+        {activeTab === 'accommodation' && <AccommodationTab trip={trip} onAddHotel={() => fetchTripData()} />}
+        {activeTab === 'transport' && <TransportTab trip={trip} onAddVehicle={() => fetchTripData()} />}
+        {activeTab === 'supplies' && <SuppliesTab trip={trip} onAddSupply={() => fetchTripData()} />}
         {activeTab === 'payment' && (
           <CheckoutCartWidget 
             tripId={trip.id}
             activeCheckout={activeCheckout}
-            cartHotels={cartHotels}
-            cartVehicle={cartVehicle}
-            cartSupplies={cartSupplies}
             onCheckoutCreated={() => fetchTripData()}
-            onClearCart={() => {
-              setCartHotels([]);
-              setCartVehicle(null);
-              setCartSupplies([]);
-            }}
           />
         )}
       </div>
@@ -345,12 +334,12 @@ export default function TripDetailsPage() {
         trip={trip}
       />
       <ConfirmDialog
-        isOpen={cancelConfirmOpen}
-        onClose={() => setCancelConfirmOpen(false)}
-        onConfirm={handleCancelConfirm}
-        title="Cancel Trip"
-        message={`Are you sure you want to cancel "${trip.title}"? This action cannot be undone.`}
-        confirmLabel="Cancel Trip"
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Trip"
+        message="Permanently delete this trip? Any held bookings will be released. This cannot be undone."
+        confirmLabel="Delete Trip"
         isDanger
       />
     </DashboardLayout>
@@ -407,32 +396,7 @@ function OverviewTab({ trip, onNavigateToTab }) {
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="bg-gradient-to-br from-primary to-accent rounded-xl p-6 text-white lg:col-span-2">
-        <p className="font-heading font-bold text-lg mb-1">Ready to plan your Sri Lanka adventure?</p>
-        <p className="text-white/80 text-body-sm mb-5">
-          Build your day-by-day itinerary, then book accommodation, transport, and supplies — all in one place.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {[
-            { icon: 'smart_toy', label: 'AI Proposal', tab: 'ai-proposal' },
-            { icon: 'map', label: 'Build Itinerary', tab: 'itinerary' },
-            { icon: 'hotel', label: 'Book Hotel', tab: 'accommodation' },
-            { icon: 'directions_car', label: 'Book Vehicle', tab: 'transport' },
-            { icon: 'inventory_2', label: 'Order Supplies', tab: 'supplies' },
-            { icon: 'payment', label: 'Checkout & Pay', tab: 'payment' },
-          ].map((a) => (
-            <button
-              key={a.tab}
-              onClick={() => onNavigateToTab(a.tab)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-pill text-white font-heading font-bold text-sm transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm">{a.icon}</span>
-              {a.label}
-            </button>
-          ))}
-        </div>
-      </div>
+
     </div>
   );
 }

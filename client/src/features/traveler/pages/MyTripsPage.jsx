@@ -11,7 +11,7 @@ import LoadingSpinner from '../../../components/LoadingSpinner';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import AddEditTripModal from '../components/AddEditTripModal';
 import CreateTripWizard from '../components/CreateTripWizard';
-import { getMyTrips, cancelTrip } from '../../../services/travelerApi';
+import { getMyTrips, deleteTrip } from '../../../services/travelerApi';
 
 const NAV_ITEMS = [
   { icon: 'luggage', label: 'My Trips', path: '/traveler/trips' },
@@ -57,8 +57,8 @@ export default function MyTripsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false); // edit only
   const [editingTrip, setEditingTrip] = useState(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false); // create wizard
-  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-  const [tripToCancel, setTripToCancel] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState(null);
   const [actionError, setActionError] = useState(null);
 
   const fetchTrips = useCallback(async () => {
@@ -128,21 +128,22 @@ export default function MyTripsPage() {
     setIsModalOpen(true);
   };
 
-  const openCancelConfirm = (e, trip) => {
+  const openDeleteConfirm = (e, trip) => {
     e.stopPropagation();
-    setTripToCancel(trip);
+    setTripToDelete(trip);
     setActionError(null);
-    setCancelConfirmOpen(true);
+    setDeleteConfirmOpen(true);
   };
 
-  const handleConfirmCancel = async () => {
-    if (!tripToCancel) return;
+  const handleConfirmDelete = async () => {
+    if (!tripToDelete) return;
     try {
       setActionError(null);
-      await cancelTrip(tripToCancel.id);
+      await deleteTrip(tripToDelete.id);
       await fetchTrips();
     } catch (err) {
-      setActionError(err.response?.data?.message || 'Failed to cancel trip.');
+      setActionError(err.response?.data?.message || 'Failed to delete trip.');
+      throw err; // Let ConfirmDialog handle the loading state properly
     }
   };
 
@@ -158,8 +159,8 @@ export default function MyTripsPage() {
     navigate(`/traveler/trips/${newTripId}`);
   };
 
-  // Can this trip still be cancelled?
-  const isCancellable = (trip) => ['Draft', 'Planned'].includes(trip.status);
+  // Can this trip still be deleted? Unpaid trips (not Confirmed or Completed) are eligible.
+  const isDeletable = (trip) => !['Confirmed', 'Completed'].includes(trip.status);
   // Can this trip still be edited?
   const isEditable = (trip) => trip.status === 'Draft';
 
@@ -263,9 +264,9 @@ export default function MyTripsPage() {
                 trip={trip}
                 onOpen={() => navigate(`/traveler/trips/${trip.id}`)}
                 onEdit={(e) => openEditModal(e, trip)}
-                onCancel={(e) => openCancelConfirm(e, trip)}
+                onCancel={(e) => openDeleteConfirm(e, trip)}
                 isEditable={isEditable(trip)}
-                isCancellable={isCancellable(trip)}
+                isCancellable={isDeletable(trip)}
               />
             ))}
           </div>
@@ -311,12 +312,12 @@ export default function MyTripsPage() {
       />
 
       <ConfirmDialog
-        isOpen={cancelConfirmOpen}
-        onClose={() => setCancelConfirmOpen(false)}
-        onConfirm={handleConfirmCancel}
-        title="Cancel Trip"
-        message={`Are you sure you want to cancel "${tripToCancel?.title}"? This action cannot be undone.`}
-        confirmLabel="Cancel Trip"
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Trip"
+        message="Permanently delete this trip? Any held bookings will be released. This cannot be undone."
+        confirmLabel="Delete Trip"
         isDanger
       />
     </DashboardLayout>
@@ -352,9 +353,9 @@ function TripCard({ trip, onOpen, onEdit, onCancel, isEditable, isCancellable })
             <button
               onClick={onCancel}
               className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-text-secondary hover:text-status-danger transition-colors"
-              aria-label="Cancel trip"
+              aria-label="Delete trip"
             >
-              <span className="material-symbols-outlined text-sm">cancel</span>
+              <span className="material-symbols-outlined text-sm">delete</span>
             </button>
           )}
         </div>

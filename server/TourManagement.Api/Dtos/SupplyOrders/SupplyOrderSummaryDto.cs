@@ -16,4 +16,6 @@ public class SupplyOrderSummaryDto
     public decimal TotalPrice { get; set; }
     
     public BookingStatus Status { get; set; }
+    
+    public DateTime? HoldExpiresAt { get; set; }
 }

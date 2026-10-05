@@ -1,18 +1,84 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser, setAuthToken } from '../services/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import apiClient, { loginUser, setAuthToken } from '../services/api';
 
 const AuthContext = createContext(null);
+
+const SESSION_USER_KEY = 'tm_user';
+const SESSION_TOKEN_KEY = 'tm_token';
+
+const isTokenExpired = (token) => {
+  if (!token) return true;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    const { exp } = JSON.parse(jsonPayload);
+    if (!exp) return false;
+    return Date.now() >= exp * 1000;
+  } catch (error) {
+    return true;
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // In a real app we might try to refresh the token on load, 
-  // but as requested we are keeping it purely in memory.
-  useEffect(() => {
-    setLoading(false);
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setAuthToken(null);
+    sessionStorage.removeItem(SESSION_USER_KEY);
+    sessionStorage.removeItem(SESSION_TOKEN_KEY);
   }, []);
+
+  useEffect(() => {
+    const initAuth = () => {
+      try {
+        const storedToken = sessionStorage.getItem(SESSION_TOKEN_KEY);
+        const storedUser = sessionStorage.getItem(SESSION_USER_KEY);
+
+        if (storedToken && storedUser) {
+          if (!isTokenExpired(storedToken)) {
+            const parsedUser = JSON.parse(storedUser);
+            setToken(storedToken);
+            setUser(parsedUser);
+            setAuthToken(storedToken);
+          } else {
+            sessionStorage.removeItem(SESSION_USER_KEY);
+            sessionStorage.removeItem(SESSION_TOKEN_KEY);
+          }
+        }
+      } catch (error) {
+        sessionStorage.removeItem(SESSION_USER_KEY);
+        sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  // Axios interceptor to catch 401s and automatically log out
+  useEffect(() => {
+    const interceptor = apiClient.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      apiClient.interceptors.response.eject(interceptor);
+    };
+  }, [logout]);
 
   const login = async (email, password) => {
     try {
@@ -34,6 +100,8 @@ export const AuthProvider = ({ children }) => {
       setToken(authToken);
       setUser(userData);
       setAuthToken(authToken);
+      sessionStorage.setItem(SESSION_TOKEN_KEY, authToken);
+      sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(userData));
 
       return { success: true, role: userData.role };
     } catch (error) {
@@ -52,12 +120,6 @@ export const AuthProvider = ({ children }) => {
       }
       return { success: false, error: message };
     }
-  };
-
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    setAuthToken(null);
   };
 
   const updateUser = (userData) => {

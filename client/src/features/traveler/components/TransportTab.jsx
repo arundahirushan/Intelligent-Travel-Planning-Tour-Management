@@ -49,14 +49,14 @@ export default function TransportTab({ trip, onAddVehicle }) {
       setLoading(true);
       setError(null);
       // Backend has no status filter — load all and filter client-side.
-      const data = await getMyVehicleBookings({ pageSize: 200 });
+      const data = await getMyVehicleBookings({ tripId: trip?.id, pageSize: 200 });
       setAllBookings(data.items || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load vehicle bookings.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [trip?.id]);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 

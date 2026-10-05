@@ -89,6 +89,14 @@ class AccommodationService {
     }
   }
 
+  Future<void> reactivateHotel(int id) async {
+    final response = await _apiClient.post('/hotels/$id/reactivate');
+    final jsonResponse = jsonDecode(response.body);
+    if (jsonResponse['success'] != true) {
+      throw Exception(jsonResponse['message'] ?? 'Failed to reactivate hotel');
+    }
+  }
+
   Future<Map<String, dynamic>> getAllBookings({
     String? status,
     int page = 1,

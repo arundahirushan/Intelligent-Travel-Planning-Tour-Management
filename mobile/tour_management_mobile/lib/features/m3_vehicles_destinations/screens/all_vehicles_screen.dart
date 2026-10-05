@@ -140,6 +140,7 @@ class _AllVehiclesScreenState extends State<AllVehiclesScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),
@@ -163,6 +164,7 @@ class _AllVehiclesScreenState extends State<AllVehiclesScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Sort',
                     border: OutlineInputBorder(),

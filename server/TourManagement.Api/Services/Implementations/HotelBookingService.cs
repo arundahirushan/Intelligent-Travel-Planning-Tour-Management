@@ -27,27 +27,64 @@ public class HotelBookingService : IHotelBookingService
 
     public async Task<HotelBookingSummaryDto> CreateAsync(CreateHotelBookingDto dto, int travelerId)
     {
-        var checkoutDto = new TourManagement.Api.Dtos.Checkout.CreateCheckoutDto 
-        { 
-            TripId = dto.TripId, 
-            Hotel  = new TourManagement.Api.Dtos.Checkout.HotelCheckoutItemDto 
+        dto.CheckInDate = DateTime.SpecifyKind(dto.CheckInDate, DateTimeKind.Utc);
+        dto.CheckOutDate = DateTime.SpecifyKind(dto.CheckOutDate, DateTimeKind.Utc);
+
+        var trip = await _db.Trips.FirstOrDefaultAsync(t => t.Id == dto.TripId);
+        if (trip == null)
+            throw new NotFoundException($"Trip with ID {dto.TripId} was not found.");
+
+        if (trip.TravelerId != travelerId)
+            throw new ForbiddenException("You do not have permission to modify this trip.");
+
+        if (trip.Status == TripStatus.Confirmed || trip.Status == TripStatus.Completed || trip.Status == TripStatus.Cancelled)
+            throw new ValidationException($"Cannot add bookings to a trip that is {trip.Status}.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            if (_db.Database.IsRelational())
             {
-                RoomId        = dto.RoomId,
-                CheckInDate   = dto.CheckInDate,
-                CheckOutDate  = dto.CheckOutDate,
-                NumberOfRooms = dto.NumberOfRooms
+                long roomLockKey = 1_000_000L + dto.RoomId;
+                await _db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({roomLockKey})");
             }
-        };
 
-        // This handles validation, locks, snapshotting price, idempotency, and 12-hour expiry.
-        var checkoutResponse = await _checkoutService.PlaceHoldAsync(checkoutDto, travelerId);
+            await ValidateAndCheckAvailabilityAsync(
+                dto.RoomId, dto.CheckInDate, dto.CheckOutDate, dto.NumberOfRooms, trip, null);
 
-        var saved = await _db.HotelBookings
-            .Include(b => b.Room).ThenInclude(r => r.Hotel)
-            .Include(b => b.Checkout)
-            .FirstAsync(b => b.Id == checkoutResponse.HotelItem!.HotelBookingId);
+            var room = await _db.Rooms.FirstOrDefaultAsync(r => r.Id == dto.RoomId);
+            int nights = (int)(dto.CheckOutDate.Date - dto.CheckInDate.Date).TotalDays;
+            decimal snapshot = room!.PricePerNight * nights * dto.NumberOfRooms;
 
-        return saved.ToSummaryDto();
+            var booking = new HotelBooking
+            {
+                TripId = dto.TripId,
+                RoomId = dto.RoomId,
+                CheckInDate = dto.CheckInDate,
+                CheckOutDate = dto.CheckOutDate,
+                NumberOfRooms = dto.NumberOfRooms,
+                Status = BookingStatus.Held,
+                PriceSnapshot = snapshot,
+                HoldExpiresAt = DateTime.UtcNow.AddHours(12),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _db.HotelBookings.Add(booking);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var saved = await _db.HotelBookings
+                .Include(b => b.Room).ThenInclude(r => r.Hotel)
+                .FirstAsync(b => b.Id == booking.Id);
+
+            return saved.ToSummaryDto();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<HotelBookingSummaryDto> UpdateAsync(int id, UpdateHotelBookingDto dto, int travelerId)
@@ -139,13 +176,16 @@ public class HotelBookingService : IHotelBookingService
     // Returns all hotel bookings that belong to the requesting traveler
     // (bookings are linked to trips, which are owned by the traveler).
     public async Task<PagedResult<HotelBookingSummaryDto>> GetMyBookingsAsync(
-        int travelerId, string? status, int page, int pageSize)
+        int travelerId, int? tripId, string? status, int page, int pageSize)
     {
         var query = _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .Include(b => b.Trip)
             .Include(b => b.Checkout)
             .Where(b => b.Trip.TravelerId == travelerId);
+
+        if (tripId.HasValue)
+            query = query.Where(b => b.TripId == tripId.Value);
 
         if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
             query = query.Where(b => b.Status == statusEnum);

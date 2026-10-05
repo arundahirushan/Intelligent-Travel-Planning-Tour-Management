@@ -318,6 +318,17 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
           child: const Text('Suspend'),
         ),
       ));
+    } else if (_hotel!.status == HotelStatus.suspended) {
+      actions.add(Expanded(
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          onPressed: _isActionRunning
+              ? null
+              : () => _performAction(
+                  'Reactivate', () => _service.reactivateHotel(_hotel!.id)),
+          child: const Text('Reactivate'),
+        ),
+      ));
     }
 
     if (actions.isEmpty) return null;
