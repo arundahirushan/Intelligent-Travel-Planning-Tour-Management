@@ -10,7 +10,7 @@ public interface ISupplyOrderService
     Task DeleteAsync(int id, int requestingUserId, string requestingUserRole);
     
     Task<PagedResult<SupplyOrderSummaryDto>> GetMyOrdersAsync(
-        int travelerId, string? status, string? sort, int page, int pageSize);
+        int travelerId, int? tripId, string? status, string? sort, int page, int pageSize);
         
     Task<SupplyOrderSummaryDto> CancelAsync(int id, int userId);
     
