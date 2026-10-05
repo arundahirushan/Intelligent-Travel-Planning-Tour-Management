@@ -139,13 +139,16 @@ public class HotelBookingService : IHotelBookingService
     // Returns all hotel bookings that belong to the requesting traveler
     // (bookings are linked to trips, which are owned by the traveler).
     public async Task<PagedResult<HotelBookingSummaryDto>> GetMyBookingsAsync(
-        int travelerId, string? status, int page, int pageSize)
+        int travelerId, int? tripId, string? status, int page, int pageSize)
     {
         var query = _db.HotelBookings
             .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .Include(b => b.Trip)
             .Include(b => b.Checkout)
             .Where(b => b.Trip.TravelerId == travelerId);
+
+        if (tripId.HasValue)
+            query = query.Where(b => b.TripId == tripId.Value);
 
         if (!string.IsNullOrEmpty(status) && Enum.TryParse<BookingStatus>(status, out var statusEnum))
             query = query.Where(b => b.Status == statusEnum);

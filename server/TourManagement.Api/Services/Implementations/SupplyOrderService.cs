@@ -140,11 +140,14 @@ public class SupplyOrderService : ISupplyOrderService
     }
 
     public async Task<PagedResult<SupplyOrderSummaryDto>> GetMyOrdersAsync(
-        int travelerId, string? status, string? sort, int page, int pageSize)
+        int travelerId, int? tripId, string? status, string? sort, int page, int pageSize)
     {
         var query = _db.SupplyOrders
             .Include(o => o.Supply)
             .Where(o => o.Trip.TravelerId == travelerId);
+
+        if (tripId.HasValue)
+            query = query.Where(o => o.TripId == tripId.Value);
 
         return await ApplyFiltersAndPaginateAsync(query, status, sort, page, pageSize);
     }

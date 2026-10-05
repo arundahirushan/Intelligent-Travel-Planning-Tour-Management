@@ -9,7 +9,7 @@ public interface IHotelBookingService
     Task<HotelBookingSummaryDto> CreateAsync(CreateHotelBookingDto dto, int travelerId);
 
     // Traveler views their own bookings (joined through Trip).
-    Task<PagedResult<HotelBookingSummaryDto>> GetMyBookingsAsync(int travelerId, string? status, int page, int pageSize);
+    Task<PagedResult<HotelBookingSummaryDto>> GetMyBookingsAsync(int travelerId, int? tripId, string? status, int page, int pageSize);
 
     // HotelOwner views bookings across all their hotels.
     Task<PagedResult<HotelBookingSummaryDto>> GetMyHotelsBookingsAsync(int ownerId, string? search, string? status, int page, int pageSize);

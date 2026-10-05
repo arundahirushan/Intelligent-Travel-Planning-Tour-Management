@@ -47,10 +47,11 @@ public class VehicleBookingsController : ControllerBase
     [HttpGet("my")]
     [Authorize(Roles = Roles.Traveler)]
     public async Task<ActionResult<ApiResponse<PagedResult<VehicleBookingSummaryDto>>>> GetMyBookings(
+        [FromQuery] int? tripId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await _bookingService.GetMyBookingsAsync(GetCurrentUserId(), page, pageSize);
+        var result = await _bookingService.GetMyBookingsAsync(GetCurrentUserId(), tripId, page, pageSize);
         return Ok(ApiResponse<PagedResult<VehicleBookingSummaryDto>>.Ok(result));
     }
 
