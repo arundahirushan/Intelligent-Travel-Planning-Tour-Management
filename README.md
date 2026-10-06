@@ -373,8 +373,16 @@ Below are the official access links and resources for project evaluators:
 - **Deployed ASP.NET Core API Base URL:** https://intelligent-travel-planning-tour.onrender.com/api
 
 ### Test Account Credentials
-Evaluators can access pre-configured accounts for testing each role:
-- **Instructions & Credentials:** [TEST_ACCOUNT_ACCESS_INSTRUCTIONS]
+Evaluators can use the following pre-configured test accounts to evaluate each system role:
+
+| Role | Email | Password | Target Interface & Access Notes |
+| :--- | :--- | :--- | :--- |
+| **`SuperAdmin`** | `superadmin@tourmanagement.com` | `SuperAdmin@123` | **Flutter Mobile App** (Full privileges, Admin user creation, force-deletion) |
+| **`Admin`** | `admin@tourmanagement.com` | `Admin123!` | **Flutter Mobile App** (Moderate listings, approve contracts & AI proposals) |
+| **`Traveler`** | `traveler@example.com` | `Traveler123!` | **React Web App** (Trip creation, AI proposal checkout, direct bookings) |
+| **`HotelOwner`** | `hotelowner@example.com` | `Owner123!` | **React Web App** (Property registration, room management, guest bookings) |
+| **`TransportProvider`** | `transport@example.com` | `Driver123!` | **React Web App** (Fleet registration, vehicle management, rental bookings) |
+| **`Supplier`** | `supplier@example.com` | `Supplier123!` | **React Web App** (Contract requests, supply product catalog, customer orders) |
 
 ---
 
