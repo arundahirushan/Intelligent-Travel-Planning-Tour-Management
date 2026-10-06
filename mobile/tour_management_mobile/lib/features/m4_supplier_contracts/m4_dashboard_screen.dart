@@ -13,7 +13,7 @@ class M4DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('M4 - Contracts & Supplies'),
+        title: const Text('Suppliers & Contracts'),
       ),
       body: GridView.count(
         crossAxisCount: 2,

@@ -94,6 +94,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddJwtAuthentication(jwtSettings);
 builder.Services.AddAuthorization();
 
+// ── Health Checks ─────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks();
+
 // ── Application services ─────────────────────────────────────────────────────
 builder.Services.AddApplicationServices();
 
@@ -109,26 +112,30 @@ await SeedData.SeedAsync(app.Services);
 // 1. Global exception handler (must be first).
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// 2. Swagger (development only).
-if (app.Environment.IsDevelopment())
+// 2. Swagger (Enabled for both development & production hosted API testing).
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TourManagement API v1");
+    c.RoutePrefix = "swagger";
+});
 
-// 3. HTTPS redirect.
+// 3. Health check endpoint (for hosting monitoring e.g. Render, Railway, AWS).
+app.MapHealthChecks("/health");
+
+// 4. HTTPS redirect.
 app.UseHttpsRedirection();
 
-// 4. CORS — must come before authentication.
+// 5. CORS — must come before authentication.
 app.UseCors("AllowFrontends");
 
-// 5. Authentication — reads the JWT from the Authorization header.
+// 6. Authentication — reads the JWT from the Authorization header.
 app.UseAuthentication();
 
-// 6. Authorization — checks [Authorize] attributes after the user is identified.
+// 7. Authorization — checks [Authorize] attributes after the user is identified.
 app.UseAuthorization();
 
-// 7. Map controller routes.
+// 8. Map controller routes.
 app.MapControllers();
 
 app.Run();

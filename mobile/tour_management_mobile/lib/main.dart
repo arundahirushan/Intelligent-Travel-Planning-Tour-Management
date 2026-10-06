@@ -22,6 +22,7 @@ class _AdminAppState extends State<AdminApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TourManagement Admin',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: ListenableBuilder(
         listenable: _authService,

@@ -154,6 +154,7 @@ class _DestinationListScreenState extends State<DestinationListScreen> {
           Expanded(
             flex: 1,
             child: DropdownButtonFormField<String?>(
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Sort',
                 border: OutlineInputBorder(),
